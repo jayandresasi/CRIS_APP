@@ -144,22 +144,23 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'CRIS App',
         theme: ThemeData(
-          primaryColor: const Color(0xFF008080),
+          primaryColor: const Color(0xFF0F766E),
           colorScheme: const ColorScheme.light(
-            primary: Color(0xFF008080),
-            secondary: Color(0xFF5BC0EB),
+            primary: Color(0xFF0F766E),
+            secondary: Color(0xFF14B8A6),
           ),
-          scaffoldBackgroundColor: const Color(0xFFF7F9FA),
+          scaffoldBackgroundColor: const Color(0xFFF9FAFB),
           textTheme: const TextTheme(
             titleLarge: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
+              color: Color(0xFF1F2937),
             ),
             bodyMedium: TextStyle(
               fontSize: 14,
-              color: Colors.black87,
-              height: 1.3,
+              color: Color(0xFF1F2937),
+              height: 1.4,
             ),
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
@@ -170,7 +171,7 @@ class MyApp extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
           ),
@@ -191,7 +192,9 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
   bool _obscure = true;
+  String? _capturedImagePath;
 
   @override
   void dispose() {
@@ -200,295 +203,316 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  Future<void> _openCamera() async {
+    final status = await Permission.camera.request();
+    if (!mounted) return;
+
+    if (!status.isGranted) {
+      if (status.isPermanentlyDenied) {
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Camera permission required'),
+            content: const Text(
+              'Camera permission is required to capture an image. Please enable it in app settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  openAppSettings();
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Camera permission denied. Unable to open camera.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+      if (image == null) {
+        return;
+      }
+      setState(() {
+        _capturedImagePath = image.path;
+      });
+      debugPrint('Captured image path: ${image.path}');
+    } catch (e) {
+      debugPrint('Camera capture failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to capture image. Please try again.'),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // MediaQuery size not used yet
-
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF00C9FF), Color(0xFF00FFA3)],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 8),
-                // Logo
-                Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 110,
-                        height: 110,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/images/CRIS icon.jpg',
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Center(
-                                  child: Text(
-                                    'CRIS',
-                                    style: TextStyle(
-                                      color: Color(0xFF00A3D9),
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.6,
-                                    ),
-                                  ),
-                                ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      const Text(
-                        'Find animal bite centers near you',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/loginpage-bg.png'),
+                  fit: BoxFit.cover,
                 ),
-
-                const SizedBox(height: 40),
-
-                // Form card
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          hintText: 'Email',
-                          prefixIcon: const Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 14,
-                            horizontal: 12,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: _obscure,
-                        decoration: InputDecoration(
-                          hintText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscure
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                            ),
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 14,
-                            horizontal: 12,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // Login button
-                      SizedBox(
-                        height: 54,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // auth stub: navigate to the Dashboard
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const DashboardPage(),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: EdgeInsets.zero,
-                            elevation: 6,
-                          ),
-                          child: Ink(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Color(0xFF6C63FF), Color(0xFF00C2FF)],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(12),
-                              ),
-                            ),
-                            child: Container(
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'Login',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-                      Row(
-                        children: const [
-                          Expanded(child: Divider()),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8.0),
-                            child: Text(
-                              'Or continue with',
-                              style: TextStyle(color: Colors.black54),
-                            ),
-                          ),
-                          Expanded(child: Divider()),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _socialCircle(
-                            icon: Icons.facebook,
-                            color: Colors.blue[800]!,
-                          ),
-                          const SizedBox(width: 16),
-                          _socialCircle(
-                            icon: Icons.g_mobiledata,
-                            color: Colors.redAccent,
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text("Don't have an account? Sign Up"),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // Recent stats / footer card (small)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 18,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Color.fromRGBO(255, 255, 255, 0.95),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            '000',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 22,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Centers In App',
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: const [
-                          Text(
-                            '24/7',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 22,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Support Available',
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          Positioned.fill(
+            child: Container(color: const Color.fromRGBO(0, 0, 0, 0.3)),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 24),
+                  Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: const Color.fromRGBO(255, 255, 255, 0.95),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/CRIS icon.jpg',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Center(
+                              child: Text(
+                                'CRIS',
+                                style: TextStyle(
+                                  color: Color(0xFF0F766E),
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'CRIS',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Rabies Monitoring & Response System',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Report. Locate. Get Treated.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 24,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            hintText: 'Email address',
+                            prefixIcon: const Icon(
+                              Icons.email_outlined,
+                              color: Color(0xFF0F766E),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xFFF3F6F8),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: _obscure,
+                          decoration: InputDecoration(
+                            hintText: 'Password',
+                            prefixIcon: const Icon(
+                              Icons.lock_outline,
+                              color: Color(0xFF0F766E),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscure
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: const Color(0xFF64748B),
+                              ),
+                              onPressed: () =>
+                                  setState(() => _obscure = !_obscure),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xFFF3F6F8),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {},
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF0F766E),
+                              padding: EdgeInsets.zero,
+                            ),
+                            child: const Text('Forgot Password?'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 54,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const DashboardPage(),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F766E),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 4,
+                            ),
+                            child: const Text(
+                              'Login',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 50,
+                          child: OutlinedButton.icon(
+                            onPressed: _openCamera,
+                            icon: const Icon(
+                              Icons.camera_alt,
+                              color: Color(0xFF0F766E),
+                            ),
+                            label: const Text('Capture photo'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF0F766E),
+                              side: const BorderSide(color: Color(0xFF0F766E)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (_capturedImagePath != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'Photo path:\n$_capturedImagePath',
+                            style: const TextStyle(
+                              color: Color(0xFF475569),
+                              fontSize: 12,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  const Text(
+                    'Be responsible. Protect lives.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
-}
-
-Widget _socialCircle({required IconData icon, required Color color}) {
-  return Container(
-    width: 48,
-    height: 48,
-    decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-    child: IconButton(
-      onPressed: () {},
-      icon: Icon(icon, color: color),
-    ),
-  );
 }
 
 class DashboardPage extends StatelessWidget {
@@ -2035,44 +2059,39 @@ class _ReportSuspiciousAnimalPageState
   Future<void> _pickImage() async {
     final hasPermission = await PermissionsHelper.requestImagePermissions();
     if (!hasPermission) {
-      if (mounted) {
-        final isPermanentlyDenied = Platform.isAndroid
-            ? await Permission.storage.isPermanentlyDenied
-            : await Permission.photos.isPermanentlyDenied;
-        if (mounted) {
-          if (isPermanentlyDenied) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Permissions Required'),
-                content: const Text(
-                  'Storage permission is permanently denied. Please enable it in app settings.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      openAppSettings();
-                    },
-                    child: const Text('Open Settings'),
-                  ),
-                ],
+      final bool isPermanentlyDenied = Platform.isAndroid
+          ? await Permission.storage.isPermanentlyDenied
+          : await Permission.photos.isPermanentlyDenied;
+      if (!mounted) return;
+      if (isPermanentlyDenied) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permissions Required'),
+            content: const Text(
+              'Storage permission is permanently denied. Please enable it in app settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Storage permission is required to select photos',
-                ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  openAppSettings();
+                },
+                child: const Text('Open Settings'),
               ),
-            );
-          }
-        }
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Storage permission is required to select photos'),
+          ),
+        );
       }
       return;
     }
@@ -2088,38 +2107,38 @@ class _ReportSuspiciousAnimalPageState
   Future<void> _takePhoto() async {
     final hasPermission = await PermissionsHelper.requestImagePermissions();
     if (!hasPermission) {
-      if (mounted) {
-        final isPermanentlyDenied = await Permission.camera.isPermanentlyDenied;
-        if (isPermanentlyDenied) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Permissions Required'),
-              content: const Text(
-                'Camera permission is permanently denied. Please enable it in app settings.',
+      final bool isPermanentlyDenied =
+          await Permission.camera.isPermanentlyDenied;
+      if (!mounted) return;
+      if (isPermanentlyDenied) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permissions Required'),
+            content: const Text(
+              'Camera permission is permanently denied. Please enable it in app settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    openAppSettings();
-                  },
-                  child: const Text('Open Settings'),
-                ),
-              ],
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Camera permission is required to take photos'),
-            ),
-          );
-        }
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  openAppSettings();
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Camera permission is required to take photos'),
+          ),
+        );
       }
       return;
     }
@@ -3091,44 +3110,39 @@ class _ReportingPageState extends State<ReportingPage> {
   Future<void> _pickImage() async {
     final hasPermission = await PermissionsHelper.requestImagePermissions();
     if (!hasPermission) {
-      if (mounted) {
-        final isPermanentlyDenied = Platform.isAndroid
-            ? await Permission.storage.isPermanentlyDenied
-            : await Permission.photos.isPermanentlyDenied;
-        if (mounted) {
-          if (isPermanentlyDenied) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Permissions Required'),
-                content: const Text(
-                  'Storage permission is permanently denied. Please enable it in app settings.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      openAppSettings();
-                    },
-                    child: const Text('Open Settings'),
-                  ),
-                ],
+      final bool isPermanentlyDenied = Platform.isAndroid
+          ? await Permission.storage.isPermanentlyDenied
+          : await Permission.photos.isPermanentlyDenied;
+      if (!mounted) return;
+      if (isPermanentlyDenied) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permissions Required'),
+            content: const Text(
+              'Storage permission is permanently denied. Please enable it in app settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Storage permission is required to select photos',
-                ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  openAppSettings();
+                },
+                child: const Text('Open Settings'),
               ),
-            );
-          }
-        }
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Storage permission is required to select photos'),
+          ),
+        );
       }
       return;
     }
@@ -3143,38 +3157,38 @@ class _ReportingPageState extends State<ReportingPage> {
   Future<void> _takePhoto() async {
     final hasPermission = await PermissionsHelper.requestImagePermissions();
     if (!hasPermission) {
-      if (mounted) {
-        final isPermanentlyDenied = await Permission.camera.isPermanentlyDenied;
-        if (isPermanentlyDenied) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Permissions Required'),
-              content: const Text(
-                'Camera permission is permanently denied. Please enable it in app settings.',
+      final bool isPermanentlyDenied =
+          await Permission.camera.isPermanentlyDenied;
+      if (!mounted) return;
+      if (isPermanentlyDenied) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permissions Required'),
+            content: const Text(
+              'Camera permission is permanently denied. Please enable it in app settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    openAppSettings();
-                  },
-                  child: const Text('Open Settings'),
-                ),
-              ],
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Camera permission is required to take photos'),
-            ),
-          );
-        }
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  openAppSettings();
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Camera permission is required to take photos'),
+          ),
+        );
       }
       return;
     }
@@ -3653,47 +3667,41 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _pickProfileImage(ImageSource source) async {
     final hasPermission = await PermissionsHelper.requestImagePermissions();
     if (!hasPermission) {
-      if (mounted) {
-        bool isPermanentlyDenied = false;
-        if (source == ImageSource.camera) {
-          isPermanentlyDenied = await Permission.camera.isPermanentlyDenied;
-        } else {
-          isPermanentlyDenied = Platform.isAndroid
-              ? await Permission.storage.isPermanentlyDenied
-              : await Permission.photos.isPermanentlyDenied;
-        }
-        if (mounted) {
-          if (isPermanentlyDenied) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Permissions Required'),
-                content: Text(
-                  '${source == ImageSource.camera ? 'Camera' : 'Storage'} permission is permanently denied. Please enable it in app settings.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      openAppSettings();
-                    },
-                    child: const Text('Open Settings'),
-                  ),
-                ],
+      final bool isPermanentlyDenied = source == ImageSource.camera
+          ? await Permission.camera.isPermanentlyDenied
+          : Platform.isAndroid
+          ? await Permission.storage.isPermanentlyDenied
+          : await Permission.photos.isPermanentlyDenied;
+      if (!mounted) return;
+      if (isPermanentlyDenied) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permissions Required'),
+            content: Text(
+              '${source == ImageSource.camera ? 'Camera' : 'Storage'} permission is permanently denied. Please enable it in app settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Camera and storage permissions are required'),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  openAppSettings();
+                },
+                child: const Text('Open Settings'),
               ),
-            );
-          }
-        }
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Camera and storage permissions are required'),
+          ),
+        );
       }
       return;
     }

@@ -3597,6 +3597,20 @@ class ProfileSidebar extends StatelessWidget {
             },
           ),
           const SizedBox(height: 16),
+           const Divider(),
+          ListTile(
+            leading: const Icon(Icons.login, color: Color(0xFF008080)),
+            title: const Text(
+              'Back to Login',
+              style: TextStyle(color: Color(0xFF008080)),
+            ),
+            onTap: () {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+          ),
         ],
       ),
     );

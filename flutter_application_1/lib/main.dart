@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:exif/exif.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'theme.dart';
+import 'package:pdfx/pdfx.dart';
 
 import 'models/report.dart';
 import 'models/sab_report.dart';
@@ -84,6 +86,138 @@ class ProfileNotifier extends ChangeNotifier {
   }
 }
 
+class VaccineScheduleCard extends StatefulWidget {
+  const VaccineScheduleCard({Key? key}) : super(key: key);
+
+  @override
+  State<VaccineScheduleCard> createState() => _VaccineScheduleCardState();
+}
+
+class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
+  DateTime _selectedDate = DateTime.now();
+
+  final List<Map<String, String>> _schedule = [
+    {'day': 'Day 0', 'status': 'completed'},
+    {'day': 'Day 3', 'status': 'completed'},
+    {'day': 'Day 7', 'status': 'completed'},
+    {'day': 'Day 14', 'status': 'upcoming'},
+    {'day': 'Day 28', 'status': 'missed'},
+  ];
+
+  Color statusColor(String status) {
+    switch (status) {
+      case 'completed':
+        return Colors.green;
+      case 'missed':
+        return const Color(0xFFFF4C4C);
+      case 'upcoming':
+      default:
+        return const Color(0xFFFFC107);
+    }
+  }
+
+  IconData statusIcon(String status) {
+    switch (status) {
+      case 'completed':
+        return Icons.check_circle;
+      case 'missed':
+        return Icons.error;
+      default:
+        return Icons.calendar_today;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Vaccine Schedule',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Calendar placed above the day buttons
+            SizedBox(
+              height: 320,
+              child: CalendarDatePicker(
+                initialDate: _selectedDate,
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+                onDateChanged: (d) => setState(() => _selectedDate = d),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Selected date: ${_selectedDate.toLocal().toString().split(' ')[0]}',
+            ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _schedule.map((dose) {
+                  final status = dose['status']!;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 14,
+                      ),
+                      constraints: const BoxConstraints(minWidth: 96),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.surface,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            statusIcon(status),
+                            color: statusColor(status),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            dose['day']!,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: statusColor(status),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // Notifications Notifier
 class NotificationsNotifier extends ChangeNotifier {
   final List<Notification> _notifications = [
@@ -143,38 +277,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'CRIS App',
-        theme: ThemeData(
-          primaryColor: const Color(0xFF008080),
-          colorScheme: const ColorScheme.light(
-            primary: Color(0xFF008080),
-            secondary: Color(0xFF5BC0EB),
-          ),
-          scaffoldBackgroundColor: const Color(0xFFF7F9FA),
-          textTheme: const TextTheme(
-            titleLarge: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
-            bodyMedium: TextStyle(
-              fontSize: 14,
-              color: Colors.black87,
-              height: 1.3,
-            ),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              textStyle: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
+        theme: AppTheme.lightTheme(),
         home: const LoginPage(),
       ),
     );
@@ -249,7 +352,7 @@ class _LoginPageState extends State<LoginPage> {
                                   child: Text(
                                     'CRIS',
                                     style: TextStyle(
-                                      color: Color(0xFF00A3D9),
+                                      color: AppColors.accent,
                                       fontSize: 26,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 0.6,
@@ -264,7 +367,7 @@ class _LoginPageState extends State<LoginPage> {
                         'Find animal bite centers near you',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.onPrimary,
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                         ),
@@ -279,7 +382,7 @@ class _LoginPageState extends State<LoginPage> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -370,7 +473,7 @@ class _LoginPageState extends State<LoginPage> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                                  color: AppColors.onPrimary,
                                 ),
                               ),
                             ),
@@ -404,7 +507,7 @@ class _LoginPageState extends State<LoginPage> {
                           const SizedBox(width: 16),
                           _socialCircle(
                             icon: Icons.g_mobiledata,
-                            color: Colors.redAccent,
+                            color: AppColors.danger,
                           ),
                         ],
                       ),
@@ -427,7 +530,7 @@ class _LoginPageState extends State<LoginPage> {
                     horizontal: 18,
                   ),
                   decoration: BoxDecoration(
-                    color: Color.fromRGBO(255, 255, 255, 0.95),
+                    color: AppColors.surface.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -483,7 +586,7 @@ Widget _socialCircle({required IconData icon, required Color color}) {
   return Container(
     width: 48,
     height: 48,
-    decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+    decoration: BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
     child: IconButton(
       onPressed: () {},
       icon: Icon(icon, color: color),
@@ -498,12 +601,12 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF008080),
+        backgroundColor: AppColors.primary,
         title: Row(
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: Colors.white,
+              backgroundColor: AppColors.surface,
               child: ClipOval(
                 child: Image.asset(
                   'assets/images/CRIS icon.jpg',
@@ -513,7 +616,7 @@ class DashboardPage extends StatelessWidget {
                   errorBuilder: (c, e, s) => const Text(
                     'CRIS',
                     style: TextStyle(
-                      color: Color(0xFF008080),
+                      color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -525,7 +628,7 @@ class DashboardPage extends StatelessWidget {
             const Text(
               'CRIS',
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.onPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -535,7 +638,7 @@ class DashboardPage extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.person_outline, color: Colors.white),
+            icon: const Icon(Icons.person_outline, color: AppColors.onPrimary),
           ),
         ],
       ),
@@ -554,8 +657,8 @@ class DashboardPage extends StatelessWidget {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF008080),
+                backgroundColor: AppColors.surface,
+                foregroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -576,8 +679,8 @@ class DashboardPage extends StatelessWidget {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF008080),
+                backgroundColor: AppColors.surface,
+                foregroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -596,8 +699,8 @@ class DashboardPage extends StatelessWidget {
                 ).push(MaterialPageRoute(builder: (_) => const HistoryPage()));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF008080),
+                backgroundColor: AppColors.surface,
+                foregroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -631,7 +734,7 @@ class DashboardPage extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF008080),
+                                color: AppColors.primary,
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -648,8 +751,8 @@ class DashboardPage extends StatelessWidget {
                               icon: const Icon(Icons.warning),
                               label: const Text('Bite Incident'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF6B6B),
-                                foregroundColor: Colors.white,
+                                backgroundColor: AppColors.danger,
+                                foregroundColor: AppColors.onPrimary,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
@@ -672,8 +775,8 @@ class DashboardPage extends StatelessWidget {
                               icon: const Icon(Icons.security),
                               label: const Text('Suspicious Animal Behavior'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF9800),
-                                foregroundColor: Colors.white,
+                                backgroundColor: AppColors.warning,
+                                foregroundColor: AppColors.onPrimary,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
@@ -698,7 +801,7 @@ class DashboardPage extends StatelessWidget {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF6B6B),
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -711,7 +814,7 @@ class DashboardPage extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             // Vaccine Schedule section
-            _buildVaccineScheduleCard(context),
+            const VaccineScheduleCard(),
             const SizedBox(height: 24),
             // Rabies Awareness section
             Container(
@@ -738,128 +841,6 @@ class DashboardPage extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVaccineScheduleCard(BuildContext context) {
-    final schedule = [
-      {'day': 'Day 0', 'status': 'completed'},
-      {'day': 'Day 3', 'status': 'completed'},
-      {'day': 'Day 7', 'status': 'completed'},
-      {'day': 'Day 14', 'status': 'upcoming'},
-      {'day': 'Day 28', 'status': 'missed'},
-    ];
-
-    Color statusColor(String status) {
-      switch (status) {
-        case 'completed':
-          return Colors.green;
-        case 'missed':
-          return const Color(0xFFFF4C4C);
-        case 'upcoming':
-        default:
-          return const Color(0xFFFFC107);
-      }
-    }
-
-    IconData statusIcon(String status) {
-      switch (status) {
-        case 'completed':
-          return Icons.check_circle;
-        case 'missed':
-          return Icons.error;
-        default:
-          return Icons.calendar_today;
-      }
-    }
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Vaccine Schedule',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF008080),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: schedule.map((dose) {
-                final status = dose['status'] as String;
-                return InkWell(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: Text('${dose['day']} details'),
-                        content: Text(
-                          'Status: ${status[0].toUpperCase()}${status.substring(1)}\n'
-                          'Next step: ${status == 'completed'
-                              ? 'All clear'
-                              : status == 'missed'
-                              ? 'Follow up with healthcare provider'
-                              : 'Prepare for upcoming dose'}',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Close'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: const Color(0xFFFFFFFF),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          statusIcon(status),
-                          color: statusColor(status),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          dose['day'] as String,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: statusColor(status),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
             ),
           ],
         ),
@@ -938,7 +919,7 @@ class NearbyCentersPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF00A3D9),
+        backgroundColor: AppColors.accent,
         title: const Text('Locate Animal Bite Centers'),
       ),
       body: SingleChildScrollView(
@@ -1078,7 +1059,7 @@ class NearbyCentersPage extends StatelessWidget {
                                 Text(
                                   'Available: ${c['availableDates'] as String}',
                                   style: const TextStyle(
-                                    color: Color(0xFF008080),
+                                    color: AppColors.primary,
                                     fontWeight: FontWeight.w500,
                                     fontSize: 14,
                                   ),
@@ -1112,7 +1093,7 @@ class CenterDetailPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF00A3D9),
+        backgroundColor: AppColors.accent,
         title: Text(center['name'] as String),
       ),
       body: SingleChildScrollView(
@@ -1137,7 +1118,7 @@ class CenterDetailPage extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1182,14 +1163,14 @@ class CenterDetailPage extends StatelessWidget {
                         children: [
                           const Icon(
                             Icons.calendar_today,
-                            color: Color(0xFF008080),
+                            color: AppColors.primary,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Available: ${center['availableDates'] as String}',
                             style: const TextStyle(
                               fontSize: 16,
-                              color: Color(0xFF008080),
+                              color: AppColors.primary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -1219,7 +1200,7 @@ class CenterDetailPage extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1240,7 +1221,7 @@ class CenterDetailPage extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF008080),
+                                  color: AppColors.primary,
                                 ),
                               ),
                             ],
@@ -1444,7 +1425,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF00A3D9),
+        backgroundColor: AppColors.accent,
         title: const Text('Report Bite Incident'),
       ),
       body: SingleChildScrollView(
@@ -1470,7 +1451,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -1482,7 +1463,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                               decoration: InputDecoration(
                                 labelText: 'Last Name',
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: AppColors.surface,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1498,7 +1479,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                               decoration: InputDecoration(
                                 labelText: 'First Name',
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: AppColors.surface,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1518,7 +1499,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                               decoration: InputDecoration(
                                 labelText: 'Middle Initial',
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: AppColors.surface,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1532,7 +1513,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                               decoration: InputDecoration(
                                 labelText: 'Suffix',
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: AppColors.surface,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1548,7 +1529,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         decoration: InputDecoration(
                           labelText: 'Age',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1562,7 +1543,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         decoration: InputDecoration(
                           labelText: 'Gender',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1593,7 +1574,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         decoration: InputDecoration(
                           labelText: 'Contact Number',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1608,7 +1589,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         decoration: InputDecoration(
                           labelText: 'Address',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1638,7 +1619,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -1650,7 +1631,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                           labelText: 'Date of Incident',
                           hintText: 'YYYY-MM-DD',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1668,7 +1649,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                           labelText: 'Time of Incident',
                           hintText: 'HH:MM',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1683,7 +1664,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         decoration: InputDecoration(
                           labelText: 'Location of Incident',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1697,7 +1678,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         decoration: InputDecoration(
                           labelText: 'Type of Exposure',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1728,7 +1709,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                           labelText: 'Animal Species',
                           hintText: 'e.g., dog, cat, others',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1742,7 +1723,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         decoration: InputDecoration(
                           labelText: 'Ownership of Animal',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1775,7 +1756,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         decoration: InputDecoration(
                           labelText: 'Vaccination Status of Animal',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1811,7 +1792,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                           hintText:
                               'Provide detailed narrative of the incident',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1841,7 +1822,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -1850,7 +1831,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         decoration: InputDecoration(
                           labelText: 'First Aid Given',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1880,7 +1861,7 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                         decoration: InputDecoration(
                           labelText: 'Rabies Vaccination Status of Patient',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1919,8 +1900,8 @@ class _ReportBiteIncidentPageState extends State<ReportBiteIncidentPage> {
                 child: ElevatedButton(
                   onPressed: _submitReport,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF008080),
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -2239,7 +2220,7 @@ class _ReportSuspiciousAnimalPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF00A3D9),
+        backgroundColor: AppColors.accent,
         title: const Text('Report Suspicious Animal Behavior'),
       ),
       body: SingleChildScrollView(
@@ -2265,7 +2246,7 @@ class _ReportSuspiciousAnimalPageState
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -2277,7 +2258,7 @@ class _ReportSuspiciousAnimalPageState
                               decoration: InputDecoration(
                                 labelText: 'Last Name',
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: AppColors.surface,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -2293,7 +2274,7 @@ class _ReportSuspiciousAnimalPageState
                               decoration: InputDecoration(
                                 labelText: 'First Name',
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: AppColors.surface,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -2313,7 +2294,7 @@ class _ReportSuspiciousAnimalPageState
                               decoration: InputDecoration(
                                 labelText: 'Middle Initial',
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: AppColors.surface,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -2327,7 +2308,7 @@ class _ReportSuspiciousAnimalPageState
                               decoration: InputDecoration(
                                 labelText: 'Suffix',
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: AppColors.surface,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -2343,7 +2324,7 @@ class _ReportSuspiciousAnimalPageState
                         decoration: InputDecoration(
                           labelText: 'Contact Number',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -2358,7 +2339,7 @@ class _ReportSuspiciousAnimalPageState
                         decoration: InputDecoration(
                           labelText: 'Address',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -2386,7 +2367,7 @@ class _ReportSuspiciousAnimalPageState
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -2398,7 +2379,7 @@ class _ReportSuspiciousAnimalPageState
                           labelText: 'Date of Observation',
                           hintText: 'YYYY-MM-DD',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -2416,7 +2397,7 @@ class _ReportSuspiciousAnimalPageState
                           labelText: 'Time of Observation',
                           hintText: 'HH:MM',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -2431,7 +2412,7 @@ class _ReportSuspiciousAnimalPageState
                         decoration: InputDecoration(
                           labelText: 'Location',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -2445,7 +2426,7 @@ class _ReportSuspiciousAnimalPageState
                         decoration: InputDecoration(
                           labelText: 'Behavior Observed',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -2488,7 +2469,7 @@ class _ReportSuspiciousAnimalPageState
                           labelText: 'Description of Incident',
                           hintText: 'Provide detailed narrative',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -2518,7 +2499,7 @@ class _ReportSuspiciousAnimalPageState
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -2530,8 +2511,8 @@ class _ReportSuspiciousAnimalPageState
                               icon: const Icon(Icons.photo_library),
                               label: const Text('Select Photo'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF5BC0EB),
-                                foregroundColor: Colors.white,
+                                backgroundColor: AppColors.secondary,
+                                foregroundColor: AppColors.onPrimary,
                               ),
                             ),
                           ),
@@ -2543,7 +2524,7 @@ class _ReportSuspiciousAnimalPageState
                               label: const Text('Take Photo'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF5BC0EB),
-                                foregroundColor: Colors.white,
+                                foregroundColor: AppColors.onPrimary,
                               ),
                             ),
                           ),
@@ -2599,8 +2580,8 @@ class _ReportSuspiciousAnimalPageState
                 child: ElevatedButton(
                   onPressed: _submitReport,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF008080),
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -2641,7 +2622,7 @@ class SABReportDetailPage extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF008080),
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(height: 12),
@@ -2674,7 +2655,7 @@ class SABReportDetailPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('SAB Report Details'),
-        backgroundColor: const Color(0xFF008080),
+        backgroundColor: AppColors.primary,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -2737,295 +2718,106 @@ class SABReportDetailPage extends StatelessWidget {
   }
 }
 
-class SafetyInformationPage extends StatelessWidget {
+class SafetyInformationPage extends StatefulWidget {
   const SafetyInformationPage({super.key});
+
+  @override
+  State<SafetyInformationPage> createState() => _SafetyInformationPageState();
+}
+
+class _SafetyInformationPageState extends State<SafetyInformationPage> {
+  PdfControllerPinch? _pdfController;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPdf();
+  }
+
+  Future<void> _initPdf() async {
+    try {
+      // Create the controller; opening an asset may throw if the file
+      // is missing or the native PDF plugin cannot establish a channel.
+      final controller = PdfControllerPinch(
+        document: PdfDocument.openAsset(
+          'assets/documents/Rabies-Hiligaynon-and-Karay-a-1.pdf',
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _pdfController = controller;
+        _error = null;
+      });
+    } catch (e) {
+      // Friendly error for missing asset or plugin/channel issues.
+      if (!mounted) return;
+      setState(() {
+        _error =
+            'Unable to open the safety PDF. Ensure the asset exists and the platform PDF plugin is available.';
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _pdfController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF00A3D9),
+        backgroundColor: AppColors.accent,
         title: const Text('Safety Information'),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Immediate actions (red panel)
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+      body: Builder(
+        builder: (context) {
+          if (_error != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'What to do if you are bitten',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 56,
+                      color: Colors.red,
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Text(
-                      '1. Stay calm. Wash the wound thoroughly with soap and running water for at least 15 minutes.',
-                      style: TextStyle(color: Colors.white70),
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16),
                     ),
-                    SizedBox(height: 8),
-                    Text(
-                      '2. Apply an antiseptic (e.g., iodine or alcohol) and cover with a clean dressing.',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      '3. Control bleeding with gentle pressure if needed. Do not close deep wounds tightly.',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      '4. Seek medical care immediately — tell the clinician the bite details and follow their advice.',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      '5. Post-exposure prophylaxis (PEP) can prevent rabies if started promptly; bring the animal for observation or report it to local authorities when safe.',
-                      style: TextStyle(color: Colors.white70),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () async {
+                        // Retry initialization in case the asset was added.
+                        setState(() {
+                          _error = null;
+                        });
+                        await _initPdf();
+                      },
+                      child: const Text('Retry'),
                     ),
                   ],
                 ),
               ),
+            );
+          }
 
-              const SizedBox(height: 16),
+          if (_pdfController == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-              // Quick action buttons (placeholders)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Text('Clean Wound'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Text('Get Help'),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // Action tiles matching prototype (2x2)
-              GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 1.6,
-                children: const [
-                  _SafetyActionCard(
-                    title: 'Clean Wound',
-                    subtitle: 'Rinse with clean water and mild soap',
-                  ),
-                  _SafetyActionCard(
-                    title: 'Apply Bandage',
-                    subtitle: 'Use sterile dressing to cover',
-                  ),
-                  _SafetyActionCard(
-                    title: 'Call for Help',
-                    subtitle: 'Contact medical services',
-                  ),
-                  _SafetyActionCard(
-                    title: 'Act Quickly',
-                    subtitle: 'Time is critical for treatment',
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 18),
-
-              // About Rabies (green panel)
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00E68A),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'About Rabies',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Rabies is a viral disease that affects the nervous system. It is usually transmitted through the bite of an infected animal and is fatal once symptoms appear. Prompt treatment after exposure prevents the disease.',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Symptoms
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Symptoms',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Early signs (may be mild): fever, headache, pain or tingling at the wound site.',
-                      style: TextStyle(color: Colors.black54),
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      'Advanced signs: agitation, confusion, difficulty swallowing, fear of water (hydrophobia), and paralysis.',
-                      style: TextStyle(color: Colors.black54),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Prevention tips (green)
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00E68A),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Prevention Tips',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      '• Avoid contact with unfamiliar or stray animals.',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      '• Keep pets vaccinated against rabies and follow local vaccination schedules.',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      '• Teach children not to approach animals and to tell an adult if bitten.',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // PEP note (white card)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'About PEP (Post‑Exposure Prophylaxis)',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'PEP consists of wound care, a series of rabies vaccinations, and sometimes immunoglobulin. It is highly effective when started as soon as possible after exposure.',
-                      style: TextStyle(color: Colors.black54),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // Emergency Hotline
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: const [
-                    Text(
-                      'Emergency Hotline',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      '0143',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+          return PdfViewPinch(
+            controller: _pdfController!,
+            scrollDirection: Axis.vertical,
+          );
+        },
       ),
     );
   }
@@ -3191,7 +2983,7 @@ class _ReportingPageState extends State<ReportingPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Report Incident'),
-        backgroundColor: const Color(0xFF008080),
+        backgroundColor: AppColors.primary,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -3265,7 +3057,7 @@ class _ReportingPageState extends State<ReportingPage> {
                       label: const Text('Select Photo'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5BC0EB),
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.onPrimary,
                       ),
                     ),
                   ),
@@ -3277,7 +3069,7 @@ class _ReportingPageState extends State<ReportingPage> {
                       label: const Text('Take Photo'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5BC0EB),
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.onPrimary,
                       ),
                     ),
                   ),
@@ -3308,7 +3100,7 @@ class _ReportingPageState extends State<ReportingPage> {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF008080),
+                  backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: const Text('Submit Report'),
@@ -3354,7 +3146,7 @@ class ProfileSidebar extends StatelessWidget {
                         },
                         child: CircleAvatar(
                           radius: 40,
-                          backgroundColor: const Color(0xFF008080),
+                          backgroundColor: AppColors.primary,
                           backgroundImage:
                               (profileNotifier.profileImagePath.isNotEmpty &&
                                   !kIsWeb)
@@ -3380,7 +3172,7 @@ class ProfileSidebar extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -3432,14 +3224,14 @@ class ProfileSidebar extends StatelessWidget {
                           },
                           icon: const Icon(
                             Icons.edit,
-                            color: Color(0xFF008080),
+                            color: AppColors.primary,
                           ),
                           label: const Text(
                             'Edit Profile',
-                            style: TextStyle(color: Color(0xFF008080)),
+                            style: TextStyle(color: AppColors.primary),
                           ),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFF008080)),
+                            side: const BorderSide(color: AppColors.primary),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -3527,7 +3319,7 @@ class ProfileSidebar extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             border: Border.all(
-                              color: const Color(0xFF008080),
+                              color: AppColors.primary,
                               width: 1.5,
                             ),
                             borderRadius: BorderRadius.circular(10),
@@ -3540,7 +3332,7 @@ class ProfileSidebar extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF008080),
+                                  color: AppColors.primary,
                                 ),
                               ),
                               Container(
@@ -3583,6 +3375,20 @@ class ProfileSidebar extends StatelessWidget {
             },
           ),
           const SizedBox(height: 16),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.login, color: AppColors.primary),
+            title: const Text(
+              'Back to Login',
+              style: TextStyle(color: AppColors.primary),
+            ),
+            onTap: () {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+          ),
         ],
       ),
     );
@@ -3777,7 +3583,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        backgroundColor: const Color(0xFF008080),
+        backgroundColor: AppColors.primary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -3801,7 +3607,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -3810,7 +3616,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         onTap: _showImageSourceSheet,
                         child: CircleAvatar(
                           radius: 34,
-                          backgroundColor: const Color(0xFF008080),
+                          backgroundColor: AppColors.primary,
                           backgroundImage: _profileImagePath.isNotEmpty
                               ? (kIsWeb
                                     ? null
@@ -3855,7 +3661,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         decoration: InputDecoration(
                           labelText: 'Gender',
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -3913,7 +3719,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         'Emergency Contact',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF008080),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -3944,8 +3750,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         child: ElevatedButton(
                           onPressed: _saveProfile,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF008080),
-                            foregroundColor: Colors.white,
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.onPrimary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -3955,7 +3761,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: AppColors.onPrimary,
                             ),
                           ),
                         ),
@@ -3987,7 +3793,7 @@ class _ProfilePageState extends State<ProfilePage> {
         labelText: label,
         hintText: hintText,
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.surface,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
       validator: validator,
@@ -4023,7 +3829,7 @@ class _HistoryPageState extends State<HistoryPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text('History'),
-        backgroundColor: const Color(0xFF008080),
+        backgroundColor: AppColors.primary,
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -4213,7 +4019,7 @@ class ReportDetailPage extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF008080),
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(height: 12),
@@ -4246,7 +4052,7 @@ class ReportDetailPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Report Details'),
-        backgroundColor: const Color(0xFF008080),
+        backgroundColor: AppColors.primary,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

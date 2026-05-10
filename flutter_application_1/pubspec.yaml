@@ -41,6 +41,7 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   exif: ^3.1.2
+  pdfx: any
 
 dev_dependencies:
   flutter_test:
@@ -96,3 +97,4 @@ flutter:
   # see https://flutter.dev/to/font-from-package
   assets:
     - assets/images/CRIS icon.jpg
+    - assets/documents/Rabies-Hiligaynon-and-Karay-a-1.pdf

@@ -96,5 +96,10 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
   assets:
+<<<<<<< HEAD
     - assets/images/CRIS icon.jpg
     - assets/documents/Rabies-Hiligaynon-and-Karay-a-1.pdf
+=======
+    - assets/loginpage-bg.png
+    - assets/images/
+>>>>>>> 70e693cf2df6b9866c6a989eadb3c574c28f100c

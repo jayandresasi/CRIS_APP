@@ -3,15 +3,15 @@ import '../models/notification.dart';
 
 /// State management for application notifications
 class NotificationsNotifier extends ChangeNotifier {
-  final List<Notification> _notifications = [
-    Notification(
+  final List<AppNotification> _notifications = [
+    AppNotification(
       id: '1',
       message: '⚠️ Confirmed rabies case detected 4 km from your address.',
       emoji: '⚠️',
       color: const Color(0xFFFF4C4C),
       isRead: false,
     ),
-    Notification(
+    AppNotification(
       id: '2',
       message: '💉 Your 3rd vaccine dose is due tomorrow.',
       emoji: '💉',
@@ -20,7 +20,7 @@ class NotificationsNotifier extends ChangeNotifier {
     ),
   ];
 
-  List<Notification> get notifications => _notifications;
+  List<AppNotification> get notifications => _notifications;
 
   void markAsRead(String id) {
     final index = _notifications.indexWhere((n) => n.id == id);
@@ -30,7 +30,7 @@ class NotificationsNotifier extends ChangeNotifier {
     }
   }
 
-  void addNotification(Notification notification) {
+  void addNotification(AppNotification notification) {
     _notifications.insert(0, notification);
     notifyListeners();
   }

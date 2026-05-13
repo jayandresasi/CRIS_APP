@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../theme.dart';
-import '../widgets/social_circle.dart';
 import 'dashboard_page.dart';
 
 /// Login page with camera capture functionality
@@ -262,6 +261,31 @@ class _LoginPageState extends State<LoginPage> {
                           height: 54,
                           child: ElevatedButton(
                             onPressed: () {
+                              final email = _emailController.text.trim();
+                              final password = _passwordController.text;
+
+                              if (email.isEmpty || password.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please enter your email and password.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (!email.contains('@')) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please enter a valid email address.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => const DashboardPage(),

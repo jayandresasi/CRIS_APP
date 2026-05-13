@@ -15,6 +15,7 @@ void main() {
     await tester.pumpWidget(const MyApp());
 
     // Verify that the login page is displayed
-    expect(find.text('Find animal bite centers near you'), findsOneWidget);
+    expect(find.text('Rabies Monitoring & Response System'), findsOneWidget);
+    expect(find.text('Report. Locate. Get Treated.'), findsOneWidget);
   });
 }

@@ -1,38 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../models/report.dart';
+import '../models/sab_report.dart';
 import '../theme.dart';
 
-class ReportingPage extends StatefulWidget {
-  const ReportingPage({super.key});
+class SABReportingPage extends StatefulWidget {
+  const SABReportingPage({super.key});
 
   @override
-  State<ReportingPage> createState() => _ReportingPageState();
+  State<SABReportingPage> createState() => _SABReportingPageState();
 }
 
-class _ReportingPageState extends State<ReportingPage> {
+class _SABReportingPageState extends State<SABReportingPage> {
   final _formKey = GlobalKey<FormState>();
 
   final _lastNameController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _middleInitialController = TextEditingController();
   final _suffixController = TextEditingController();
-  final _ageController = TextEditingController();
   final _contactNumberController = TextEditingController();
   final _addressController = TextEditingController();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _animalSpeciesController = TextEditingController();
 
-  String? _gender;
-  String? _exposureType;
-  String _animalOwnership = 'Stray';
-  String _animalVaccinationStatus = 'Unknown';
-  String _firstAidGiven = 'None';
-  String _patientVaccinationStatus = 'Not vaccinated';
-
-  DateTime? _dateOfIncident;
-  TimeOfDay? _timeOfIncident;
+  String? _behaviorObserved;
+  DateTime? _dateOfObservation;
+  TimeOfDay? _timeOfObservation;
   bool _isSubmitting = false;
 
   @override
@@ -41,19 +33,17 @@ class _ReportingPageState extends State<ReportingPage> {
     _firstNameController.dispose();
     _middleInitialController.dispose();
     _suffixController.dispose();
-    _ageController.dispose();
     _contactNumberController.dispose();
     _addressController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
-    _animalSpeciesController.dispose();
     super.dispose();
   }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _dateOfIncident ?? DateTime.now(),
+      initialDate: _dateOfObservation ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
@@ -63,13 +53,13 @@ class _ReportingPageState extends State<ReportingPage> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => _dateOfIncident = picked);
+    if (picked != null) setState(() => _dateOfObservation = picked);
   }
 
   Future<void> _pickTime() async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: _timeOfIncident ?? TimeOfDay.now(),
+      initialTime: _timeOfObservation ?? TimeOfDay.now(),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.light(primary: AppColors.accent),
@@ -77,7 +67,7 @@ class _ReportingPageState extends State<ReportingPage> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => _timeOfIncident = picked);
+    if (picked != null) setState(() => _timeOfObservation = picked);
   }
 
   Future<void> _submit() async {
@@ -85,32 +75,28 @@ class _ReportingPageState extends State<ReportingPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      final report = Report(
+      final now = DateTime.now();
+      final report = SABReport(
         lastName: _lastNameController.text.trim(),
         firstName: _firstNameController.text.trim(),
         middleInitial: _middleInitialController.text.trim(),
         suffix: _suffixController.text.trim(),
-        age: _ageController.text.trim(),
-        gender: _gender ?? '',
         contactNumber: _contactNumberController.text.trim(),
         address: _addressController.text.trim(),
-        dateOfIncident: _dateOfIncident != null
-            ? '${_dateOfIncident!.year}-${_dateOfIncident!.month.toString().padLeft(2, '0')}-${_dateOfIncident!.day.toString().padLeft(2, '0')}'
-            : DateTime.now().toIso8601String().split('T').first,
-        timeOfIncident:
-            _timeOfIncident?.format(context) ?? TimeOfDay.now().format(context),
-        locationOfIncident: _locationController.text.trim(),
-        exposureType: _exposureType ?? '',
-        animalSpecies: _animalSpeciesController.text.trim(),
-        animalOwnership: _animalOwnership,
-        animalVaccinationStatus: _animalVaccinationStatus,
-        incidentDescription: _descriptionController.text.trim(),
-        firstAidGiven: _firstAidGiven,
-        patientVaccinationStatus: _patientVaccinationStatus,
-        reportedAt: DateTime.now(),
+        dateOfObservation: _dateOfObservation != null
+            ? '${_dateOfObservation!.year}-${_dateOfObservation!.month.toString().padLeft(2, '0')}-${_dateOfObservation!.day.toString().padLeft(2, '0')}'
+            : now.toIso8601String().split('T').first,
+        timeOfObservation:
+            _timeOfObservation?.format(context) ??
+            TimeOfDay.now().format(context),
+        location: _locationController.text.trim(),
+        behaviorObserved: _behaviorObserved ?? '',
+        description: _descriptionController.text.trim(),
+        photoPath: '',
+        reportedAt: now,
       );
 
-      await Hive.box<Report>('reports').add(report);
+      await Hive.box<SABReport>('sab_reports').add(report);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -132,7 +118,6 @@ class _ReportingPageState extends State<ReportingPage> {
     }
   }
 
-  // Shared input decoration matching the screenshot style
   InputDecoration _dec(String label, {Widget? suffix}) => InputDecoration(
     labelText: label,
     suffixIcon: suffix,
@@ -175,10 +160,10 @@ class _ReportingPageState extends State<ReportingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final dateLabel = _dateOfIncident != null
-        ? '${_dateOfIncident!.year}-${_dateOfIncident!.month.toString().padLeft(2, '0')}-${_dateOfIncident!.day.toString().padLeft(2, '0')}'
+    final dateLabel = _dateOfObservation != null
+        ? '${_dateOfObservation!.year}-${_dateOfObservation!.month.toString().padLeft(2, '0')}-${_dateOfObservation!.day.toString().padLeft(2, '0')}'
         : null;
-    final timeLabel = _timeOfIncident?.format(context);
+    final timeLabel = _timeOfObservation?.format(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -189,11 +174,11 @@ class _ReportingPageState extends State<ReportingPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Report Bite Incident',
+          'Report Suspicious Animal Behavior',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
-            fontSize: 17,
+            fontSize: 16,
           ),
         ),
       ),
@@ -204,8 +189,8 @@ class _ReportingPageState extends State<ReportingPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Patient Information ───────────────────────────────
-              _sectionHeader('Patient Information'),
+              // ── Reporter Information ──────────────────────────────
+              _sectionHeader('Reporter Information'),
               _card([
                 Row(
                   children: [
@@ -258,24 +243,6 @@ class _ReportingPageState extends State<ReportingPage> {
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
-                  controller: _ageController,
-                  decoration: _dec('Age'),
-                  keyboardType: TextInputType.number,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _gender,
-                  decoration: _dec('Gender'),
-                  items: ['Male', 'Female', 'Other']
-                      .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _gender = v),
-                  validator: (v) => v == null ? 'Required' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
                   controller: _contactNumberController,
                   decoration: _dec('Contact Number'),
                   keyboardType: TextInputType.phone,
@@ -296,38 +263,38 @@ class _ReportingPageState extends State<ReportingPage> {
               // ── Incident Details ──────────────────────────────────
               _sectionHeader('Incident Details'),
               _card([
-                // Date of Incident
+                // Date of Observation
                 GestureDetector(
                   onTap: _pickDate,
                   child: AbsorbPointer(
                     child: TextFormField(
                       decoration: _dec(
-                        dateLabel ?? 'Date of Incident',
+                        dateLabel ?? 'Date of Observation',
                         suffix: const Icon(
                           Icons.calendar_today_outlined,
                           color: Colors.grey,
                         ),
                       ),
-                      validator: (_) => _dateOfIncident == null
+                      validator: (_) => _dateOfObservation == null
                           ? 'Please select a date'
                           : null,
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Time of Incident
+                // Time of Observation
                 GestureDetector(
                   onTap: _pickTime,
                   child: AbsorbPointer(
                     child: TextFormField(
                       decoration: _dec(
-                        timeLabel ?? 'Time of Incident',
+                        timeLabel ?? 'Time of Observation',
                         suffix: const Icon(
                           Icons.access_time_outlined,
                           color: Colors.grey,
                         ),
                       ),
-                      validator: (_) => _timeOfIncident == null
+                      validator: (_) => _timeOfObservation == null
                           ? 'Please select a time'
                           : null,
                     ),
@@ -336,46 +303,30 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _locationController,
-                  decoration: _dec('Location of Incident'),
+                  decoration: _dec('Location'),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Please enter a location'
                       : null,
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _exposureType,
-                  decoration: _dec('Type of Exposure'),
-                  items: ['Bite', 'Scratch', 'Lick on wound', 'Other']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _exposureType = v),
+                  value: _behaviorObserved,
+                  decoration: _dec('Behavior Observed'),
+                  items:
+                      [
+                            'Aggression',
+                            'Excessive drooling',
+                            'Staggering / Disoriented',
+                            'Unprovoked biting',
+                            'Hiding / Fearfulness',
+                            'Other',
+                          ]
+                          .map(
+                            (b) => DropdownMenuItem(value: b, child: Text(b)),
+                          )
+                          .toList(),
+                  onChanged: (v) => setState(() => _behaviorObserved = v),
                   validator: (v) => v == null ? 'Required' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _animalSpeciesController,
-                  decoration: _dec('Animal Species (e.g. Dog, Cat)'),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _animalOwnership,
-                  decoration: _dec('Animal Ownership'),
-                  items: ['Stray', 'Owned', 'Unknown']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _animalOwnership = v!),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _animalVaccinationStatus,
-                  decoration: _dec('Animal Vaccination Status'),
-                  items: ['Vaccinated', 'Not vaccinated', 'Unknown']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _animalVaccinationStatus = v!),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -385,36 +336,6 @@ class _ReportingPageState extends State<ReportingPage> {
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Please enter a description'
                       : null,
-                ),
-              ]),
-
-              // ── Medical Information ───────────────────────────────
-              _sectionHeader('Medical Information'),
-              _card([
-                DropdownButtonFormField<String>(
-                  value: _firstAidGiven,
-                  decoration: _dec('First Aid Given'),
-                  items: ['None', 'Wound washed', 'Antiseptic applied', 'Other']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _firstAidGiven = v!),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _patientVaccinationStatus,
-                  decoration: _dec('Patient Vaccination Status'),
-                  items:
-                      [
-                            'Not vaccinated',
-                            'Partially vaccinated',
-                            'Fully vaccinated',
-                          ]
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
-                  onChanged: (v) =>
-                      setState(() => _patientVaccinationStatus = v!),
                 ),
               ]),
 

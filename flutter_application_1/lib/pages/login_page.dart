@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../theme.dart';
 import 'dashboard_page.dart';
 
-/// Login page with camera capture functionality
+/// Login page
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -15,74 +13,13 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
   bool _obscure = true;
-  String? _capturedImagePath;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _openCamera() async {
-    final status = await Permission.camera.request();
-    if (!mounted) return;
-
-    if (!status.isGranted) {
-      if (status.isPermanentlyDenied) {
-        await showDialog<void>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Camera permission required'),
-            content: const Text(
-              'Camera permission is required to capture an image. Please enable it in app settings.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  openAppSettings();
-                },
-                child: const Text('Open Settings'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Camera permission denied. Unable to open camera.'),
-          ),
-        );
-      }
-      return;
-    }
-
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-      if (image == null) {
-        return;
-      }
-      setState(() {
-        _capturedImagePath = image.path;
-      });
-      debugPrint('Captured image path: ${image.path}');
-    } catch (e) {
-      debugPrint('Camera capture failed: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to capture image. Please try again.'),
-          ),
-        );
-      }
-    }
   }
 
   @override
@@ -309,36 +246,6 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 50,
-                          child: OutlinedButton.icon(
-                            onPressed: _openCamera,
-                            icon: const Icon(
-                              Icons.camera_alt,
-                              color: AppColors.primary,
-                            ),
-                            label: const Text('Capture photo'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                              side: const BorderSide(color: AppColors.primary),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (_capturedImagePath != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            'Photo path:\n$_capturedImagePath',
-                            style: const TextStyle(
-                              color: Color(0xFF475569),
-                              fontSize: 12,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
                       ],
                     ),
                   ),

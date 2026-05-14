@@ -98,3 +98,4 @@ flutter:
   assets:
     - assets/loginpage-bg.png
     - assets/images/
+    - assets/documents/

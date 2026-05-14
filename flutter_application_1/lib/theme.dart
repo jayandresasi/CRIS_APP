@@ -28,6 +28,9 @@ class AppTheme {
         surface: AppColors.surface,
         onPrimary: AppColors.onPrimary,
         onSecondary: AppColors.onSecondary,
+        // These two fix invisible text inside text fields
+        onSurface: Colors.black87,
+        onBackground: Colors.black87,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.accent,
@@ -44,16 +47,33 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
         ),
       ),
-      // Card theme intentionally omitted to avoid SDK type mismatch;
-      // individual cards in the app use AppColors.surface and consistent
-      // shapes via local decoration where needed.
+      // Global input field text styling — fixes invisible typed text everywhere
+      inputDecorationTheme: InputDecorationTheme(
+        labelStyle: const TextStyle(color: Colors.black54),
+        hintStyle: const TextStyle(color: Colors.black38),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFCDD5DF)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 16,
+        ),
+      ),
       textTheme: const TextTheme(
         titleLarge: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.2,
+          color: Colors.black87,
         ),
         bodyMedium: TextStyle(fontSize: 14, color: Colors.black87, height: 1.3),
+        bodySmall: TextStyle(fontSize: 12, color: Colors.black54),
       ),
     );
   }

@@ -131,8 +131,10 @@ class _LoginPageState extends State<LoginPage> {
                         TextField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
+                          style: const TextStyle(color: Colors.black87),
                           decoration: InputDecoration(
                             hintText: 'Email address',
+                            hintStyle: const TextStyle(color: Colors.black38),
                             prefixIcon: const Icon(
                               Icons.email_outlined,
                               color: AppColors.primary,
@@ -153,8 +155,10 @@ class _LoginPageState extends State<LoginPage> {
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscure,
+                          style: const TextStyle(color: Colors.black87),
                           decoration: InputDecoration(
                             hintText: 'Password',
+                            hintStyle: const TextStyle(color: Colors.black38),
                             prefixIcon: const Icon(
                               Icons.lock_outline,
                               color: AppColors.primary,

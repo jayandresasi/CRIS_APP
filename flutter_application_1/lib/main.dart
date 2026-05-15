@@ -30,9 +30,7 @@ void main() async {
 /// reopen it empty so the app can start cleanly.
 Future<void> _openBoxSafely<T>(String name) async {
   try {
-    final box = await Hive.openBox<T>(name);
-    // Force-read every record to surface any corruption before the UI starts
-    box.values.toList();
+    await Hive.openBox<T>(name);
   } catch (e) {
     debugPrint('[$name] Box corrupted or schema changed — clearing: $e');
     await Hive.deleteBoxFromDisk(name);

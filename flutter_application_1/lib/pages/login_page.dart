@@ -16,6 +16,18 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscure = true;
 
   @override
+  void initState() {
+    super.initState();
+    // Precache assets so they're decoded before the first paint,
+    // not during it — this is the main cause of skipped frames on login.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      precacheImage(const AssetImage('assets/loginpage-bg.png'), context);
+      precacheImage(const AssetImage('assets/images/CRIS icon.jpg'), context);
+    });
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();

@@ -10,6 +10,7 @@ class VaccineScheduleCard extends StatefulWidget {
 
 class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
   DateTime _selectedDate = DateTime.now();
+  bool _calendarReady = false;
 
   final List<Map<String, String>> _schedule = [
     {'day': 'Day 0', 'status': 'completed'},
@@ -18,6 +19,16 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
     {'day': 'Day 14', 'status': 'upcoming'},
     {'day': 'Day 28', 'status': 'missed'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // CalendarDatePicker is heavy — defer it until after the first frame
+    // is painted so it doesn't block the dashboard from appearing.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _calendarReady = true);
+    });
+  }
 
   Color statusColor(String status) {
     switch (status) {
@@ -63,12 +74,19 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
             const SizedBox(height: 12),
             SizedBox(
               height: 320,
-              child: CalendarDatePicker(
-                initialDate: _selectedDate,
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-                onDateChanged: (d) => setState(() => _selectedDate = d),
-              ),
+              child: _calendarReady
+                  ? CalendarDatePicker(
+                      initialDate: _selectedDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                      onDateChanged: (d) => setState(() => _selectedDate = d),
+                    )
+                  : const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                        strokeWidth: 2,
+                      ),
+                    ),
             ),
             const SizedBox(height: 8),
             Text(

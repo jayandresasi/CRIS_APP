@@ -160,7 +160,7 @@ class DashboardPage extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.person_outline, color: Colors.white),
+                icon: const Icon(Icons.notifications_outlined, color: Colors.white),
                 onPressed: () {
                   showModalBottomSheet(
                     context: context,

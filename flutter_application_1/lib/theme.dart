@@ -28,13 +28,11 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
-        background: AppColors.background,
         surface: AppColors.surface,
         onPrimary: AppColors.onPrimary,
         onSecondary: AppColors.onSecondary,
         // These two fix invisible text inside text fields
         onSurface: Colors.black87,
-        onBackground: Colors.black87,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.primary,

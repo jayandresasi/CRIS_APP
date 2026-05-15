@@ -7,10 +7,10 @@ class SocialCircle extends StatelessWidget {
   final Color color;
 
   const SocialCircle({
-    Key? key,
+    super.key,
     required this.icon,
     required this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -3,7 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../theme.dart';
 
 class VaccineScheduleCard extends StatefulWidget {
-  const VaccineScheduleCard({Key? key}) : super(key: key);
+  const VaccineScheduleCard({super.key});
 
   @override
   State<VaccineScheduleCard> createState() => _VaccineScheduleCardState();

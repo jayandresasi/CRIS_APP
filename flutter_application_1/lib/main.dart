@@ -22,6 +22,8 @@ void main() async {
   await _openBoxSafely<SABReport>('sab_reports');
   // General key-value box — used by ProfileNotifier for persistence
   await Hive.openBox('settings');
+  // Stores registered user accounts: key=email, value=Map{name, password}
+  await Hive.openBox('accounts');
 
   runApp(const MyApp());
 }

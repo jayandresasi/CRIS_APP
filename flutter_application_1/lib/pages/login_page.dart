@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import '../theme.dart';
 import '../providers/profile_notifier.dart';
 import 'dashboard_page.dart';
+import 'create_account_page.dart';
 
 /// Login page
 class LoginPage extends StatefulWidget {
@@ -50,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
-    final email = _emailController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
@@ -61,22 +63,53 @@ class _LoginPageState extends State<LoginPage> {
       _showError('Please enter a valid email address.');
       return;
     }
-    if (email != _validEmail || password != _validPassword) {
+
+    setState(() => _isLoading = true);
+
+    // Check hardcoded admin credentials first
+    bool isValid = (email == _validEmail && password == _validPassword);
+
+    // Then check locally registered accounts
+    if (!isValid) {
+      final box = Hive.box('accounts');
+      if (box.containsKey(email)) {
+        final account = Map<String, dynamic>.from(box.get(email) as Map);
+        isValid = account['password'] == password;
+
+        // Pre-populate name into profile on first login for this account
+        if (isValid) {
+          final profileBox = Hive.box('settings');
+          if ((profileBox.get('name', defaultValue: '') as String).isEmpty) {
+            await profileBox.put('name', account['name'] ?? '');
+          }
+        }
+      }
+    }
+
+    if (!isValid) {
+      setState(() => _isLoading = false);
       _showError('Incorrect email or password. Please try again.');
       return;
     }
 
-    setState(() => _isLoading = true);
-
-    // Persist the logged-in email into the profile
     await context.read<ProfileNotifier>().setEmail(email);
+    context.read<ProfileNotifier>().load();
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const DashboardPage()));
+    Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const DashboardPage()));
+  }
+
+  void _goToCreateAccount() async {
+    final newEmail = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const CreateAccountPage()),
+    );
+    // Pre-fill email if the user just registered
+    if (newEmail != null && mounted) {
+      _emailController.text = newEmail;
+    }
   }
 
   void _showForgotPassword() {
@@ -152,15 +185,15 @@ class _LoginPageState extends State<LoginPage> {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) =>
                             const Center(
-                              child: Text(
-                                'CRIS',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
+                          child: Text(
+                            'CRIS',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
                             ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -312,6 +345,34 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
                                   ),
                           ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              "Don't have an account?",
+                              style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 14,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _goToCreateAccount,
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 6),
+                              ),
+                              child: const Text(
+                                'Create one',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/notification.dart';
+import '../theme.dart';
 
 /// State management for application notifications
 class NotificationsNotifier extends ChangeNotifier {
@@ -8,14 +9,14 @@ class NotificationsNotifier extends ChangeNotifier {
       id: '1',
       message: '⚠️ Confirmed rabies case detected 4 km from your address.',
       emoji: '⚠️',
-      color: const Color(0xFFFF4C4C),
+      color: AppColors.primary,
       isRead: false,
     ),
     AppNotification(
       id: '2',
       message: '💉 Your 3rd vaccine dose is due tomorrow.',
       emoji: '💉',
-      color: const Color(0xFF5BC0EB),
+      color: AppColors.secondary,
       isRead: false,
     ),
   ];

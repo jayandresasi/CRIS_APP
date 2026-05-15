@@ -20,6 +20,8 @@ void main() async {
 
   await _openBoxSafely<Report>('reports');
   await _openBoxSafely<SABReport>('sab_reports');
+  // General key-value box — used by ProfileNotifier for persistence
+  await Hive.openBox('settings');
 
   runApp(const MyApp());
 }
@@ -45,7 +47,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ProfileNotifier()),
+        ChangeNotifierProvider(create: (_) => ProfileNotifier()..load()),
         ChangeNotifierProvider(create: (_) => NotificationsNotifier()),
       ],
       child: MaterialApp(

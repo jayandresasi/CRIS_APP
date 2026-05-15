@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme.dart';
+import '../providers/profile_notifier.dart';
 import 'dashboard_page.dart';
 
 /// Login page
@@ -14,12 +16,15 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscure = true;
+  bool _isLoading = false;
+
+  // Hardcoded credentials — replace with a real backend call when ready.
+  static const _validEmail = 'admin@cris.ph';
+  static const _validPassword = 'cris2024';
 
   @override
   void initState() {
     super.initState();
-    // Precache assets so they're decoded before the first paint,
-    // not during it — this is the main cause of skipped frames on login.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       precacheImage(const AssetImage('assets/loginpage-bg.png'), context);
@@ -32,6 +37,74 @@ class _LoginPageState extends State<LoginPage> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Please enter your email and password.');
+      return;
+    }
+    if (!email.contains('@')) {
+      _showError('Please enter a valid email address.');
+      return;
+    }
+    if (email != _validEmail || password != _validPassword) {
+      _showError('Incorrect email or password. Please try again.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    // Persist the logged-in email into the profile
+    await context.read<ProfileNotifier>().setEmail(email);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const DashboardPage()));
+  }
+
+  void _showForgotPassword() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Forgot Password',
+          style: TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Please contact your CRIS system administrator to reset your password.\n\n'
+          '📧  admin@cris.ph\n'
+          '📞  033-333-1111',
+          style: TextStyle(height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -201,7 +274,7 @@ class _LoginPageState extends State<LoginPage> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {},
+                            onPressed: _showForgotPassword,
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.primary,
                               padding: EdgeInsets.zero,
@@ -213,38 +286,7 @@ class _LoginPageState extends State<LoginPage> {
                         SizedBox(
                           height: 54,
                           child: ElevatedButton(
-                            onPressed: () {
-                              final email = _emailController.text.trim();
-                              final password = _passwordController.text;
-
-                              if (email.isEmpty || password.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Please enter your email and password.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              if (!email.contains('@')) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Please enter a valid email address.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const DashboardPage(),
-                                ),
-                              );
-                            },
+                            onPressed: _isLoading ? null : _login,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               shape: RoundedRectangleBorder(
@@ -252,14 +294,23 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               elevation: 4,
                             ),
-                            child: const Text(
-                              'Login',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Login',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],

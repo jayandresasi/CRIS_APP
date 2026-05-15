@@ -12,15 +12,32 @@ import 'theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Hive for local data persistence
   await Hive.initFlutter();
   Hive.registerAdapter(ReportAdapter());
   Hive.registerAdapter(SABReportAdapter());
-  await Hive.openBox<Report>('reports');
-  await Hive.openBox<SABReport>('sab_reports');
+
+  await _openBoxSafely<Report>('reports');
+  await _openBoxSafely<SABReport>('sab_reports');
 
   runApp(const MyApp());
+}
+
+/// Opens a Hive box safely. If existing records were written with an older
+/// adapter format (e.g. after a schema change), reading them throws a
+/// "not enough bytes" error. In that case we delete the corrupted box and
+/// reopen it empty so the app can start cleanly.
+Future<void> _openBoxSafely<T>(String name) async {
+  try {
+    final box = await Hive.openBox<T>(name);
+    // Force-read every record to surface any corruption before the UI starts
+    box.values.toList();
+  } catch (e) {
+    debugPrint('[$name] Box corrupted or schema changed — clearing: $e');
+    await Hive.deleteBoxFromDisk(name);
+    await Hive.openBox<T>(name);
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -38,9 +55,7 @@ class MyApp extends StatelessWidget {
         title: 'CRIS App',
         theme: AppTheme.lightTheme(),
         home: const LoginPage(),
-        routes: {
-          '/dashboard': (context) => const DashboardPage(),
-        },
+        routes: {'/dashboard': (context) => const DashboardPage()},
       ),
     );
   }

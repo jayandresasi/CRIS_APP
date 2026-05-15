@@ -58,7 +58,7 @@ class _ReportingPageState extends State<ReportingPage> {
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.accent),
+          colorScheme: const ColorScheme.light(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -72,7 +72,7 @@ class _ReportingPageState extends State<ReportingPage> {
       initialTime: _timeOfIncident ?? TimeOfDay.now(),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.accent),
+          colorScheme: const ColorScheme.light(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -147,7 +147,7 @@ class _ReportingPageState extends State<ReportingPage> {
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
     ),
     contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
   );
@@ -187,7 +187,7 @@ class _ReportingPageState extends State<ReportingPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.accent,
+        backgroundColor: AppColors.primary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -216,6 +216,7 @@ class _ReportingPageState extends State<ReportingPage> {
                     Expanded(
                       child: TextFormField(
                         controller: _lastNameController,
+                        style: _fieldStyle,
                         decoration: _dec('Last Name'),
                         validator: (v) => (v == null || v.trim().isEmpty)
                             ? 'Please enter contact person'
@@ -226,6 +227,7 @@ class _ReportingPageState extends State<ReportingPage> {
                     Expanded(
                       child: TextFormField(
                         controller: _firstNameController,
+                        style: _fieldStyle,
                         decoration: _dec('First Name'),
                         validator: (v) => (v == null || v.trim().isEmpty)
                             ? 'Please enter contact person'
@@ -240,6 +242,7 @@ class _ReportingPageState extends State<ReportingPage> {
                     Expanded(
                       child: TextFormField(
                         controller: _middleInitialController,
+                        style: _fieldStyle,
                         decoration: _dec('Middle Initial'),
                         maxLength: 3,
                         buildCounter:
@@ -255,6 +258,7 @@ class _ReportingPageState extends State<ReportingPage> {
                     Expanded(
                       child: TextFormField(
                         controller: _suffixController,
+                        style: _fieldStyle,
                         decoration: _dec('Suffix'),
                       ),
                     ),
@@ -263,6 +267,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _ageController,
+                  style: _fieldStyle,
                   decoration: _dec('Age'),
                   keyboardType: TextInputType.number,
                   validator: (v) =>
@@ -271,6 +276,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _gender,
+                  style: _fieldStyle,
                   decoration: _dec('Gender'),
                   items: ['Male', 'Female', 'Other']
                       .map((g) => DropdownMenuItem(value: g, child: Text(g)))
@@ -281,6 +287,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _contactNumberController,
+                  style: _fieldStyle,
                   decoration: _dec('Contact Number'),
                   keyboardType: TextInputType.phone,
                   validator: (v) => (v == null || v.trim().isEmpty)
@@ -290,6 +297,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _addressController,
+                  style: _fieldStyle,
                   decoration: _dec('Address'),
                   maxLines: 2,
                   validator: (v) =>
@@ -305,6 +313,7 @@ class _ReportingPageState extends State<ReportingPage> {
                   onTap: _pickDate,
                   child: AbsorbPointer(
                     child: TextFormField(
+                      style: _fieldStyle,
                       decoration: _dec(
                         dateLabel ?? 'Date of Incident',
                         suffix: const Icon(
@@ -324,6 +333,7 @@ class _ReportingPageState extends State<ReportingPage> {
                   onTap: _pickTime,
                   child: AbsorbPointer(
                     child: TextFormField(
+                      style: _fieldStyle,
                       decoration: _dec(
                         timeLabel ?? 'Time of Incident',
                         suffix: const Icon(
@@ -340,6 +350,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _locationController,
+                  style: _fieldStyle,
                   decoration: _dec('Location of Incident'),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Please enter a location'
@@ -348,6 +359,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _exposureType,
+                  style: _fieldStyle,
                   decoration: _dec('Type of Exposure'),
                   items: ['Bite', 'Scratch', 'Lick on wound', 'Other']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
@@ -358,6 +370,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _animalSpeciesController,
+                  style: _fieldStyle,
                   decoration: _dec('Animal Species (e.g. Dog, Cat)'),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -365,6 +378,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _animalOwnership,
+                  style: _fieldStyle,
                   decoration: _dec('Animal Ownership'),
                   items: ['Stray', 'Owned', 'Unknown']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
@@ -374,6 +388,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _animalVaccinationStatus,
+                  style: _fieldStyle,
                   decoration: _dec('Animal Vaccination Status'),
                   items: ['Vaccinated', 'Not vaccinated', 'Unknown']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
@@ -384,6 +399,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _descriptionController,
+                  style: _fieldStyle,
                   decoration: _dec('Description of Incident'),
                   maxLines: 4,
                   validator: (v) => (v == null || v.trim().isEmpty)
@@ -397,6 +413,7 @@ class _ReportingPageState extends State<ReportingPage> {
               _card([
                 DropdownButtonFormField<String>(
                   value: _firstAidGiven,
+                  style: _fieldStyle,
                   decoration: _dec('First Aid Given'),
                   items: ['None', 'Wound washed', 'Antiseptic applied', 'Other']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
@@ -406,6 +423,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _patientVaccinationStatus,
+                  style: _fieldStyle,
                   decoration: _dec('Patient Vaccination Status'),
                   items:
                       [
@@ -427,7 +445,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
+                    backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),

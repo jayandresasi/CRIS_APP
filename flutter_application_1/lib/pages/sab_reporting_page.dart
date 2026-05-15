@@ -48,7 +48,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.accent),
+          colorScheme: const ColorScheme.light(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -62,7 +62,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
       initialTime: _timeOfObservation ?? TimeOfDay.now(),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.accent),
+          colorScheme: const ColorScheme.light(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -118,8 +118,12 @@ class _SABReportingPageState extends State<SABReportingPage> {
     }
   }
 
+  static const _fieldStyle = TextStyle(color: Colors.black87, fontSize: 14);
+
   InputDecoration _dec(String label, {Widget? suffix}) => InputDecoration(
     labelText: label,
+    labelStyle: const TextStyle(color: Colors.black54),
+    hintStyle: const TextStyle(color: Colors.black38),
     suffixIcon: suffix,
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
     enabledBorder: OutlineInputBorder(
@@ -128,7 +132,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
     ),
     contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
   );
@@ -168,7 +172,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.accent,
+        backgroundColor: AppColors.primary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -197,6 +201,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                     Expanded(
                       child: TextFormField(
                         controller: _lastNameController,
+                        style: _fieldStyle,
                         decoration: _dec('Last Name'),
                         validator: (v) => (v == null || v.trim().isEmpty)
                             ? 'Please enter contact person'
@@ -207,6 +212,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                     Expanded(
                       child: TextFormField(
                         controller: _firstNameController,
+                        style: _fieldStyle,
                         decoration: _dec('First Name'),
                         validator: (v) => (v == null || v.trim().isEmpty)
                             ? 'Please enter contact person'
@@ -221,6 +227,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                     Expanded(
                       child: TextFormField(
                         controller: _middleInitialController,
+                        style: _fieldStyle,
                         decoration: _dec('Middle Initial'),
                         maxLength: 3,
                         buildCounter:
@@ -236,6 +243,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                     Expanded(
                       child: TextFormField(
                         controller: _suffixController,
+                        style: _fieldStyle,
                         decoration: _dec('Suffix'),
                       ),
                     ),
@@ -244,6 +252,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _contactNumberController,
+                  style: _fieldStyle,
                   decoration: _dec('Contact Number'),
                   keyboardType: TextInputType.phone,
                   validator: (v) => (v == null || v.trim().isEmpty)
@@ -253,6 +262,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _addressController,
+                  style: _fieldStyle,
                   decoration: _dec('Address'),
                   maxLines: 2,
                   validator: (v) =>
@@ -268,6 +278,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                   onTap: _pickDate,
                   child: AbsorbPointer(
                     child: TextFormField(
+                      style: _fieldStyle,
                       decoration: _dec(
                         dateLabel ?? 'Date of Observation',
                         suffix: const Icon(
@@ -287,6 +298,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                   onTap: _pickTime,
                   child: AbsorbPointer(
                     child: TextFormField(
+                      style: _fieldStyle,
                       decoration: _dec(
                         timeLabel ?? 'Time of Observation',
                         suffix: const Icon(
@@ -303,6 +315,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _locationController,
+                  style: _fieldStyle,
                   decoration: _dec('Location'),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Please enter a location'
@@ -311,6 +324,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _behaviorObserved,
+                  style: _fieldStyle,
                   decoration: _dec('Behavior Observed'),
                   items:
                       [
@@ -331,6 +345,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _descriptionController,
+                  style: _fieldStyle,
                   decoration: _dec('Description of Incident'),
                   maxLines: 4,
                   validator: (v) => (v == null || v.trim().isEmpty)
@@ -344,7 +359,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
+                    backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),

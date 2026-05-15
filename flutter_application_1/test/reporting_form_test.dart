@@ -9,7 +9,7 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: ReportingPage()));
 
       // Ensure page loaded
-      expect(find.text('Report Incident'), findsOneWidget);
+      expect(find.text('Report Bite Incident'), findsOneWidget);
 
       // Tap submit without filling required fields
       await tester.tap(find.text('Submit Report'));

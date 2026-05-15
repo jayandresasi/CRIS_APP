@@ -55,6 +55,8 @@ class SABReportAdapter extends TypeAdapter<SABReport> {
 
   @override
   SABReport read(BinaryReader reader) {
+    // Read a flag byte: 1 = GPS present, 0 = null
+    final hasGps = reader.readByte() == 1;
     return SABReport(
       lastName: reader.readString(),
       firstName: reader.readString(),
@@ -68,14 +70,17 @@ class SABReportAdapter extends TypeAdapter<SABReport> {
       behaviorObserved: reader.readString(),
       description: reader.readString(),
       photoPath: reader.readString(),
-      longitude: reader.readDouble(),
-      latitude: reader.readDouble(),
+      longitude: hasGps ? reader.readDouble() : null,
+      latitude: hasGps ? reader.readDouble() : null,
       reportedAt: DateTime.fromMillisecondsSinceEpoch(reader.readInt()),
     );
   }
 
   @override
   void write(BinaryWriter writer, SABReport obj) {
+    final hasGps = obj.longitude != null && obj.latitude != null;
+    // Write flag byte first so reader knows whether to expect GPS doubles
+    writer.writeByte(hasGps ? 1 : 0);
     writer.writeString(obj.lastName);
     writer.writeString(obj.firstName);
     writer.writeString(obj.middleInitial);
@@ -88,8 +93,10 @@ class SABReportAdapter extends TypeAdapter<SABReport> {
     writer.writeString(obj.behaviorObserved);
     writer.writeString(obj.description);
     writer.writeString(obj.photoPath);
-    writer.writeDouble(obj.longitude ?? 0.0);
-    writer.writeDouble(obj.latitude ?? 0.0);
+    if (hasGps) {
+      writer.writeDouble(obj.longitude!);
+      writer.writeDouble(obj.latitude!);
+    }
     writer.writeInt(obj.reportedAt.millisecondsSinceEpoch);
   }
 }

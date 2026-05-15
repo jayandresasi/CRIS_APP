@@ -132,9 +132,13 @@ class _ReportingPageState extends State<ReportingPage> {
     }
   }
 
-  // Shared input decoration matching the screenshot style
+  // Explicit text style applied to every field so typed text is always visible
+  static const _fieldStyle = TextStyle(color: Colors.black87, fontSize: 14);
+
   InputDecoration _dec(String label, {Widget? suffix}) => InputDecoration(
     labelText: label,
+    labelStyle: const TextStyle(color: Colors.black54),
+    hintStyle: const TextStyle(color: Colors.black38),
     suffixIcon: suffix,
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
     enabledBorder: OutlineInputBorder(

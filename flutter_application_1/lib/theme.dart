@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFF008080);
-  static const Color primaryVariant = Color(0xFF006969);
-  static const Color secondary = Color(0xFF5BC0EB);
-  static const Color accent = Color(0xFF00A3D9);
-  static const Color success = Color(0xFF00E68A);
-  static const Color danger = Color(0xFFFF4D4F);
-  static const Color warning = Color(0xFFFF9800);
-  static const Color background = Color(0xFFF7F9FA);
+  // Sunset Palette
+  static const Color primary = Color(0xFFEA6113); // deep orange-red
+  static const Color primaryVariant = Color(0xFFC85010); // darker orange
+  static const Color secondary = Color(0xFFF88F22); // orange
+  static const Color accent = Color(0xFFFBB931); // golden yellow
+  static const Color cream = Color(0xFFFFE3B3); // lightest cream
+
+  // Semantic
+  static const Color success = Color(0xFF00C48C);
+  static const Color danger = Color(0xFFEA6113);
+  static const Color warning = Color(0xFFF88F22);
+  static const Color background = Color(0xFFFFF8F0); // warm cream background
   static const Color surface = Color(0xFFFFFFFF);
   static const Color onPrimary = Colors.white;
   static const Color onSecondary = Colors.black87;
@@ -33,7 +37,7 @@ class AppTheme {
         onBackground: Colors.black87,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.accent,
+        backgroundColor: AppColors.primary,
         foregroundColor: AppColors.onPrimary,
         elevation: 1,
       ),
@@ -58,7 +62,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(
           vertical: 16,

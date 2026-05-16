@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "627885439681",
+    "firebase_url": "https://cris-database-da989-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "cris-database-da989",
+    "storage_bucket": "cris-database-da989.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:627885439681:android:05759fba51074480913240",
+        "android_client_info": {
+          "package_name": "com.example.cris_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpsbDo_tiB9rTeuturAeUzIGJ5x2Mdtas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

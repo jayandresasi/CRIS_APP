@@ -366,7 +366,7 @@ class _AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final profile = context.read<ProfileNotifier>();
+    final profile = context.watch<ProfileNotifier>();
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,

@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/report.dart';
 import '../models/sab_report.dart';
 import '../theme.dart';
+import 'report_detail_page.dart';
 
 class HistoryPage extends StatelessWidget {
   const HistoryPage({super.key});
@@ -38,6 +39,58 @@ class HistoryPage extends StatelessWidget {
   }
 }
 
+// ── Shared delete confirmation ────────────────────────────────────────────────
+Future<bool> _confirmDelete(BuildContext context, String name) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Delete Report'),
+          content:
+              Text('Remove the report for "$name"? This cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+}
+
+// ── Shared swipe background ───────────────────────────────────────────────────
+Widget _deleteBackground() => Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: 20),
+      decoration: BoxDecoration(
+        color: AppColors.danger,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.delete_outline, color: Colors.white, size: 26),
+          SizedBox(height: 4),
+          Text(
+            'Delete',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+
+// ── Bite Reports ──────────────────────────────────────────────────────────────
 class _BiteReportsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -47,44 +100,66 @@ class _BiteReportsList extends StatelessWidget {
         if (box.isEmpty) {
           return const _EmptyState(message: 'No bite reports submitted yet.');
         }
-        final reports = box.values.toList().reversed.toList();
+        final keys = box.keys.toList().reversed.toList();
+        final reports = keys.map((k) => box.get(k)!).toList();
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: reports.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (_, i) {
             final r = reports[i];
-            return Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFFFFEBEB),
-                  child: Icon(
-                    Icons.warning_amber_rounded,
-                    color: Color(0xFFEF5350),
+            final key = keys[i];
+            return Dismissible(
+              key: ValueKey(key),
+              direction: DismissDirection.endToStart,
+              confirmDismiss: (_) => _confirmDelete(context, r.fullName),
+              onDismissed: (_) => box.delete(key),
+              background: _deleteBackground(),
+              child: Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BiteReportDetailPage(report: r),
+                    ),
+                  ),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFFFEBEB),
+                      child: Icon(
+                        Icons.warning_amber_rounded,
+                        color: Color(0xFFEF5350),
+                      ),
+                    ),
+                    title: Text(
+                      r.fullName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${r.exposureType} — ${r.animalSpecies}'),
+                        Text(
+                          r.locationOfIncident,
+                          style:
+                              const TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                        Text(
+                          r.dateOfIncident,
+                          style:
+                              const TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    trailing:
+                        const Icon(Icons.chevron_right, color: Colors.grey),
+                    isThreeLine: true,
                   ),
                 ),
-                title: Text(
-                  r.fullName,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${r.exposureType} — ${r.animalSpecies}'),
-                    Text(
-                      r.locationOfIncident,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                    Text(
-                      r.dateOfIncident,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-                isThreeLine: true,
               ),
             );
           },
@@ -94,6 +169,7 @@ class _BiteReportsList extends StatelessWidget {
   }
 }
 
+// ── SAB Reports ───────────────────────────────────────────────────────────────
 class _SABReportsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -105,41 +181,64 @@ class _SABReportsList extends StatelessWidget {
             message: 'No suspicious animal behavior reports yet.',
           );
         }
-        final reports = box.values.toList().reversed.toList();
+        final keys = box.keys.toList().reversed.toList();
+        final reports = keys.map((k) => box.get(k)!).toList();
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: reports.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (_, i) {
             final r = reports[i];
-            return Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFFFFF3E0),
-                  child: Icon(Icons.shield_outlined, color: Color(0xFFFFA726)),
+            final key = keys[i];
+            return Dismissible(
+              key: ValueKey(key),
+              direction: DismissDirection.endToStart,
+              confirmDismiss: (_) => _confirmDelete(context, r.fullName),
+              onDismissed: (_) => box.delete(key),
+              background: _deleteBackground(),
+              child: Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                title: Text(
-                  r.fullName,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(r.behaviorObserved),
-                    Text(
-                      r.location,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SABReportDetailPage(report: r),
                     ),
-                    Text(
-                      r.dateOfObservation,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFFFF3E0),
+                      child:
+                          Icon(Icons.shield_outlined, color: Color(0xFFFFA726)),
                     ),
-                  ],
+                    title: Text(
+                      r.fullName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(r.behaviorObserved),
+                        Text(
+                          r.location,
+                          style:
+                              const TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                        Text(
+                          r.dateOfObservation,
+                          style:
+                              const TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    trailing:
+                        const Icon(Icons.chevron_right, color: Colors.grey),
+                    isThreeLine: true,
+                  ),
                 ),
-                isThreeLine: true,
               ),
             );
           },
@@ -149,6 +248,7 @@ class _SABReportsList extends StatelessWidget {
   }
 }
 
+// ── Empty state ───────────────────────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
   final String message;
   const _EmptyState({required this.message});

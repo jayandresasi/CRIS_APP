@@ -136,46 +136,47 @@ class _ReportingPageState extends State<ReportingPage> {
   static const _fieldStyle = TextStyle(color: Colors.black87, fontSize: 14);
 
   InputDecoration _dec(String label, {Widget? suffix}) => InputDecoration(
-    labelText: label,
-    labelStyle: const TextStyle(color: Colors.black54),
-    hintStyle: const TextStyle(color: Colors.black38),
-    suffixIcon: suffix,
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFFCDD5DF)),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-    ),
-    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-  );
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.black54),
+        hintStyle: const TextStyle(color: Colors.black38),
+        suffixIcon: suffix,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFCDD5DF)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      );
 
   Widget _sectionHeader(String title) => Padding(
-    padding: const EdgeInsets.fromLTRB(0, 20, 0, 12),
-    child: Text(
-      title,
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-        color: AppColors.primary,
-      ),
-    ),
-  );
+        padding: const EdgeInsets.fromLTRB(0, 20, 0, 12),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primary,
+          ),
+        ),
+      );
 
   Widget _card(List<Widget> children) => Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFE8ECF0)),
-    ),
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: children,
-    ),
-  );
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE8ECF0)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -245,13 +246,13 @@ class _ReportingPageState extends State<ReportingPage> {
                         style: _fieldStyle,
                         decoration: _dec('Middle Initial'),
                         maxLength: 3,
-                        buildCounter:
-                            (
-                              _, {
-                              required currentLength,
-                              required isFocused,
-                              maxLength,
-                            }) => const SizedBox.shrink(),
+                        buildCounter: (
+                          _, {
+                          required currentLength,
+                          required isFocused,
+                          maxLength,
+                        }) =>
+                            const SizedBox.shrink(),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -270,8 +271,20 @@ class _ReportingPageState extends State<ReportingPage> {
                   style: _fieldStyle,
                   decoration: _dec('Age'),
                   keyboardType: TextInputType.number,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  maxLength: 3,
+                  buildCounter: (_,
+                          {required currentLength,
+                          required isFocused,
+                          maxLength}) =>
+                      const SizedBox.shrink(),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Age is required';
+                    final age = int.tryParse(v.trim());
+                    if (age == null) return 'Age must be a number';
+                    if (age < 1 || age > 120)
+                      return 'Age must be between 1 and 120';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -425,16 +438,15 @@ class _ReportingPageState extends State<ReportingPage> {
                   value: _patientVaccinationStatus,
                   style: _fieldStyle,
                   decoration: _dec('Patient Vaccination Status'),
-                  items:
-                      [
-                            'Not vaccinated',
-                            'Partially vaccinated',
-                            'Fully vaccinated',
-                          ]
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
+                  items: [
+                    'Not vaccinated',
+                    'Partially vaccinated',
+                    'Fully vaccinated',
+                  ]
+                      .map(
+                        (e) => DropdownMenuItem(value: e, child: Text(e)),
+                      )
+                      .toList(),
                   onChanged: (v) =>
                       setState(() => _patientVaccinationStatus = v!),
                 ),

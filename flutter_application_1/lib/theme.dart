@@ -10,7 +10,7 @@ class AppColors {
 
   // Semantic
   static const Color success = Color(0xFF00C48C);
-  static const Color danger = Color(0xFFEA6113);
+  static const Color danger = Color(0xFFE53935);
   static const Color warning = Color(0xFFF88F22);
   static const Color background = Color(0xFFFFF8F0); // warm cream background
   static const Color surface = Color(0xFFFFFFFF);

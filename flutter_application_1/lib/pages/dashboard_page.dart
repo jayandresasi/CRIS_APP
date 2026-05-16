@@ -160,7 +160,8 @@ class DashboardPage extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                icon: const Icon(Icons.notifications_outlined,
+                    color: Colors.white),
                 onPressed: () {
                   showModalBottomSheet(
                     context: context,
@@ -199,6 +200,7 @@ class DashboardPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _NavCard(
+              icon: Icons.location_on_outlined,
               label: 'Locate Animal Bite Centers',
               onTap: () => Navigator.push(
                 context,
@@ -207,6 +209,7 @@ class DashboardPage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _NavCard(
+              icon: Icons.health_and_safety_outlined,
               label: 'Bite Prevention & First Aid',
               onTap: () => Navigator.push(
                 context,
@@ -215,6 +218,7 @@ class DashboardPage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _NavCard(
+              icon: Icons.history_outlined,
               label: 'View History',
               onTap: () => Navigator.push(
                 context,
@@ -254,7 +258,9 @@ class DashboardPage extends StatelessWidget {
 class _NavCard extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
-  const _NavCard({required this.label, required this.onTap});
+  final IconData icon;
+  const _NavCard(
+      {required this.label, required this.onTap, required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -266,16 +272,31 @@ class _NavCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-          child: Center(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 22),
               ),
-            ),
+              const SizedBox(width: 14),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              const Spacer(),
+              const Icon(Icons.chevron_right,
+                  color: AppColors.primary, size: 20),
+            ],
           ),
         ),
       ),

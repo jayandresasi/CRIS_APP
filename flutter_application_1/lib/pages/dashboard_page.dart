@@ -335,7 +335,7 @@ class _NotificationsSheet extends StatelessWidget {
               final n = notifier.notifications[i];
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: n.color.withOpacity(0.15),
+                  backgroundColor: n.color.withValues(alpha: 0.15),
                   child: Text(n.emoji),
                 ),
                 title: Text(

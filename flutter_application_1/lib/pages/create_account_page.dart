@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme.dart';
 
-/// Create Account page — stores new user credentials locally via Hive.
+/// Create Account page — creates users in Firebase Authentication and stores a profile in Firestore.
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
 
@@ -69,20 +70,34 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
     setState(() => _isLoading = true);
 
-    final box = Hive.box('accounts');
-
-    // Check if email is already registered
-    if (box.containsKey(email)) {
+    try {
+      // Create user with Firebase Authentication
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final uid = cred.user!.uid;
+      // Save profile in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'name': name,
+        'email': email,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } on FirebaseAuthException catch (e) {
       setState(() => _isLoading = false);
-      _showError('An account with this email already exists.');
+      if (e.code == 'email-already-in-use') {
+        _showError('An account with this email already exists.');
+      } else if (e.code == 'weak-password') {
+        _showError('The password is too weak.');
+      } else {
+        _showError('Failed to create account: ${e.message}');
+      }
+      return;
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showError('Failed to create account: $e');
       return;
     }
-
-    // Save account
-    await box.put(email, {
-      'name': name,
-      'password': password,
-    });
 
     if (!mounted) return;
     setState(() => _isLoading = false);

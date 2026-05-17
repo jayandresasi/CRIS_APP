@@ -86,8 +86,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
         dateOfObservation: _dateOfObservation != null
             ? '${_dateOfObservation!.year}-${_dateOfObservation!.month.toString().padLeft(2, '0')}-${_dateOfObservation!.day.toString().padLeft(2, '0')}'
             : now.toIso8601String().split('T').first,
-        timeOfObservation:
-            _timeOfObservation?.format(context) ??
+        timeOfObservation: _timeOfObservation?.format(context) ??
             TimeOfDay.now().format(context),
         location: _locationController.text.trim(),
         behaviorObserved: _behaviorObserved ?? '',
@@ -121,46 +120,47 @@ class _SABReportingPageState extends State<SABReportingPage> {
   static const _fieldStyle = TextStyle(color: Colors.black87, fontSize: 14);
 
   InputDecoration _dec(String label, {Widget? suffix}) => InputDecoration(
-    labelText: label,
-    labelStyle: const TextStyle(color: Colors.black54),
-    hintStyle: const TextStyle(color: Colors.black38),
-    suffixIcon: suffix,
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFFCDD5DF)),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-    ),
-    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-  );
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.black54),
+        hintStyle: const TextStyle(color: Colors.black38),
+        suffixIcon: suffix,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFCDD5DF)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      );
 
   Widget _sectionHeader(String title) => Padding(
-    padding: const EdgeInsets.fromLTRB(0, 20, 0, 12),
-    child: Text(
-      title,
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-        color: AppColors.primary,
-      ),
-    ),
-  );
+        padding: const EdgeInsets.fromLTRB(0, 20, 0, 12),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primary,
+          ),
+        ),
+      );
 
   Widget _card(List<Widget> children) => Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFE8ECF0)),
-    ),
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: children,
-    ),
-  );
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE8ECF0)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -230,13 +230,13 @@ class _SABReportingPageState extends State<SABReportingPage> {
                         style: _fieldStyle,
                         decoration: _dec('Middle Initial'),
                         maxLength: 3,
-                        buildCounter:
-                            (
-                              _, {
-                              required currentLength,
-                              required isFocused,
-                              maxLength,
-                            }) => const SizedBox.shrink(),
+                        buildCounter: (
+                          _, {
+                          required currentLength,
+                          required isFocused,
+                          maxLength,
+                        }) =>
+                            const SizedBox.shrink(),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -323,22 +323,21 @@ class _SABReportingPageState extends State<SABReportingPage> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _behaviorObserved,
+                  initialValue: _behaviorObserved,
                   style: _fieldStyle,
                   decoration: _dec('Behavior Observed'),
-                  items:
-                      [
-                            'Aggression',
-                            'Excessive drooling',
-                            'Staggering / Disoriented',
-                            'Unprovoked biting',
-                            'Hiding / Fearfulness',
-                            'Other',
-                          ]
-                          .map(
-                            (b) => DropdownMenuItem(value: b, child: Text(b)),
-                          )
-                          .toList(),
+                  items: [
+                    'Aggression',
+                    'Excessive drooling',
+                    'Staggering / Disoriented',
+                    'Unprovoked biting',
+                    'Hiding / Fearfulness',
+                    'Other',
+                  ]
+                      .map(
+                        (b) => DropdownMenuItem(value: b, child: Text(b)),
+                      )
+                      .toList(),
                   onChanged: (v) => setState(() => _behaviorObserved = v),
                   validator: (v) => v == null ? 'Required' : null,
                 ),

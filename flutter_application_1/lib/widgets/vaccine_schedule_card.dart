@@ -154,9 +154,10 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.cream.withOpacity(0.5),
+                  color: AppColors.cream.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.accent.withOpacity(0.4)),
+                  border: Border.all(
+                      color: AppColors.accent.withValues(alpha: 0.4)),
                 ),
                 child: const Row(
                   children: [
@@ -206,9 +207,9 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
                         constraints: const BoxConstraints(minWidth: 88),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          color: _statusColor(status).withOpacity(0.1),
+                          color: _statusColor(status).withValues(alpha: 0.1),
                           border: Border.all(
-                            color: _statusColor(status).withOpacity(0.4),
+                            color: _statusColor(status).withValues(alpha: 0.4),
                           ),
                         ),
                         child: Column(

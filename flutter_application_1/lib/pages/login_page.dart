@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme.dart';
 import '../providers/profile_notifier.dart';
 import 'dashboard_page.dart';
@@ -66,24 +68,23 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
 
-    // Check hardcoded admin credentials first
-    bool isValid = (email == _validEmail && password == _validPassword);
+    bool isValid = false;
+    UserCredential? userCred;
 
-    // Then check locally registered accounts
+    // Try Firebase Authentication first
+    try {
+      userCred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      isValid = true;
+    } on FirebaseAuthException catch (_) {
+      isValid = false;
+    }
+
+    // Fallback to hardcoded admin if firebase failed
     if (!isValid) {
-      final box = Hive.box('accounts');
-      if (box.containsKey(email)) {
-        final account = Map<String, dynamic>.from(box.get(email) as Map);
-        isValid = account['password'] == password;
-
-        // Pre-populate name into profile on first login for this account
-        if (isValid) {
-          final profileBox = Hive.box('settings');
-          if ((profileBox.get('name', defaultValue: '') as String).isEmpty) {
-            await profileBox.put('name', account['name'] ?? '');
-          }
-        }
-      }
+      isValid = (email == _validEmail && password == _validPassword);
     }
 
     if (!isValid) {
@@ -92,8 +93,29 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    await context.read<ProfileNotifier>().setEmail(email);
-    context.read<ProfileNotifier>().load();
+    // If logged in via Firebase, pre-populate name from Firestore into settings
+    if (userCred != null) {
+      final uid = userCred.user!.uid;
+      try {
+        final doc =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        final name = (doc.exists && doc.data() != null)
+            ? (doc.data()!['name'] ?? '') as String
+            : '';
+        final profileBox = Hive.box('settings');
+        if ((profileBox.get('name', defaultValue: '') as String).isEmpty) {
+          await profileBox.put('name', name);
+        }
+      } catch (e) {
+        // ignore fetch errors; app can proceed
+      }
+    }
+
+    if (!mounted) return;
+    final profileNotifier = context.read<ProfileNotifier>();
+
+    await profileNotifier.setEmail(email);
+    profileNotifier.load();
 
     if (!mounted) return;
     setState(() => _isLoading = false);

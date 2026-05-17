@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'login_page.dart';
 import '../models/report.dart';
 import '../theme.dart';
 
@@ -81,7 +84,30 @@ class _ReportingPageState extends State<ReportingPage> {
   }
 
   Future<void> _submit() async {
+    // Require user to be signed in to submit
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in to submit a report.')),
+        );
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+      }
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
+    // Capture context-dependent values before any `await` to avoid
+    // using BuildContext across async gaps.
+    final dateStr = _dateOfIncident != null
+        ? '${_dateOfIncident!.year}-${_dateOfIncident!.month.toString().padLeft(2, '0')}-${_dateOfIncident!.day.toString().padLeft(2, '0')}'
+        : DateTime.now().toIso8601String().split('T').first;
+    final timeStr =
+        _timeOfIncident?.format(context) ?? TimeOfDay.now().format(context);
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -94,11 +120,8 @@ class _ReportingPageState extends State<ReportingPage> {
         gender: _gender ?? '',
         contactNumber: _contactNumberController.text.trim(),
         address: _addressController.text.trim(),
-        dateOfIncident: _dateOfIncident != null
-            ? '${_dateOfIncident!.year}-${_dateOfIncident!.month.toString().padLeft(2, '0')}-${_dateOfIncident!.day.toString().padLeft(2, '0')}'
-            : DateTime.now().toIso8601String().split('T').first,
-        timeOfIncident:
-            _timeOfIncident?.format(context) ?? TimeOfDay.now().format(context),
+        dateOfIncident: dateStr,
+        timeOfIncident: timeStr,
         locationOfIncident: _locationController.text.trim(),
         exposureType: _exposureType ?? '',
         animalSpecies: _animalSpeciesController.text.trim(),
@@ -111,6 +134,56 @@ class _ReportingPageState extends State<ReportingPage> {
       );
 
       await Hive.box<Report>('reports').add(report);
+
+      // Save to Firestore collection `bite_reports`
+      try {
+        final submittedBy = user.uid;
+        print('Firestore upload starting for user: $submittedBy');
+
+        int? ageInt;
+        try {
+          ageInt = int.tryParse(_ageController.text.trim());
+        } catch (_) {
+          ageInt = null;
+        }
+
+        final Map<String, dynamic> doc = {
+          'lastName': _lastNameController.text.trim(),
+          'firstName': _firstNameController.text.trim(),
+          'middleInitial': _middleInitialController.text.trim(),
+          'suffix': _suffixController.text.trim(),
+          'age': ageInt ?? _ageController.text.trim(),
+          'gender': _gender ?? '',
+          'contactNumber': _contactNumberController.text.trim(),
+          'address': _addressController.text.trim(),
+          'dateOfIncident': dateStr,
+          'timeOfIncident': timeStr,
+          'locationOfIncident': _locationController.text.trim(),
+          'typeOfExposure': _exposureType ?? '',
+          'animalSpecies': _animalSpeciesController.text.trim(),
+          'animalOwnership': _animalOwnership,
+          'animalVaccinationStatus': _animalVaccinationStatus,
+          'description': _descriptionController.text.trim(),
+          'firstAidGiven': _firstAidGiven,
+          'patientVaccinationStatus': _patientVaccinationStatus,
+          'submittedBy': submittedBy,
+          'status': 'pending',
+          'createdAt': FieldValue.serverTimestamp(),
+        };
+        print('Firestore document to add: $doc');
+        final ref = await FirebaseFirestore.instance
+            .collection('bite_reports')
+            .add(doc);
+        print('Firestore add success, doc id: ${ref.id}');
+      } catch (e, st) {
+        // Log Firestore failure but don't block the user from proceeding
+        print('Firestore upload error: $e\n$st');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Saved locally but failed to upload: $e')),
+          );
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -281,14 +354,15 @@ class _ReportingPageState extends State<ReportingPage> {
                     if (v == null || v.trim().isEmpty) return 'Age is required';
                     final age = int.tryParse(v.trim());
                     if (age == null) return 'Age must be a number';
-                    if (age < 1 || age > 120)
+                    if (age < 1 || age > 120) {
                       return 'Age must be between 1 and 120';
+                    }
                     return null;
                   },
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _gender,
+                  initialValue: _gender,
                   style: _fieldStyle,
                   decoration: _dec('Gender'),
                   items: ['Male', 'Female', 'Other']
@@ -371,7 +445,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _exposureType,
+                  initialValue: _exposureType,
                   style: _fieldStyle,
                   decoration: _dec('Type of Exposure'),
                   items: ['Bite', 'Scratch', 'Lick on wound', 'Other']
@@ -390,7 +464,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _animalOwnership,
+                  initialValue: _animalOwnership,
                   style: _fieldStyle,
                   decoration: _dec('Animal Ownership'),
                   items: ['Stray', 'Owned', 'Unknown']
@@ -400,7 +474,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _animalVaccinationStatus,
+                  initialValue: _animalVaccinationStatus,
                   style: _fieldStyle,
                   decoration: _dec('Animal Vaccination Status'),
                   items: ['Vaccinated', 'Not vaccinated', 'Unknown']
@@ -425,7 +499,7 @@ class _ReportingPageState extends State<ReportingPage> {
               _sectionHeader('Medical Information'),
               _card([
                 DropdownButtonFormField<String>(
-                  value: _firstAidGiven,
+                  initialValue: _firstAidGiven,
                   style: _fieldStyle,
                   decoration: _dec('First Aid Given'),
                   items: ['None', 'Wound washed', 'Antiseptic applied', 'Other']
@@ -435,7 +509,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _patientVaccinationStatus,
+                  initialValue: _patientVaccinationStatus,
                   style: _fieldStyle,
                   decoration: _dec('Patient Vaccination Status'),
                   items: [

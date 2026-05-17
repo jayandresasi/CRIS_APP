@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'models/report.dart';
 import 'models/sab_report.dart';
@@ -22,8 +24,24 @@ void main() async {
   await _openBoxSafely<SABReport>('sab_reports');
   // General key-value box — used by ProfileNotifier for persistence
   await Hive.openBox('settings');
-  // Stores registered user accounts: key=email, value=Map{name, password}
-  await Hive.openBox('accounts');
+
+  // Initialize Firebase for remote auth/storage.
+  // Web requires explicit FirebaseOptions, while native platforms use
+  // the Firebase config files already included in the project.
+  if (kIsWeb) {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: 'AIzaSyDpsbDo_tiB9rTeuturAeUzIGJ5x2Mdtas',
+        authDomain: 'cris-database-da989.firebaseapp.com',
+        projectId: 'cris-database-da989',
+        storageBucket: 'cris-database-da989.firebasestorage.app',
+        messagingSenderId: '627885439681',
+        appId: '1:627885439681:android:05759fba51074480913240',
+      ),
+    );
+  } else {
+    await Firebase.initializeApp();
+  }
 
   runApp(const MyApp());
 }

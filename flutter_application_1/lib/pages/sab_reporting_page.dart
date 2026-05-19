@@ -1,5 +1,11 @@
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:exif/exif.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/sab_report.dart';
 import '../theme.dart';
 
@@ -25,6 +31,11 @@ class _SABReportingPageState extends State<SABReportingPage> {
   String? _behaviorObserved;
   DateTime? _dateOfObservation;
   TimeOfDay? _timeOfObservation;
+  XFile? _photo;
+  double? _latitude;
+  double? _longitude;
+  String? _photoError;
+  bool _isProcessingPhoto = false;
   bool _isSubmitting = false;
 
   @override
@@ -71,6 +82,22 @@ class _SABReportingPageState extends State<SABReportingPage> {
   }
 
   Future<void> _submit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please sign in to submit a report.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (_photo == null) {
+      setState(() => _photoError = 'Please upload or take a photo.');
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
 
@@ -88,14 +115,49 @@ class _SABReportingPageState extends State<SABReportingPage> {
             : now.toIso8601String().split('T').first,
         timeOfObservation: _timeOfObservation?.format(context) ??
             TimeOfDay.now().format(context),
-        location: _locationController.text.trim(),
+        location: _locationController.text.trim().isNotEmpty
+            ? _locationController.text.trim()
+            : (_latitude != null && _longitude != null
+                ? '${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}'
+                : 'Unknown location'),
         behaviorObserved: _behaviorObserved ?? '',
         description: _descriptionController.text.trim(),
-        photoPath: '',
+        photoPath: _photo?.path ?? '',
+        latitude: _latitude,
+        longitude: _longitude,
         reportedAt: now,
       );
 
       await Hive.box<SABReport>('sab_reports').add(report);
+
+      try {
+        final doc = {
+          'lastName': _lastNameController.text.trim(),
+          'firstName': _firstNameController.text.trim(),
+          'middleInitial': _middleInitialController.text.trim(),
+          'suffix': _suffixController.text.trim(),
+          'contactNumber': _contactNumberController.text.trim(),
+          'address': _addressController.text.trim(),
+          'dateOfObservation': report.dateOfObservation,
+          'timeOfObservation': report.timeOfObservation,
+          'location': report.location,
+          'behaviorObserved': report.behaviorObserved,
+          'description': report.description,
+          'photoPath': report.photoPath,
+          'latitude': report.latitude,
+          'longitude': report.longitude,
+          'submittedBy': user.uid,
+          'status': 'pending',
+          'createdAt': FieldValue.serverTimestamp(),
+        };
+        await FirebaseFirestore.instance.collection('sab_reports').add(doc);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Saved locally but failed to upload: $e')),
+          );
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -161,6 +223,78 @@ class _SABReportingPageState extends State<SABReportingPage> {
           children: children,
         ),
       );
+
+  Future<double?> _readGpsCoordinate(
+      IfdTag? coordinateTag, IfdTag? refTag) async {
+    if (coordinateTag == null || refTag == null) return null;
+    final values = coordinateTag.values;
+    if (values == null || values.length != 3) return null;
+
+    double toDouble(dynamic value) {
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString()) ?? 0.0;
+    }
+
+    final degrees = toDouble(values[0]);
+    final minutes = toDouble(values[1]);
+    final seconds = toDouble(values[2]);
+    var coordinate = degrees + (minutes / 60) + (seconds / 3600);
+    final ref = refTag.printable?.replaceAll(RegExp(r'[^A-Z]'), '');
+    if (ref == 'S' || ref == 'W') coordinate = -coordinate;
+    return coordinate;
+  }
+
+  Future<void> _processPickedPhoto(XFile photo) async {
+    setState(() {
+      _photo = photo;
+      _photoError = null;
+      _isProcessingPhoto = true;
+      _locationController.text = 'Reading location from photo...';
+    });
+
+    try {
+      final bytes = await photo.readAsBytes();
+      final tags = await readExifFromBytes(bytes) ?? {};
+      final lat = await _readGpsCoordinate(
+        tags['GPS GPSLatitude'],
+        tags['GPS GPSLatitudeRef'],
+      );
+      final lon = await _readGpsCoordinate(
+        tags['GPS GPSLongitude'],
+        tags['GPS GPSLongitudeRef'],
+      );
+
+      setState(() {
+        _latitude = lat;
+        _longitude = lon;
+        if (lat != null && lon != null) {
+          _locationController.text =
+              '${lat.toStringAsFixed(6)}, ${lon.toStringAsFixed(6)}';
+        } else {
+          _locationController.text = 'No GPS metadata found in photo.';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _locationController.text = 'Unable to read photo location.';
+      });
+    } finally {
+      setState(() => _isProcessingPhoto = false);
+    }
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: source,
+      maxWidth: 1800,
+      maxHeight: 1800,
+      imageQuality: 80,
+    );
+    if (image != null) {
+      await _processPickedPhoto(image);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -269,6 +403,80 @@ class _SABReportingPageState extends State<SABReportingPage> {
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
               ]),
+              _sectionHeader('Photo Evidence'),
+              _card([
+                if (_photo != null)
+                  Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.file(
+                          File(_photo!.path),
+                          fit: BoxFit.cover,
+                          height: 220,
+                          width: double.infinity,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                if (_isProcessingPhoto) ...[
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _pickPhoto(ImageSource.camera),
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('Take Photo'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _pickPhoto(ImageSource.gallery),
+                        icon: const Icon(Icons.photo_library),
+                        label: const Text('Upload Photo'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_photoError != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    _photoError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _locationController,
+                  readOnly: true,
+                  style: _fieldStyle,
+                  decoration: _dec('Location (from photo)'),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Photo location is required'
+                      : null,
+                ),
+              ]),
 
               // ── Incident Details ──────────────────────────────────
               _sectionHeader('Incident Details'),
@@ -311,15 +519,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
                           : null,
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _locationController,
-                  style: _fieldStyle,
-                  decoration: _dec('Location'),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Please enter a location'
-                      : null,
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(

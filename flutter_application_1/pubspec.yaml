@@ -40,12 +40,11 @@ dependencies:
   hive_flutter: ^1.1.0
   pdfx: ^2.5.0
   permission_handler: ^11.3.1
-  firebase_core: 2.10.0
-  firebase_auth: 4.4.0
-  cloud_firestore: 4.5.3
-
-dependency_overrides:
-  firebase_core_web: 2.3.0
+  image_picker: ^0.8.7+6
+  exif: ^2.0.3
+  firebase_core: ^4.9.0
+  firebase_auth: ^6.5.1
+  cloud_firestore: ^6.4.1
 
 dev_dependencies:
   flutter_test:

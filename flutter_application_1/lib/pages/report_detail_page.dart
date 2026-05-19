@@ -174,7 +174,7 @@ class _DetailScaffold extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor: accentColor.withOpacity(0.12),
+                  backgroundColor: accentColor.withValues(alpha: 0.12),
                   child: Icon(iconData, color: accentColor, size: 26),
                 ),
                 const SizedBox(width: 14),

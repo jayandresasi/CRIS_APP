@@ -26,6 +26,8 @@ class _ReportingPageState extends State<ReportingPage> {
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _animalSpeciesController = TextEditingController();
+  final _dateController = TextEditingController();
+  final _timeController = TextEditingController();
 
   String? _gender;
   String? _exposureType;
@@ -33,6 +35,12 @@ class _ReportingPageState extends State<ReportingPage> {
   String _animalVaccinationStatus = 'Unknown';
   String _firstAidGiven = 'None';
   String _patientVaccinationStatus = 'Not vaccinated';
+
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _formSectionKey = GlobalKey();
+  String? _reportingFor;
+  String? _reportingForError;
+  bool _isLoadingProfile = false;
 
   DateTime? _dateOfIncident;
   TimeOfDay? _timeOfIncident;
@@ -50,6 +58,9 @@ class _ReportingPageState extends State<ReportingPage> {
     _locationController.dispose();
     _descriptionController.dispose();
     _animalSpeciesController.dispose();
+    _dateController.dispose();
+    _timeController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -66,7 +77,13 @@ class _ReportingPageState extends State<ReportingPage> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => _dateOfIncident = picked);
+    if (picked != null) {
+      setState(() {
+        _dateOfIncident = picked;
+        _dateController.text =
+            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      });
+    }
   }
 
   Future<void> _pickTime() async {
@@ -80,7 +97,98 @@ class _ReportingPageState extends State<ReportingPage> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => _timeOfIncident = picked);
+    if (picked != null) {
+      setState(() {
+        _timeOfIncident = picked;
+        _timeController.text = picked.format(context);
+      });
+    }
+  }
+
+  void _clearPatientInfo() {
+    _lastNameController.clear();
+    _firstNameController.clear();
+    _middleInitialController.clear();
+    _suffixController.clear();
+    _ageController.clear();
+    _gender = null;
+    _contactNumberController.clear();
+    _addressController.clear();
+  }
+
+  Future<void> _loadCurrentUserProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to load your profile.')),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+      return;
+    }
+
+    setState(() => _isLoadingProfile = true);
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final data = doc.data();
+      if (data != null) {
+        setState(() {
+          _lastNameController.text =
+              (data['lastName'] ?? data['last_name'] ?? '') as String;
+          _firstNameController.text =
+              (data['firstName'] ?? data['first_name'] ?? '') as String;
+          _middleInitialController.text =
+              (data['middleInitial'] ?? data['middle_initial'] ?? '') as String;
+          _suffixController.text = (data['suffix'] ?? '') as String;
+          _ageController.text =
+              data['age'] != null ? data['age'].toString() : '';
+          _gender = (data['gender'] ?? '') as String?;
+          _contactNumberController.text =
+              (data['contactNumber'] ?? data['contact_number'] ?? '') as String;
+          _addressController.text = (data['address'] ?? '') as String;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to load profile data: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingProfile = false);
+    }
+  }
+
+  Future<void> _selectReportingFor(String selection) async {
+    if (selection == _reportingFor) return;
+    setState(() {
+      _reportingFor = selection;
+      _reportingForError = null;
+      if (selection == 'Someone Else') {
+        _clearPatientInfo();
+      }
+    });
+
+    if (selection == 'Myself') {
+      await _loadCurrentUserProfile();
+    }
+
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_formSectionKey.currentContext != null) {
+        Scrollable.ensureVisible(
+          _formSectionKey.currentContext!,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   Future<void> _submit() async {
@@ -94,6 +202,20 @@ class _ReportingPageState extends State<ReportingPage> {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+      }
+      return;
+    }
+
+    if (_reportingFor == null) {
+      setState(() {
+        _reportingForError = 'Please select who this report is for.';
+      });
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
         );
       }
       return;
@@ -138,7 +260,6 @@ class _ReportingPageState extends State<ReportingPage> {
       // Save to Firestore collection `bite_reports`
       try {
         final submittedBy = user.uid;
-        print('Firestore upload starting for user: $submittedBy');
 
         int? ageInt;
         try {
@@ -166,18 +287,14 @@ class _ReportingPageState extends State<ReportingPage> {
           'description': _descriptionController.text.trim(),
           'firstAidGiven': _firstAidGiven,
           'patientVaccinationStatus': _patientVaccinationStatus,
+          'reportingFor': _reportingFor ?? 'Unknown',
           'submittedBy': submittedBy,
           'status': 'pending',
           'createdAt': FieldValue.serverTimestamp(),
         };
-        print('Firestore document to add: $doc');
-        final ref = await FirebaseFirestore.instance
-            .collection('bite_reports')
-            .add(doc);
-        print('Firestore add success, doc id: ${ref.id}');
-      } catch (e, st) {
+        await FirebaseFirestore.instance.collection('bite_reports').add(doc);
+      } catch (e) {
         // Log Firestore failure but don't block the user from proceeding
-        print('Firestore upload error: $e\n$st');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Saved locally but failed to upload: $e')),
@@ -251,13 +368,75 @@ class _ReportingPageState extends State<ReportingPage> {
         ),
       );
 
+  Widget _buildReportingForCard({
+    required String label,
+    required String description,
+    required IconData icon,
+    required String value,
+  }) {
+    final selected = _reportingFor == value;
+    return Expanded(
+      child: InkWell(
+        onTap: _isLoadingProfile ? null : () => _selectReportingFor(value),
+        borderRadius: BorderRadius.circular(18),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected ? AppColors.primary : const Color(0xFFE8ECF0),
+              width: selected ? 2 : 1,
+            ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    )
+                  ]
+                : null,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: selected
+                    ? AppColors.primary.withValues(alpha: 0.15)
+                    : const Color(0xFFF4F7FB),
+                child: Icon(icon,
+                    color: selected ? AppColors.primary : AppColors.primary,
+                    size: 24),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? AppColors.primary : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                description,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dateLabel = _dateOfIncident != null
-        ? '${_dateOfIncident!.year}-${_dateOfIncident!.month.toString().padLeft(2, '0')}-${_dateOfIncident!.day.toString().padLeft(2, '0')}'
-        : null;
-    final timeLabel = _timeOfIncident?.format(context);
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -276,14 +455,72 @@ class _ReportingPageState extends State<ReportingPage> {
         ),
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: 8),
+              const Text(
+                'Who are you reporting for?',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _buildReportingForCard(
+                    label: 'Myself',
+                    description: 'Use my profile details',
+                    icon: Icons.person,
+                    value: 'Myself',
+                  ),
+                  const SizedBox(width: 12),
+                  _buildReportingForCard(
+                    label: 'Someone Else',
+                    description: 'Enter patient details manually',
+                    icon: Icons.group,
+                    value: 'Someone Else',
+                  ),
+                ],
+              ),
+              if (_reportingForError != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _reportingForError!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+              if (_isLoadingProfile) ...[
+                const SizedBox(height: 16),
+                Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 10),
+                      Text('Loading your profile...'),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
               // ── Patient Information ───────────────────────────────
-              _sectionHeader('Patient Information'),
+              Container(
+                  key: _formSectionKey,
+                  child: _sectionHeader('Patient Information')),
               _card([
                 Row(
                   children: [
@@ -293,7 +530,7 @@ class _ReportingPageState extends State<ReportingPage> {
                         style: _fieldStyle,
                         decoration: _dec('Last Name'),
                         validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Please enter contact person'
+                            ? 'Please enter last name'
                             : null,
                       ),
                     ),
@@ -304,7 +541,7 @@ class _ReportingPageState extends State<ReportingPage> {
                         style: _fieldStyle,
                         decoration: _dec('First Name'),
                         validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Please enter contact person'
+                            ? 'Please enter first name'
                             : null,
                       ),
                     ),
@@ -396,43 +633,37 @@ class _ReportingPageState extends State<ReportingPage> {
               _sectionHeader('Incident Details'),
               _card([
                 // Date of Incident
-                GestureDetector(
-                  onTap: _pickDate,
-                  child: AbsorbPointer(
-                    child: TextFormField(
-                      style: _fieldStyle,
-                      decoration: _dec(
-                        dateLabel ?? 'Date of Incident',
-                        suffix: const Icon(
-                          Icons.calendar_today_outlined,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      validator: (_) => _dateOfIncident == null
-                          ? 'Please select a date'
-                          : null,
+                TextFormField(
+                  controller: _dateController,
+                  readOnly: true,
+                  style: _fieldStyle,
+                  decoration: _dec(
+                    'Date of Incident',
+                    suffix: const Icon(
+                      Icons.calendar_today_outlined,
+                      color: Colors.grey,
                     ),
                   ),
+                  onTap: _pickDate,
+                  validator: (_) =>
+                      _dateOfIncident == null ? 'Please select a date' : null,
                 ),
                 const SizedBox(height: 12),
                 // Time of Incident
-                GestureDetector(
-                  onTap: _pickTime,
-                  child: AbsorbPointer(
-                    child: TextFormField(
-                      style: _fieldStyle,
-                      decoration: _dec(
-                        timeLabel ?? 'Time of Incident',
-                        suffix: const Icon(
-                          Icons.access_time_outlined,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      validator: (_) => _timeOfIncident == null
-                          ? 'Please select a time'
-                          : null,
+                TextFormField(
+                  controller: _timeController,
+                  readOnly: true,
+                  style: _fieldStyle,
+                  decoration: _dec(
+                    'Time of Incident',
+                    suffix: const Icon(
+                      Icons.access_time_outlined,
+                      color: Colors.grey,
                     ),
                   ),
+                  onTap: _pickTime,
+                  validator: (_) =>
+                      _timeOfIncident == null ? 'Please select a time' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(

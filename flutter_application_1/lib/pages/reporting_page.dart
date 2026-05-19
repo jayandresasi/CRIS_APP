@@ -1,10 +1,58 @@
-import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'login_page.dart';
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
 import '../models/report.dart';
 import '../theme.dart';
+import 'login_page.dart';
+
+const List<String> iloiloMunicipalities = [
+  'Ajuy',
+  'Alimodian',
+  'Anilao',
+  'Badiangan',
+  'Balasan',
+  'Banate',
+  'Barotac Nuevo',
+  'Barotac Viejo',
+  'Batad',
+  'Bingawan',
+  'Cabatuan',
+  'Calinog',
+  'Carles',
+  'Concepcion',
+  'Dingle',
+  'Dueñas',
+  'Dumangas',
+  'Estancia',
+  'Guimbal',
+  'Igbaras',
+  'Iloilo City',
+  'Janiuay',
+  'Lambunao',
+  'Leganes',
+  'Lemery',
+  'Leon',
+  'Maasin',
+  'Miagao',
+  'Mina',
+  'New Lucena',
+  'Oton',
+  'Passi City',
+  'Pavia',
+  'Pototan',
+  'San Dionisio',
+  'San Enrique',
+  'San Joaquin',
+  'San Miguel',
+  'San Rafael',
+  'Santa Barbara',
+  'Sara',
+  'Tigbauan',
+  'Tubungan',
+  'Zarraga',
+];
 
 class ReportingPage extends StatefulWidget {
   const ReportingPage({super.key});
@@ -16,113 +64,67 @@ class ReportingPage extends StatefulWidget {
 class _ReportingPageState extends State<ReportingPage> {
   final _formKey = GlobalKey<FormState>();
 
-  final _lastNameController = TextEditingController();
-  final _firstNameController = TextEditingController();
-  final _middleInitialController = TextEditingController();
-  final _suffixController = TextEditingController();
+  final _fullNameController = TextEditingController();
   final _ageController = TextEditingController();
   final _contactNumberController = TextEditingController();
   final _addressController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  final _barangayController = TextEditingController();
+  final _municipalityController = TextEditingController();
+  final _incidentLocationController = TextEditingController();
+  final _incidentBarangayController = TextEditingController();
+  final _incidentMunicipalityController = TextEditingController();
   final _animalSpeciesController = TextEditingController();
+  final _descriptionController = TextEditingController();
   final _dateController = TextEditingController();
   final _timeController = TextEditingController();
 
-  String? _gender;
+  String? _sex;
   String? _exposureType;
   String _animalOwnership = 'Stray';
   String _animalVaccinationStatus = 'Unknown';
   String _firstAidGiven = 'None';
   String _patientVaccinationStatus = 'Not vaccinated';
-
-  final ScrollController _scrollController = ScrollController();
-  final GlobalKey _formSectionKey = GlobalKey();
-  String? _reportingFor;
-  String? _reportingForError;
+  bool _reportingForSelf = false;
   bool _isLoadingProfile = false;
-
+  bool _isSubmitting = false;
   DateTime? _dateOfIncident;
   TimeOfDay? _timeOfIncident;
-  bool _isSubmitting = false;
+
+  bool get _patientFieldsReadOnly => _reportingForSelf || _isLoadingProfile;
 
   @override
   void dispose() {
-    _lastNameController.dispose();
-    _firstNameController.dispose();
-    _middleInitialController.dispose();
-    _suffixController.dispose();
+    _fullNameController.dispose();
     _ageController.dispose();
     _contactNumberController.dispose();
     _addressController.dispose();
-    _locationController.dispose();
-    _descriptionController.dispose();
+    _barangayController.dispose();
+    _municipalityController.dispose();
+    _incidentLocationController.dispose();
+    _incidentBarangayController.dispose();
+    _incidentMunicipalityController.dispose();
     _animalSpeciesController.dispose();
+    _descriptionController.dispose();
     _dateController.dispose();
     _timeController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _dateOfIncident ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.primary),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) {
-      setState(() {
-        _dateOfIncident = picked;
-        _dateController.text =
-            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-      });
+  Future<void> _setReportingForSelf(bool value) async {
+    if (value == _reportingForSelf) return;
+    setState(() => _reportingForSelf = value);
+    if (value) {
+      await _loadCurrentUserProfile();
+    } else {
+      _clearPatientFields();
     }
-  }
-
-  Future<void> _pickTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _timeOfIncident ?? TimeOfDay.now(),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.primary),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) {
-      setState(() {
-        _timeOfIncident = picked;
-        _timeController.text = picked.format(context);
-      });
-    }
-  }
-
-  void _clearPatientInfo() {
-    _lastNameController.clear();
-    _firstNameController.clear();
-    _middleInitialController.clear();
-    _suffixController.clear();
-    _ageController.clear();
-    _gender = null;
-    _contactNumberController.clear();
-    _addressController.clear();
   }
 
   Future<void> _loadCurrentUserProfile() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
+      _showSnackBar('Please sign in to use your profile.');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in to load your profile.')),
-      );
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -132,119 +134,111 @@ class _ReportingPageState extends State<ReportingPage> {
 
     setState(() => _isLoadingProfile = true);
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
+      final snapshot = await FirebaseFirestore.instance
+          .collection('user-info')
           .doc(user.uid)
           .get();
-      final data = doc.data();
-      if (data != null) {
-        setState(() {
-          _lastNameController.text =
-              (data['lastName'] ?? data['last_name'] ?? '') as String;
-          _firstNameController.text =
-              (data['firstName'] ?? data['first_name'] ?? '') as String;
-          _middleInitialController.text =
-              (data['middleInitial'] ?? data['middle_initial'] ?? '') as String;
-          _suffixController.text = (data['suffix'] ?? '') as String;
-          _ageController.text =
-              data['age'] != null ? data['age'].toString() : '';
-          _gender = (data['gender'] ?? '') as String?;
-          _contactNumberController.text =
-              (data['contactNumber'] ?? data['contact_number'] ?? '') as String;
-          _addressController.text = (data['address'] ?? '') as String;
-        });
+      final data = snapshot.data();
+      if (data == null) {
+        setState(() => _reportingForSelf = false);
+        _showSnackBar('No saved profile found. Please set up your profile.');
+        return;
       }
+
+      final dob = (data['dob'] ?? data['birthDate'] ?? '') as String;
+      final calculatedAge = _calculateAge(dob);
+      setState(() {
+        _fullNameController.text = (data['fullName'] ?? '') as String;
+        _ageController.text = calculatedAge == null ? '' : '$calculatedAge';
+        _sex = _normalizedSex((data['sex'] ?? data['gender'] ?? '') as String);
+        _contactNumberController.text =
+            (data['contactNumber'] ?? data['contact_number'] ?? '') as String;
+        _addressController.text = (data['address'] ?? '') as String;
+        _barangayController.text =
+            (data['barangay'] ?? data['brgy'] ?? '') as String;
+        _municipalityController.text = (data['municipality'] ?? '') as String;
+      });
+    } on FirebaseException catch (e) {
+      setState(() => _reportingForSelf = false);
+      _showSnackBar(e.message ?? 'Unable to load your profile.');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unable to load profile data: $e')),
-        );
-      }
+      setState(() => _reportingForSelf = false);
+      _showSnackBar('Unable to load your profile: $e');
     } finally {
       if (mounted) setState(() => _isLoadingProfile = false);
     }
   }
 
-  Future<void> _selectReportingFor(String selection) async {
-    if (selection == _reportingFor) return;
+  void _clearPatientFields() {
     setState(() {
-      _reportingFor = selection;
-      _reportingForError = null;
-      if (selection == 'Someone Else') {
-        _clearPatientInfo();
-      }
+      _fullNameController.clear();
+      _ageController.clear();
+      _sex = null;
+      _contactNumberController.clear();
+      _addressController.clear();
+      _barangayController.clear();
+      _municipalityController.clear();
     });
+  }
 
-    if (selection == 'Myself') {
-      await _loadCurrentUserProfile();
-    }
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dateOfIncident ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (picked == null) return;
+    setState(() {
+      _dateOfIncident = picked;
+      _dateController.text = _formatDate(picked);
+    });
+  }
 
-    if (!mounted) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_formSectionKey.currentContext != null) {
-        Scrollable.ensureVisible(
-          _formSectionKey.currentContext!,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOut,
-        );
-      }
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _timeOfIncident ?? TimeOfDay.now(),
+    );
+    if (picked == null) return;
+    setState(() {
+      _timeOfIncident = picked;
+      _timeController.text = picked.format(context);
     });
   }
 
   Future<void> _submit() async {
-    // Require user to be signed in to submit
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please sign in to submit a report.')),
-        );
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginPage()),
-        );
-      }
-      return;
-    }
-
-    if (_reportingFor == null) {
-      setState(() {
-        _reportingForError = 'Please select who this report is for.';
-      });
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
+      _showSnackBar('Please sign in to submit a report.');
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
       return;
     }
 
     if (!_formKey.currentState!.validate()) return;
-    // Capture context-dependent values before any `await` to avoid
-    // using BuildContext across async gaps.
-    final dateStr = _dateOfIncident != null
-        ? '${_dateOfIncident!.year}-${_dateOfIncident!.month.toString().padLeft(2, '0')}-${_dateOfIncident!.day.toString().padLeft(2, '0')}'
-        : DateTime.now().toIso8601String().split('T').first;
-    final timeStr =
-        _timeOfIncident?.format(context) ?? TimeOfDay.now().format(context);
 
+    final dateStr = _dateController.text.trim();
+    final timeStr = _timeController.text.trim();
     setState(() => _isSubmitting = true);
 
     try {
+      final nameParts = _splitName(_fullNameController.text.trim());
       final report = Report(
-        lastName: _lastNameController.text.trim(),
-        firstName: _firstNameController.text.trim(),
-        middleInitial: _middleInitialController.text.trim(),
-        suffix: _suffixController.text.trim(),
+        lastName: nameParts.lastName,
+        firstName: nameParts.firstName,
+        middleInitial: '',
+        suffix: '',
         age: _ageController.text.trim(),
-        gender: _gender ?? '',
+        gender: _sex ?? '',
         contactNumber: _contactNumberController.text.trim(),
         address: _addressController.text.trim(),
         dateOfIncident: dateStr,
         timeOfIncident: timeStr,
-        locationOfIncident: _locationController.text.trim(),
+        locationOfIncident: _incidentLocationController.text.trim(),
         exposureType: _exposureType ?? '',
         animalSpecies: _animalSpeciesController.text.trim(),
         animalOwnership: _animalOwnership,
@@ -254,184 +248,155 @@ class _ReportingPageState extends State<ReportingPage> {
         patientVaccinationStatus: _patientVaccinationStatus,
         reportedAt: DateTime.now(),
       );
-
       await Hive.box<Report>('reports').add(report);
 
-      // Save to Firestore collection `bite_reports`
-      try {
-        final submittedBy = user.uid;
-
-        int? ageInt;
-        try {
-          ageInt = int.tryParse(_ageController.text.trim());
-        } catch (_) {
-          ageInt = null;
-        }
-
-        final Map<String, dynamic> doc = {
-          'lastName': _lastNameController.text.trim(),
-          'firstName': _firstNameController.text.trim(),
-          'middleInitial': _middleInitialController.text.trim(),
-          'suffix': _suffixController.text.trim(),
-          'age': ageInt ?? _ageController.text.trim(),
-          'gender': _gender ?? '',
+      final doc = <String, dynamic>{
+        'reportingForSelf': _reportingForSelf,
+        'submittedBy': user.uid,
+        'patient': {
+          'fullName': _fullNameController.text.trim(),
+          'age': int.parse(_ageController.text.trim()),
+          'sex': _sex,
           'contactNumber': _contactNumberController.text.trim(),
           'address': _addressController.text.trim(),
-          'dateOfIncident': dateStr,
-          'timeOfIncident': timeStr,
-          'locationOfIncident': _locationController.text.trim(),
-          'typeOfExposure': _exposureType ?? '',
-          'animalSpecies': _animalSpeciesController.text.trim(),
-          'animalOwnership': _animalOwnership,
-          'animalVaccinationStatus': _animalVaccinationStatus,
+          'barangay': _barangayController.text.trim(),
+          'municipality': _municipalityController.text.trim(),
+        },
+        'incident': {
+          'date': dateStr,
+          'time': timeStr,
+          'location': _incidentLocationController.text.trim(),
+          'barangay': _incidentBarangayController.text.trim(),
+          'municipality': _incidentMunicipalityController.text.trim(),
+          'exposureType': _exposureType,
           'description': _descriptionController.text.trim(),
+        },
+        'animal': {
+          'species': _animalSpeciesController.text.trim(),
+          'ownership': _animalOwnership,
+          'vaccinationStatus': _animalVaccinationStatus,
+        },
+        'medical': {
           'firstAidGiven': _firstAidGiven,
           'patientVaccinationStatus': _patientVaccinationStatus,
-          'reportingFor': _reportingFor ?? 'Unknown',
-          'submittedBy': submittedBy,
-          'status': 'pending',
-          'createdAt': FieldValue.serverTimestamp(),
-        };
-        await FirebaseFirestore.instance.collection('bite_reports').add(doc);
-      } catch (e) {
-        // Log Firestore failure but don't block the user from proceeding
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Saved locally but failed to upload: $e')),
-          );
-        }
-      }
+        },
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Report submitted successfully.'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        Navigator.pop(context);
-      }
+      await FirebaseFirestore.instance.collection('bite_reports').add(doc);
+
+      if (!mounted) return;
+      _showSnackBar('Bite report submitted successfully.');
+      Navigator.pop(context);
+    } on FirebaseException catch (e) {
+      _showSnackBar(e.message ?? 'Unable to upload bite report.');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to submit: $e')));
-      }
+      _showSnackBar('Unable to submit bite report: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  // Explicit text style applied to every field so typed text is always visible
-  static const _fieldStyle = TextStyle(color: Colors.black87, fontSize: 14);
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 
-  InputDecoration _dec(String label, {Widget? suffix}) => InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.black54),
-        hintStyle: const TextStyle(color: Colors.black38),
-        suffixIcon: suffix,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFCDD5DF)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-      );
+  String? _required(String? value, String label) {
+    if (value == null || value.trim().isEmpty) return '$label is required';
+    return null;
+  }
 
-  Widget _sectionHeader(String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(0, 20, 0, 12),
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: AppColors.primary,
-          ),
-        ),
-      );
+  String? _ageValidator(String? value) {
+    final message = _required(value, 'Age');
+    if (message != null) return message;
+    final age = int.tryParse(value!.trim());
+    if (age == null) return 'Age must be a number';
+    if (age < 0 || age > 120) return 'Age must be between 0 and 120';
+    return null;
+  }
 
-  Widget _card(List<Widget> children) => Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE8ECF0)),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
-      );
+  String _formatDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
 
-  Widget _buildReportingForCard({
-    required String label,
-    required String description,
-    required IconData icon,
-    required String value,
-  }) {
-    final selected = _reportingFor == value;
-    return Expanded(
-      child: InkWell(
-        onTap: _isLoadingProfile ? null : () => _selectReportingFor(value),
-        borderRadius: BorderRadius.circular(18),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: selected ? AppColors.primary : const Color(0xFFE8ECF0),
-              width: selected ? 2 : 1,
+  int? _calculateAge(String dobString) {
+    final dob = DateTime.tryParse(dobString);
+    if (dob == null) return null;
+    final now = DateTime.now();
+    var age = now.year - dob.year;
+    final hasHadBirthday =
+        now.month > dob.month || (now.month == dob.month && now.day >= dob.day);
+    if (!hasHadBirthday) age--;
+    return age;
+  }
+
+  String? _normalizedSex(String value) {
+    if (value == 'Male' || value == 'Female') return value;
+    return null;
+  }
+
+  _NameParts _splitName(String fullName) {
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    if (parts.length <= 1) return _NameParts(firstName: fullName, lastName: '');
+    return _NameParts(
+      firstName: parts.first,
+      lastName: parts.sublist(1).join(' '),
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 20, 0, 10),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
             ),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    )
-                  ]
-                : null,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: selected
-                    ? AppColors.primary.withValues(alpha: 0.15)
-                    : const Color(0xFFF4F7FB),
-                child: Icon(icon,
-                    color: selected ? AppColors.primary : AppColors.primary,
-                    size: 24),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: selected ? AppColors.primary : Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                description,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black54,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
+    );
+  }
+
+  Widget _municipalityField({
+    required TextEditingController controller,
+    required String label,
+    bool enabled = true,
+  }) {
+    return Autocomplete<String>(
+      initialValue: TextEditingValue(text: controller.text),
+      optionsBuilder: (value) {
+        final query = value.text.trim().toLowerCase();
+        if (query.isEmpty) return iloiloMunicipalities;
+        return iloiloMunicipalities.where(
+          (municipality) => municipality.toLowerCase().contains(query),
+        );
+      },
+      onSelected: (value) => controller.text = value,
+      fieldViewBuilder: (context, textController, focusNode, onSubmitted) {
+        textController.text = controller.text;
+        textController.selection = TextSelection.collapsed(
+          offset: textController.text.length,
+        );
+        return TextFormField(
+          controller: textController,
+          focusNode: focusNode,
+          enabled: enabled,
+          decoration: InputDecoration(
+            labelText: label,
+            suffixIcon: const Icon(Icons.search),
+          ),
+          textCapitalization: TextCapitalization.words,
+          onChanged: (value) => controller.text = value,
+          validator: (value) => _required(value, label),
+        );
+      },
     );
   }
 
@@ -439,358 +404,287 @@ class _ReportingPageState extends State<ReportingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Report Bite Incident',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 17,
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 8),
-              const Text(
-                'Who are you reporting for?',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
+      appBar: AppBar(title: const Text('Report Bite Incident')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SwitchListTile(
+                  value: _reportingForSelf,
+                  onChanged: _isLoadingProfile ? null : _setReportingForSelf,
+                  title: const Text('Reporting for self?'),
+                  subtitle: const Text('Use saved profile details'),
+                  secondary: _isLoadingProfile
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.person_outline),
+                  contentPadding: EdgeInsets.zero,
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildReportingForCard(
-                    label: 'Myself',
-                    description: 'Use my profile details',
-                    icon: Icons.person,
-                    value: 'Myself',
-                  ),
-                  const SizedBox(width: 12),
-                  _buildReportingForCard(
-                    label: 'Someone Else',
-                    description: 'Enter patient details manually',
-                    icon: Icons.group,
-                    value: 'Someone Else',
-                  ),
-                ],
-              ),
-              if (_reportingForError != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _reportingForError!,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-              if (_isLoadingProfile) ...[
-                const SizedBox(height: 16),
-                Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 10),
-                      Text('Loading your profile...'),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 20),
-              // ── Patient Information ───────────────────────────────
-              Container(
-                  key: _formSectionKey,
-                  child: _sectionHeader('Patient Information')),
-              _card([
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _lastNameController,
-                        style: _fieldStyle,
-                        decoration: _dec('Last Name'),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Please enter last name'
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _firstNameController,
-                        style: _fieldStyle,
-                        decoration: _dec('First Name'),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Please enter first name'
-                            : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _middleInitialController,
-                        style: _fieldStyle,
-                        decoration: _dec('Middle Initial'),
-                        maxLength: 3,
-                        buildCounter: (
-                          _, {
-                          required currentLength,
-                          required isFocused,
-                          maxLength,
-                        }) =>
-                            const SizedBox.shrink(),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _suffixController,
-                        style: _fieldStyle,
-                        decoration: _dec('Suffix'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
+                _sectionTitle('Patient Information'),
                 TextFormField(
-                  controller: _ageController,
-                  style: _fieldStyle,
-                  decoration: _dec('Age'),
-                  keyboardType: TextInputType.number,
-                  maxLength: 3,
-                  buildCounter: (_,
-                          {required currentLength,
-                          required isFocused,
-                          maxLength}) =>
-                      const SizedBox.shrink(),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Age is required';
-                    final age = int.tryParse(v.trim());
-                    if (age == null) return 'Age must be a number';
-                    if (age < 1 || age > 120) {
-                      return 'Age must be between 1 and 120';
-                    }
-                    return null;
-                  },
+                  controller: _fullNameController,
+                  readOnly: _patientFieldsReadOnly,
+                  decoration: const InputDecoration(labelText: 'Full Name'),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) => _required(value, 'Full name'),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _gender,
-                  style: _fieldStyle,
-                  decoration: _dec('Gender'),
-                  items: ['Male', 'Female', 'Other']
-                      .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _gender = v),
-                  validator: (v) => v == null ? 'Required' : null,
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _ageController,
+                        readOnly: _patientFieldsReadOnly,
+                        decoration: const InputDecoration(labelText: 'Age'),
+                        keyboardType: TextInputType.number,
+                        validator: _ageValidator,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _sex,
+                        decoration: const InputDecoration(labelText: 'Sex'),
+                        items: const [
+                          DropdownMenuItem(value: 'Male', child: Text('Male')),
+                          DropdownMenuItem(
+                            value: 'Female',
+                            child: Text('Female'),
+                          ),
+                        ],
+                        onChanged: _patientFieldsReadOnly
+                            ? null
+                            : (value) => setState(() => _sex = value),
+                        validator: (value) =>
+                            value == null ? 'Sex is required' : null,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _contactNumberController,
-                  style: _fieldStyle,
-                  decoration: _dec('Contact Number'),
+                  readOnly: _patientFieldsReadOnly,
+                  decoration: const InputDecoration(labelText: 'Contact Number'),
                   keyboardType: TextInputType.phone,
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Please enter contact number'
-                      : null,
+                  validator: (value) => _required(value, 'Contact number'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _addressController,
-                  style: _fieldStyle,
-                  decoration: _dec('Address'),
+                  readOnly: _patientFieldsReadOnly,
+                  decoration: const InputDecoration(labelText: 'Address'),
                   maxLines: 2,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  textCapitalization: TextCapitalization.sentences,
+                  validator: (value) => _required(value, 'Address'),
                 ),
-              ]),
-
-              // ── Incident Details ──────────────────────────────────
-              _sectionHeader('Incident Details'),
-              _card([
-                // Date of Incident
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _barangayController,
+                  readOnly: _patientFieldsReadOnly,
+                  decoration: const InputDecoration(labelText: 'Barangay'),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) => _required(value, 'Barangay'),
+                ),
+                const SizedBox(height: 12),
+                _municipalityField(
+                  controller: _municipalityController,
+                  label: 'Municipality',
+                  enabled: !_patientFieldsReadOnly,
+                ),
+                _sectionTitle('Location of Incident'),
+                TextFormField(
+                  controller: _incidentLocationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Specific Location / Landmark',
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
+                  validator: (value) =>
+                      _required(value, 'Location of incident'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _incidentBarangayController,
+                  decoration: const InputDecoration(labelText: 'Barangay'),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) => _required(value, 'Incident barangay'),
+                ),
+                const SizedBox(height: 12),
+                _municipalityField(
+                  controller: _incidentMunicipalityController,
+                  label: 'Incident Municipality',
+                ),
+                _sectionTitle('Incident Details'),
                 TextFormField(
                   controller: _dateController,
                   readOnly: true,
-                  style: _fieldStyle,
-                  decoration: _dec(
-                    'Date of Incident',
-                    suffix: const Icon(
-                      Icons.calendar_today_outlined,
-                      color: Colors.grey,
-                    ),
+                  decoration: const InputDecoration(
+                    labelText: 'Date of Incident',
+                    suffixIcon: Icon(Icons.calendar_today_outlined),
                   ),
                   onTap: _pickDate,
-                  validator: (_) =>
-                      _dateOfIncident == null ? 'Please select a date' : null,
+                  validator: (value) => _required(value, 'Date of incident'),
                 ),
                 const SizedBox(height: 12),
-                // Time of Incident
                 TextFormField(
                   controller: _timeController,
                   readOnly: true,
-                  style: _fieldStyle,
-                  decoration: _dec(
-                    'Time of Incident',
-                    suffix: const Icon(
-                      Icons.access_time_outlined,
-                      color: Colors.grey,
-                    ),
+                  decoration: const InputDecoration(
+                    labelText: 'Time of Incident',
+                    suffixIcon: Icon(Icons.access_time_outlined),
                   ),
                   onTap: _pickTime,
-                  validator: (_) =>
-                      _timeOfIncident == null ? 'Please select a time' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _locationController,
-                  style: _fieldStyle,
-                  decoration: _dec('Location of Incident'),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Please enter a location'
-                      : null,
+                  validator: (value) => _required(value, 'Time of incident'),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _exposureType,
-                  style: _fieldStyle,
-                  decoration: _dec('Type of Exposure'),
-                  items: ['Bite', 'Scratch', 'Lick on wound', 'Other']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _exposureType = v),
-                  validator: (v) => v == null ? 'Required' : null,
+                  decoration: const InputDecoration(labelText: 'Type of Exposure'),
+                  items: const [
+                    DropdownMenuItem(value: 'Bite', child: Text('Bite')),
+                    DropdownMenuItem(value: 'Scratch', child: Text('Scratch')),
+                    DropdownMenuItem(
+                      value: 'Lick on wound',
+                      child: Text('Lick on wound'),
+                    ),
+                    DropdownMenuItem(value: 'Other', child: Text('Other')),
+                  ],
+                  onChanged: (value) => setState(() => _exposureType = value),
+                  validator: (value) =>
+                      value == null ? 'Type of exposure is required' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _animalSpeciesController,
-                  style: _fieldStyle,
-                  decoration: _dec('Animal Species (e.g. Dog, Cat)'),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Animal Species',
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) => _required(value, 'Animal species'),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _animalOwnership,
-                  style: _fieldStyle,
-                  decoration: _dec('Animal Ownership'),
-                  items: ['Stray', 'Owned', 'Unknown']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _animalOwnership = v!),
+                  decoration: const InputDecoration(labelText: 'Animal Ownership'),
+                  items: const [
+                    DropdownMenuItem(value: 'Stray', child: Text('Stray')),
+                    DropdownMenuItem(value: 'Owned', child: Text('Owned')),
+                    DropdownMenuItem(value: 'Unknown', child: Text('Unknown')),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _animalOwnership = value ?? 'Stray'),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _animalVaccinationStatus,
-                  style: _fieldStyle,
-                  decoration: _dec('Animal Vaccination Status'),
-                  items: ['Vaccinated', 'Not vaccinated', 'Unknown']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _animalVaccinationStatus = v!),
+                  decoration: const InputDecoration(
+                    labelText: 'Animal Vaccination Status',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Vaccinated',
+                      child: Text('Vaccinated'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Not vaccinated',
+                      child: Text('Not vaccinated'),
+                    ),
+                    DropdownMenuItem(value: 'Unknown', child: Text('Unknown')),
+                  ],
+                  onChanged: (value) => setState(
+                    () => _animalVaccinationStatus = value ?? 'Unknown',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _descriptionController,
-                  style: _fieldStyle,
-                  decoration: _dec('Description of Incident'),
+                  decoration: const InputDecoration(
+                    labelText: 'Description of Incident',
+                  ),
                   maxLines: 4,
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Please enter a description'
-                      : null,
+                  textCapitalization: TextCapitalization.sentences,
+                  validator: (value) => _required(value, 'Description'),
                 ),
-              ]),
-
-              // ── Medical Information ───────────────────────────────
-              _sectionHeader('Medical Information'),
-              _card([
+                _sectionTitle('Medical Information'),
                 DropdownButtonFormField<String>(
                   initialValue: _firstAidGiven,
-                  style: _fieldStyle,
-                  decoration: _dec('First Aid Given'),
-                  items: ['None', 'Wound washed', 'Antiseptic applied', 'Other']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _firstAidGiven = v!),
+                  decoration: const InputDecoration(labelText: 'First Aid Given'),
+                  items: const [
+                    DropdownMenuItem(value: 'None', child: Text('None')),
+                    DropdownMenuItem(
+                      value: 'Wound washed',
+                      child: Text('Wound washed'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Antiseptic applied',
+                      child: Text('Antiseptic applied'),
+                    ),
+                    DropdownMenuItem(value: 'Other', child: Text('Other')),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _firstAidGiven = value ?? 'None'),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _patientVaccinationStatus,
-                  style: _fieldStyle,
-                  decoration: _dec('Patient Vaccination Status'),
-                  items: [
-                    'Not vaccinated',
-                    'Partially vaccinated',
-                    'Fully vaccinated',
-                  ]
-                      .map(
-                        (e) => DropdownMenuItem(value: e, child: Text(e)),
-                      )
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _patientVaccinationStatus = v!),
+                  decoration: const InputDecoration(
+                    labelText: 'Patient Vaccination Status',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Not vaccinated',
+                      child: Text('Not vaccinated'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Partially vaccinated',
+                      child: Text('Partially vaccinated'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Fully vaccinated',
+                      child: Text('Fully vaccinated'),
+                    ),
+                  ],
+                  onChanged: (value) => setState(
+                    () => _patientVaccinationStatus =
+                        value ?? 'Not vaccinated',
+                  ),
                 ),
-              ]),
-
-              const SizedBox(height: 28),
-              SizedBox(
-                height: 54,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                const SizedBox(height: 24),
+                SizedBox(
+                  height: 52,
+                  child: FilledButton.icon(
+                    onPressed: _isSubmitting ? null : _submit,
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_outlined),
+                    label: Text(
+                      _isSubmitting ? 'Submitting...' : 'Submit Report',
                     ),
                   ),
-                  onPressed: _isSubmitting ? null : _submit,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          'Submit Report',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _NameParts {
+  const _NameParts({required this.firstName, required this.lastName});
+
+  final String firstName;
+  final String lastName;
 }

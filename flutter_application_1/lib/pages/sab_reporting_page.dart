@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:exif/exif.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/sab_report.dart';
@@ -25,6 +27,8 @@ class _SABReportingPageState extends State<SABReportingPage> {
   final _suffixController = TextEditingController();
   final _contactNumberController = TextEditingController();
   final _addressController = TextEditingController();
+  final _barangayController = TextEditingController();
+  final _municipalityController = TextEditingController();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
 
@@ -46,6 +50,8 @@ class _SABReportingPageState extends State<SABReportingPage> {
     _suffixController.dispose();
     _contactNumberController.dispose();
     _addressController.dispose();
+    _barangayController.dispose();
+    _municipalityController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -83,14 +89,14 @@ class _SABReportingPageState extends State<SABReportingPage> {
 
   Future<void> _submit() async {
     final user = FirebaseAuth.instance.currentUser;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     if (user == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please sign in to submit a report.'),
-          ),
-        );
-      }
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to submit a report.'),
+        ),
+      );
       return;
     }
 
@@ -99,10 +105,19 @@ class _SABReportingPageState extends State<SABReportingPage> {
       return;
     }
     if (!_formKey.currentState!.validate()) return;
+    if (_latitude == null || _longitude == null) {
+      setState(() => _photoError =
+          'Unable to determine GPS coordinates. Please allow location access or choose another photo.');
+      return;
+    }
     setState(() => _isSubmitting = true);
+    final timeOfObservation =
+        _timeOfObservation?.format(context) ?? TimeOfDay.now().format(context);
 
     try {
       final now = DateTime.now();
+      final imageUrl = await _uploadPhotoToStorage(_photo!, user.uid);
+      debugPrint('Uploading image... $imageUrl');
       final report = SABReport(
         lastName: _lastNameController.text.trim(),
         firstName: _firstNameController.text.trim(),
@@ -113,8 +128,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
         dateOfObservation: _dateOfObservation != null
             ? '${_dateOfObservation!.year}-${_dateOfObservation!.month.toString().padLeft(2, '0')}-${_dateOfObservation!.day.toString().padLeft(2, '0')}'
             : now.toIso8601String().split('T').first,
-        timeOfObservation: _timeOfObservation?.format(context) ??
-            TimeOfDay.now().format(context),
+        timeOfObservation: timeOfObservation,
         location: _locationController.text.trim().isNotEmpty
             ? _locationController.text.trim()
             : (_latitude != null && _longitude != null
@@ -131,42 +145,42 @@ class _SABReportingPageState extends State<SABReportingPage> {
       await Hive.box<SABReport>('sab_reports').add(report);
 
       try {
+        final collection = FirebaseFirestore.instance.collection('SAB_report');
+        final docRef = collection.doc();
         final doc = {
-          'lastName': _lastNameController.text.trim(),
-          'firstName': _firstNameController.text.trim(),
-          'middleInitial': _middleInitialController.text.trim(),
-          'suffix': _suffixController.text.trim(),
-          'contactNumber': _contactNumberController.text.trim(),
-          'address': _addressController.text.trim(),
-          'dateOfObservation': report.dateOfObservation,
-          'timeOfObservation': report.timeOfObservation,
+          'reportId': docRef.id,
+          'reportedByUID': user.uid,
+          'imageURL': imageUrl,
+          'latitude': _latitude,
+          'longitude': _longitude,
+          'municipality': _municipalityController.text.trim(),
+          'barangay': _barangayController.text.trim(),
           'location': report.location,
           'behaviorObserved': report.behaviorObserved,
           'description': report.description,
-          'photoPath': report.photoPath,
-          'latitude': report.latitude,
-          'longitude': report.longitude,
           'submittedBy': user.uid,
-          'status': 'pending',
+          'reportStatus': 'pending',
           'createdAt': FieldValue.serverTimestamp(),
         };
-        await FirebaseFirestore.instance.collection('sab_reports').add(doc);
+        debugPrint('Saving SAB report to Firestore...');
+        await docRef.set(doc);
+        debugPrint('Saved SAB report successfully: ${docRef.id}');
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          scaffoldMessenger.showSnackBar(
             SnackBar(content: Text('Saved locally but failed to upload: $e')),
           );
         }
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Report submitted successfully.'),
             backgroundColor: AppColors.success,
           ),
         );
-        Navigator.pop(context);
+        navigator.pop();
       }
     } catch (e) {
       if (mounted) {
@@ -264,18 +278,34 @@ class _SABReportingPageState extends State<SABReportingPage> {
         tags['GPS GPSLongitudeRef'],
       );
 
-      setState(() {
-        _latitude = lat;
-        _longitude = lon;
-        if (lat != null && lon != null) {
+      if (lat != null && lon != null) {
+        setState(() {
+          _latitude = lat;
+          _longitude = lon;
           _locationController.text =
               '${lat.toStringAsFixed(6)}, ${lon.toStringAsFixed(6)}';
+        });
+      } else {
+        final position = await _getDeviceLocation();
+        if (position != null) {
+          setState(() {
+            _latitude = position.latitude;
+            _longitude = position.longitude;
+            _locationController.text =
+                '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+          });
         } else {
-          _locationController.text = 'No GPS metadata found in photo.';
+          setState(() {
+            _latitude = null;
+            _longitude = null;
+            _locationController.text = 'No GPS metadata found in photo.';
+          });
         }
-      });
+      }
     } catch (e) {
       setState(() {
+        _latitude = null;
+        _longitude = null;
         _locationController.text = 'Unable to read photo location.';
       });
     } finally {
@@ -294,6 +324,44 @@ class _SABReportingPageState extends State<SABReportingPage> {
     if (image != null) {
       await _processPickedPhoto(image);
     }
+  }
+
+  Future<Position?> _getDeviceLocation() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      debugPrint('Location services are disabled.');
+      return null;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.deniedForever ||
+        permission == LocationPermission.denied) {
+      debugPrint('Location permission denied.');
+      return null;
+    }
+
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.best,
+    );
+  }
+
+  Future<String> _uploadPhotoToStorage(XFile photo, String uid) async {
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('sab_images')
+        .child(uid)
+        .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+    debugPrint('Uploading image to storage at ${ref.fullPath}');
+    final task = ref.putFile(File(photo.path));
+    final snapshot = await task.whenComplete(() {});
+    if (snapshot.state == TaskState.success) {
+      final url = await ref.getDownloadURL();
+      return url;
+    }
+    throw Exception('Image upload failed');
   }
 
   @override
@@ -399,6 +467,22 @@ class _SABReportingPageState extends State<SABReportingPage> {
                   style: _fieldStyle,
                   decoration: _dec('Address'),
                   maxLines: 2,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _barangayController,
+                  style: _fieldStyle,
+                  decoration: _dec('Barangay'),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _municipalityController,
+                  style: _fieldStyle,
+                  decoration: _dec('Municipality'),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),

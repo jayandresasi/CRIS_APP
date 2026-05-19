@@ -9,6 +9,7 @@ import 'safety_info_page.dart';
 import 'reporting_page.dart';
 import 'sab_reporting_page.dart';
 import 'history_page.dart';
+import 'user_info_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -408,6 +409,17 @@ class _AppDrawer extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_outline, color: AppColors.primary),
+            title: const Text('User Information'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const UserInfoPage()),
+              );
+            },
           ),
           ListTile(
             leading: const Icon(

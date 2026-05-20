@@ -12,6 +12,7 @@ class SABReport {
     required this.dateOfObservation,
     required this.timeOfObservation,
     required this.location,
+    required this.animalType,
     required this.behaviorObserved,
     required this.description,
     required this.photoPath,
@@ -30,6 +31,7 @@ class SABReport {
   final String dateOfObservation;
   final String timeOfObservation;
   final String location;
+  final String animalType;
   final String behaviorObserved;
   final String description;
 
@@ -67,6 +69,7 @@ class SABReportAdapter extends TypeAdapter<SABReport> {
       dateOfObservation: reader.readString(),
       timeOfObservation: reader.readString(),
       location: reader.readString(),
+      animalType: reader.readString(),
       behaviorObserved: reader.readString(),
       description: reader.readString(),
       photoPath: reader.readString(),
@@ -90,6 +93,7 @@ class SABReportAdapter extends TypeAdapter<SABReport> {
     writer.writeString(obj.dateOfObservation);
     writer.writeString(obj.timeOfObservation);
     writer.writeString(obj.location);
+    writer.writeString(obj.animalType);
     writer.writeString(obj.behaviorObserved);
     writer.writeString(obj.description);
     writer.writeString(obj.photoPath);

@@ -251,6 +251,8 @@ class _ReportingPageState extends State<ReportingPage> {
       await Hive.box<Report>('reports').add(report);
 
       final doc = <String, dynamic>{
+        'userId': user.uid,
+        'province': 'Iloilo',
         'reportingForSelf': _reportingForSelf,
         'submittedBy': user.uid,
         'patient': {

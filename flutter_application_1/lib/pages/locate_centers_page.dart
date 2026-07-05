@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import '../theme.dart';
+import '../widgets/cris_map.dart';
 
 class LocateCentersPage extends StatefulWidget {
   const LocateCentersPage({super.key});
@@ -11,10 +12,9 @@ class LocateCentersPage extends StatefulWidget {
 
 class _LocateCentersPageState extends State<LocateCentersPage> {
   final TextEditingController _searchController = TextEditingController();
-  GoogleMapController? _mapController;
   String _searchQuery = '';
 
-  // Default center: Iloilo City, Philippines
+  // Default center: Iloilo Province, Philippines
   static const LatLng _defaultCenter = LatLng(10.7202, 122.5621);
 
   // Hardcoded nearby ABTCs — replace with live API data as needed
@@ -65,20 +65,18 @@ class _LocateCentersPageState extends State<LocateCentersPage> {
         .toList();
   }
 
-  Set<Marker> get _markers => _filtered
+  List<CRISMapMarker> get _markers => _filtered
       .map(
-        (c) => Marker(
-          markerId: MarkerId(c.name),
+        (c) => CRISMapMarker(
+          label: c.name,
           position: c.position,
-          infoWindow: InfoWindow(title: c.name, snippet: c.address),
         ),
       )
-      .toSet();
+      .toList();
 
   @override
   void dispose() {
     _searchController.dispose();
-    _mapController?.dispose();
     super.dispose();
   }
 
@@ -118,24 +116,14 @@ class _LocateCentersPageState extends State<LocateCentersPage> {
             ),
           ),
 
-          // ── Google Map ────────────────────────────────────────
-          SizedBox(
-            height: 220,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: GoogleMap(
-                  initialCameraPosition: const CameraPosition(
-                    target: _defaultCenter,
-                    zoom: 13,
-                  ),
-                  markers: _markers,
-                  onMapCreated: (c) => _mapController = c,
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: false,
-                ),
-              ),
+          // ── Embedded map ─────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: CRISMap(
+              center: _defaultCenter,
+              zoom: 10,
+              markers: _markers,
+              height: 220,
             ),
           ),
           const SizedBox(height: 12),

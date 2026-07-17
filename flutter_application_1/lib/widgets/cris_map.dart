@@ -40,12 +40,14 @@ class CRISMap extends StatefulWidget {
     this.zoom = 12,
     this.markers = const [],
     this.height = 220,
+    this.mapController,
   });
 
   final LatLng center;
   final double zoom;
   final List<CRISMapMarker> markers;
   final double height;
+  final MapController? mapController;
 
   @override
   State<CRISMap> createState() => _CRISMapState();
@@ -53,6 +55,23 @@ class CRISMap extends StatefulWidget {
 
 class _CRISMapState extends State<CRISMap> {
   CRISMapLayerType _activeLayer = CRISMapLayerType.standard;
+  late final MapController _mapController;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = widget.mapController ?? MapController();
+  }
+
+  @override
+  void didUpdateWidget(covariant CRISMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.center != widget.center || oldWidget.zoom != widget.zoom) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _mapController.move(widget.center, widget.zoom);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +84,7 @@ class _CRISMapState extends State<CRISMap> {
         child: Stack(
           children: [
             FlutterMap(
+              mapController: _mapController,
               options: MapOptions(
                 initialCenter: widget.center,
                 initialZoom: widget.zoom,
@@ -113,11 +133,12 @@ class _CRISMapState extends State<CRISMap> {
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
                             ),
-                            child: Icon(
-                              Icons.location_pin,
-                              color: marker.color,
-                              size: 34,
-                            ),
+                            child: marker.child ??
+                                Icon(
+                                  Icons.location_pin,
+                                  color: marker.color,
+                                  size: 34,
+                                ),
                           ),
                         ),
                       )
@@ -172,9 +193,11 @@ class CRISMapMarker {
     required this.label,
     required this.position,
     this.color = Colors.redAccent,
+    this.child,
   });
 
   final String label;
   final LatLng position;
   final Color color;
+  final Widget? child;
 }

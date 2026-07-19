@@ -41,6 +41,7 @@ class CRISMap extends StatefulWidget {
     this.markers = const [],
     this.height = 220,
     this.mapController,
+    this.onTap,
   });
 
   final LatLng center;
@@ -48,6 +49,9 @@ class CRISMap extends StatefulWidget {
   final List<CRISMapMarker> markers;
   final double height;
   final MapController? mapController;
+
+  /// Called when a location is selected directly on the map.
+  final ValueChanged<LatLng>? onTap;
 
   @override
   State<CRISMap> createState() => _CRISMapState();
@@ -92,6 +96,7 @@ class _CRISMapState extends State<CRISMap> {
                 interactionOptions: const InteractionOptions(
                   flags: InteractiveFlag.all,
                 ),
+                onTap: (_, point) => widget.onTap?.call(point),
               ),
               children: [
                 TileLayer(

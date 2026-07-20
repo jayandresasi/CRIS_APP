@@ -666,10 +666,9 @@ class _ReportingPageState extends State<ReportingPage> {
                         _animalVaccinated,
                         (v) => setState(() => _animalVaccinated = v)),
                     _subheading('Suspicious Animal Behavior'),
-                    ..._behaviorOptions.map((option) => CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
+                    ..._behaviorOptions.map((option) => _reportCheckboxTile(
+                        title: option,
                         value: _behaviors.contains(option),
-                        title: Text(option),
                         onChanged: (checked) =>
                             _toggleSuspiciousBehavior(option, checked ?? false))),
                   ]),
@@ -691,12 +690,11 @@ class _ReportingPageState extends State<ReportingPage> {
                           required: true)
                     ],
                     _subheading('Body Part Affected'),
-                    CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
+                    _reportCheckboxTile(
+                        title: 'Multiple Sites',
                         value: _multipleSites,
-                        title: const Text('Multiple Sites'),
-                        subtitle: const Text(
-                            'Select this before choosing more than one body location.'),
+                        subtitle:
+                            'Select this before choosing more than one body location.',
                         onChanged: (value) => setState(() {
                               _multipleSites = value ?? false;
                               if (!_multipleSites && _bodySites.length > 1) {
@@ -929,13 +927,53 @@ class _ReportingPageState extends State<ReportingPage> {
       DropdownButtonFormField<String>(
           initialValue: value,
           isExpanded: true,
-          decoration: InputDecoration(labelText: label),
+          style: const TextStyle(color: Colors.black87),
+          dropdownColor: Colors.white,
+          iconEnabledColor: Colors.black54,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: 'Select $label',
+            labelStyle: const TextStyle(color: Colors.black87),
+            floatingLabelStyle: const TextStyle(color: AppColors.primary),
+            hintStyle: const TextStyle(color: Colors.black54),
+          ),
           items: options
-              .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+              .map((v) => DropdownMenuItem(
+                  value: v,
+                  child: Text(v,
+                      style: const TextStyle(color: Colors.black87))))
               .toList(),
           onChanged: enabled ? onChanged : null,
           validator:
               required ? (v) => v == null ? '$label is required' : null : null);
+  Widget _reportCheckboxTile({
+    required String title,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+    String? subtitle,
+  }) =>
+      CheckboxListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+        value: value,
+        selected: value,
+        tileColor: const Color(0xFFF7F7F7),
+        selectedTileColor: const Color(0xFFFFE7D8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        controlAffinity: ListTileControlAffinity.leading,
+        activeColor: AppColors.primary,
+        checkColor: Colors.white,
+        title: Text(
+          title,
+          style: TextStyle(
+            color: value ? AppColors.primaryVariant : const Color(0xFF4B5563),
+            fontWeight: value ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+        subtitle: subtitle == null
+            ? null
+            : Text(subtitle, style: const TextStyle(color: Color(0xFF5F6B76))),
+        onChanged: onChanged,
+      );
   Widget _yesNo(
           String question, String? value, ValueChanged<String?> onChanged) =>
       _dropdown(question, value, const ['Yes', 'No'], onChanged,
@@ -956,6 +994,24 @@ class _ReportingPageState extends State<ReportingPage> {
                     .where((item) => item.toLowerCase().contains(query));
           },
           onSelected: (value) => controller.text = value,
+          optionsViewBuilder: (_, onSelected, options) => Material(
+              elevation: 4,
+              color: Colors.white,
+              child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 240),
+                  child: ListView(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      children: options
+                          .map((option) => InkWell(
+                              onTap: () => onSelected(option),
+                              child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
+                                  child: Text(option,
+                                      style: const TextStyle(
+                                          color: Colors.black87)))))
+                          .toList()))),
           fieldViewBuilder: (_, textController, focusNode, __) {
             textController.value = TextEditingValue(
                 text: controller.text,
@@ -965,8 +1021,15 @@ class _ReportingPageState extends State<ReportingPage> {
                 controller: textController,
                 focusNode: focusNode,
                 enabled: enabled,
+                style: const TextStyle(color: Colors.black87),
                 decoration: InputDecoration(
-                    labelText: label, suffixIcon: const Icon(Icons.search)),
+                    labelText: label,
+                    hintText: 'Select or enter $label',
+                    labelStyle: const TextStyle(color: Colors.black87),
+                    floatingLabelStyle:
+                        const TextStyle(color: AppColors.primary),
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    suffixIcon: const Icon(Icons.search)),
                 textCapitalization: TextCapitalization.words,
                 onChanged: (value) => controller.text = value,
                 validator: (value) => _required(value, label));

@@ -22,7 +22,9 @@ class ABTCModel {
       province: _string(data['province']),
       municipality: _string(data['municipality']),
       barangay: _string(data['barangay']),
-      streetAddress: _string(data['streetAddress']),
+      // Imported ABTC records use the CSV's real `Street` column, stored as
+      // `street`. Keep the older field as a fallback for existing documents.
+      streetAddress: _string(data['street'], fallback: _string(data['streetAddress'])),
       schedule: _string(data['schedule'], fallback: 'Schedule unavailable'),
       availability: _string(data['availability'], fallback: 'Availability unavailable'),
     );

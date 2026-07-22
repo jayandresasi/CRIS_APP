@@ -122,8 +122,9 @@ class _ReportingPageState extends State<ReportingPage> {
   Uint8List? _woundBytes;
   Uint8List? _animalBytes;
   final Set<String> _behaviors = {};
-  final Set<String> _bodySites = {};
+  final List<_BodySiteSelection> _bodySites = [];
   bool _multipleSites = false;
+  int _affectedSiteLimit = 1;
   bool _certified = false;
   bool _reviewing = false;
   bool _reportingForSelf = false;
@@ -301,16 +302,53 @@ class _ReportingPageState extends State<ReportingPage> {
     });
   }
 
-  void _selectBodySite(String site) {
+  void _selectBodySite(_BodySiteSelection site) {
     setState(() {
+      final existingIndex =
+          _bodySites.indexWhere((selection) => selection.id == site.id);
       if (_multipleSites) {
-        if (!_bodySites.add(site)) _bodySites.remove(site);
+        if (existingIndex >= 0) {
+          _bodySites.removeAt(existingIndex);
+        } else if (_bodySites.length < _affectedSiteLimit) {
+          _bodySites.add(site);
+        } else {
+          _showSnackBar(
+              'You can only select the number of affected sites specified.');
+        }
       } else {
         _bodySites
           ..clear()
           ..add(site);
       }
     });
+  }
+
+  void _setMultipleSites(bool value) {
+    if (!value && _bodySites.length > 1) {
+      _showSnackBar(
+          'Remove extra body locations before turning off Multiple Sites.');
+      return;
+    }
+    setState(() {
+      _multipleSites = value;
+      _affectedSiteLimit = value ? _affectedSiteLimit : 1;
+    });
+  }
+
+  void _changeAffectedSiteLimit(int change) {
+    if (!_multipleSites) return;
+    final nextLimit = _affectedSiteLimit + change;
+    if (nextLimit < 1) return;
+    if (nextLimit < _bodySites.length) {
+      _showSnackBar(
+          'Remove selected body locations before reducing the number of affected sites.');
+      return;
+    }
+    setState(() => _affectedSiteLimit = nextLimit);
+  }
+
+  void _removeBodySite(_BodySiteSelection site) {
+    setState(() => _bodySites.removeWhere((selection) => selection.id == site.id));
   }
 
   String? _required(String? value, String label) =>
@@ -335,6 +373,15 @@ class _ReportingPageState extends State<ReportingPage> {
     if (!_formKey.currentState!.validate()) return;
     if (_bodySites.isEmpty) {
       _showSnackBar('Select at least one body area affected.');
+      return;
+    }
+    if (!_multipleSites && _bodySites.length != 1) {
+      _showSnackBar('Select exactly one body area, or enable Multiple Sites.');
+      return;
+    }
+    if (_bodySites.length > _affectedSiteLimit) {
+      _showSnackBar(
+          'You can only select the number of affected sites specified.');
       return;
     }
     setState(() => _reviewing = true);
@@ -452,7 +499,7 @@ class _ReportingPageState extends State<ReportingPage> {
         },
         'exposure': {
           'type': _resolvedExposure(),
-          'bodySites': _bodySites.toList(),
+          'bodySites': _bodySites.map((site) => site.name).toList(),
           'multipleSites': _multipleSites,
           'numberOfWounds': int.tryParse(_woundCount.text.trim()),
           'bleeding': _bleeding,
@@ -695,19 +742,18 @@ class _ReportingPageState extends State<ReportingPage> {
                         value: _multipleSites,
                         subtitle:
                             'Select this before choosing more than one body location.',
-                        onChanged: (value) => setState(() {
-                              _multipleSites = value ?? false;
-                              if (!_multipleSites && _bodySites.length > 1) {
-                                _bodySites.removeWhere(
-                                    (site) => site != _bodySites.first);
-                              }
-                            })),
+                        onChanged: (value) => _setMultipleSites(value ?? false)),
+                    _AffectedSiteQuantitySelector(
+                        value: _affectedSiteLimit,
+                        enabled: _multipleSites,
+                        onDecrease: () => _changeAffectedSiteLimit(-1),
+                        onIncrease: () => _changeAffectedSiteLimit(1)),
+                    const Text('Tap the affected body part(s).'),
                     _BodySiteSelector(
                         selected: _bodySites, onSelected: _selectBodySite),
                     if (_bodySites.isNotEmpty)
-                      Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text('Selected: ${_bodySites.join(', ')}')),
+                      _SelectedBodyPartsList(
+                          selections: _bodySites, onRemove: _removeBodySite),
                     const SizedBox(height: 12),
                     _field(_woundCount, 'Number of Bite/Scratch Wounds',
                         required: true,
@@ -814,7 +860,7 @@ class _ReportingPageState extends State<ReportingPage> {
         }),
         _summary('Exposure & First Aid', {
           'Exposure': _resolvedExposure(),
-          'Body areas': _bodySites.join(', '),
+          'Body areas': _bodySites.map((site) => site.name).join(', '),
           'Wounds / Bleeding': '${_woundCount.text} / ${_bleeding ?? ''}',
           'Washed wound': _washedWound == 'Yes'
               ? 'Yes, ${_washMinutes.text} minutes'
@@ -1197,148 +1243,223 @@ class _SubmissionSuccess extends StatelessWidget {
       ]));
 }
 
+class _AffectedSiteQuantitySelector extends StatelessWidget {
+  const _AffectedSiteQuantitySelector({
+    required this.value,
+    required this.enabled,
+    required this.onDecrease,
+    required this.onIncrease,
+  });
+
+  final int value;
+  final bool enabled;
+  final VoidCallback onDecrease;
+  final VoidCallback onIncrease;
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        const Expanded(
+            child: Text('Number of Affected Sites',
+                style: TextStyle(fontWeight: FontWeight.w600))),
+        IconButton(
+            tooltip: 'Decrease affected sites',
+            onPressed: enabled && value > 1 ? onDecrease : null,
+            icon: const Icon(Icons.remove_circle_outline)),
+        Semantics(
+            label: '$value affected site${value == 1 ? '' : 's'}',
+            child: SizedBox(
+                width: 28,
+                child: Text('$value', textAlign: TextAlign.center))),
+        IconButton(
+            tooltip: 'Increase affected sites',
+            onPressed: enabled ? onIncrease : null,
+            icon: const Icon(Icons.add_circle_outline)),
+      ]);
+}
+
+class _SelectedBodyPartsList extends StatelessWidget {
+  const _SelectedBodyPartsList({
+    required this.selections,
+    required this.onRemove,
+  });
+
+  final List<_BodySiteSelection> selections;
+  final ValueChanged<_BodySiteSelection> onRemove;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Selected Body Parts:',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        ...selections.map((selection) => Row(children: [
+              const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Icon(Icons.circle, size: 10, color: AppColors.danger)),
+              Expanded(child: Text(selection.name)),
+              TextButton(
+                  onPressed: () => onRemove(selection), child: const Text('Remove')),
+            ])),
+      ]));
+}
+
 class _BodySiteSelector extends StatelessWidget {
   const _BodySiteSelector({required this.selected, required this.onSelected});
-  final Set<String> selected;
-  final ValueChanged<String> onSelected;
+
+  final List<_BodySiteSelection> selected;
+  final ValueChanged<_BodySiteSelection> onSelected;
+
   @override
   Widget build(BuildContext context) => Container(
       decoration: BoxDecoration(
           border: Border.all(color: Colors.black12),
           borderRadius: BorderRadius.circular(12)),
       padding: const EdgeInsets.all(8),
-      child: Row(children: [
-        Expanded(
-            child: _BodyDiagram(
-                side: 'Front', selected: selected, onSelected: onSelected)),
-        const VerticalDivider(),
-        Expanded(
-            child: _BodyDiagram(
-                side: 'Back', selected: selected, onSelected: onSelected))
-      ]));
+      child: Center(
+          child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: AspectRatio(
+                  aspectRatio: 700 / 724,
+                  child: LayoutBuilder(builder: (context, constraints) {
+                    return Semantics(
+                        label: 'Interactive front and back body diagram',
+                        child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTapDown: (details) {
+                              final position = Offset(
+                                  details.localPosition.dx / constraints.maxWidth,
+                                  details.localPosition.dy / constraints.maxHeight);
+                              final selection = _BodyPartMap.resolve(position);
+                              if (selection != null) onSelected(selection);
+                            },
+                            child: Stack(children: [
+                              const Positioned.fill(
+                                  child: Image(
+                                      image: AssetImage(
+                                          'assets/images/bodydiagram.webp'),
+                                      fit: BoxFit.fill)),
+                              ...selected.map((selection) => Positioned(
+                                  left: selection.position.dx *
+                                          constraints.maxWidth -
+                                      8,
+                                  top: selection.position.dy *
+                                          constraints.maxHeight -
+                                      8,
+                                  child: const IgnorePointer(
+                                      child: Icon(Icons.circle,
+                                          size: 16, color: AppColors.danger)))),
+                            ])));
+                  })))));
 }
 
-class _BodyDiagram extends StatelessWidget {
-  const _BodyDiagram(
-      {required this.side, required this.selected, required this.onSelected});
-  final String side;
-  final Set<String> selected;
-  final ValueChanged<String> onSelected;
-  static const _regions = <String>[
-    'Head',
-    'Chest',
-    'Left Arm',
-    'Right Arm',
-    'Abdomen',
-    'Left Leg',
-    'Right Leg',
-    'Left Foot',
-    'Right Foot'
-  ];
-  @override
-  Widget build(BuildContext context) => Column(
-        children: [
-          Text(side, style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          AspectRatio(
-            aspectRatio: .48,
-            child: LayoutBuilder(
-              builder: (context, constraints) => Stack(
-                children: [
-                  CustomPaint(size: Size.infinite, painter: _BodyPainter()),
-                  ..._regions.map((region) {
-                    final key = '$side $region';
-                    return Align(
-                      alignment: _regionAlignment(region),
-                      child: Semantics(
-                        button: true,
-                        label: key,
-                        child: InkWell(
-                          onTap: () => onSelected(key),
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: selected.contains(key)
-                                  ? AppColors.danger
-                                  : Colors.transparent,
-                              border: Border.all(
-                                color: selected.contains(key)
-                                    ? AppColors.danger
-                                    : Colors.transparent,
-                              ),
-                            ),
-                            child: selected.contains(key)
-                                ? const Icon(Icons.location_on,
-                                    size: 20, color: Colors.white)
-                                : null,
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
-  Alignment _regionAlignment(String region) => switch (region) {
-        'Head' => const Alignment(0, -.88),
-        'Chest' => const Alignment(0, -.42),
-        'Abdomen' => const Alignment(0, -.08),
-        'Left Arm' => const Alignment(-.68, -.31),
-        'Right Arm' => const Alignment(.68, -.31),
-        'Left Leg' => const Alignment(-.22, .48),
-        'Right Leg' => const Alignment(.22, .48),
-        'Left Foot' => const Alignment(-.25, .9),
-        _ => const Alignment(.25, .9)
-      };
+class _BodySiteSelection {
+  const _BodySiteSelection({
+    required this.id,
+    required this.name,
+    required this.position,
+  });
+
+  final String id;
+  final String name;
+  final Offset position;
 }
 
-class _BodyPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFE8EDF0)
-      ..style = PaintingStyle.fill;
-    final outline = Paint()
-      ..color = const Color(0xFF9EABB4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    final cx = size.width / 2;
-    canvas.drawCircle(Offset(cx, size.height * .1), size.width * .16, paint);
-    canvas.drawCircle(Offset(cx, size.height * .1), size.width * .16, outline);
-    final torso = RRect.fromRectAndRadius(
-        Rect.fromCenter(
-            center: Offset(cx, size.height * .36),
-            width: size.width * .38,
-            height: size.height * .38),
-        const Radius.circular(22));
-    canvas.drawRRect(torso, paint);
-    canvas.drawRRect(torso, outline);
-    for (final side in [-1, 1]) {
-      final arm = Rect.fromCenter(
-          center: Offset(cx + side * size.width * .31, size.height * .36),
-          width: size.width * .11,
-          height: size.height * .33);
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(arm, const Radius.circular(12)), paint);
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(arm, const Radius.circular(12)), outline);
-      final leg = Rect.fromCenter(
-          center: Offset(cx + side * size.width * .11, size.height * .72),
-          width: size.width * .15,
-          height: size.height * .37);
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(leg, const Radius.circular(12)), paint);
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(leg, const Radius.circular(12)), outline);
+class _BodyPartMap {
+  static _BodySiteSelection? resolve(Offset position) {
+    for (final region in _regions) {
+      if (region.bounds.contains(position)) {
+        return _BodySiteSelection(
+            id: region.id, name: region.name, position: position);
+      }
     }
+    return null;
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  // Bounds are fractions of the supplied 700 x 724 image. This keeps hit
+  // testing and marker placement aligned when the diagram is resized.
+  static const _regions = <_BodyHitRegion>[
+    // Front view: smaller regions come first so fingers, ears and joints are
+    // not swallowed by the larger adjacent body-area bounds.
+    _BodyHitRegion('front-right-ear', 'Right Ear', Rect.fromLTRB(.232, .115, .252, .155)),
+    _BodyHitRegion('front-left-ear', 'Left Ear', Rect.fromLTRB(.348, .115, .368, .155)),
+    _BodyHitRegion('front-face', 'Face', Rect.fromLTRB(.245, .105, .355, .190)),
+    _BodyHitRegion('front-head', 'Head', Rect.fromLTRB(.250, .055, .350, .120)),
+    _BodyHitRegion('front-neck', 'Neck', Rect.fromLTRB(.270, .185, .330, .225)),
+    _BodyHitRegion('front-right-fingers', 'Right Fingers', Rect.fromLTRB(.075, .570, .135, .630)),
+    _BodyHitRegion('front-left-fingers', 'Left Fingers', Rect.fromLTRB(.465, .570, .525, .630)),
+    _BodyHitRegion('front-right-hand', 'Right Hand', Rect.fromLTRB(.105, .535, .180, .615)),
+    _BodyHitRegion('front-left-hand', 'Left Hand', Rect.fromLTRB(.420, .535, .495, .615)),
+    _BodyHitRegion('front-right-wrist', 'Right Wrist', Rect.fromLTRB(.145, .510, .195, .565)),
+    _BodyHitRegion('front-left-wrist', 'Left Wrist', Rect.fromLTRB(.405, .510, .455, .565)),
+    _BodyHitRegion('front-right-elbow', 'Right Elbow', Rect.fromLTRB(.165, .390, .225, .450)),
+    _BodyHitRegion('front-left-elbow', 'Left Elbow', Rect.fromLTRB(.375, .390, .435, .450)),
+    _BodyHitRegion('front-right-forearm', 'Right Forearm', Rect.fromLTRB(.145, .435, .210, .535)),
+    _BodyHitRegion('front-left-forearm', 'Left Forearm', Rect.fromLTRB(.390, .435, .455, .535)),
+    _BodyHitRegion('front-right-upper-arm', 'Right Upper Arm', Rect.fromLTRB(.165, .275, .230, .405)),
+    _BodyHitRegion('front-left-upper-arm', 'Left Upper Arm', Rect.fromLTRB(.370, .275, .435, .405)),
+    _BodyHitRegion('front-right-shoulder', 'Right Shoulder', Rect.fromLTRB(.175, .210, .245, .290)),
+    _BodyHitRegion('front-left-shoulder', 'Left Shoulder', Rect.fromLTRB(.355, .210, .425, .290)),
+    _BodyHitRegion('front-right-toe', 'Right Toes', Rect.fromLTRB(.220, .930, .285, .970)),
+    _BodyHitRegion('front-left-toe', 'Left Toes', Rect.fromLTRB(.315, .930, .380, .970)),
+    _BodyHitRegion('front-right-foot', 'Right Foot', Rect.fromLTRB(.215, .900, .290, .950)),
+    _BodyHitRegion('front-left-foot', 'Left Foot', Rect.fromLTRB(.310, .900, .385, .950)),
+    _BodyHitRegion('front-right-ankle', 'Right Ankle', Rect.fromLTRB(.225, .870, .285, .920)),
+    _BodyHitRegion('front-left-ankle', 'Left Ankle', Rect.fromLTRB(.315, .870, .375, .920)),
+    _BodyHitRegion('front-right-knee', 'Right Knee', Rect.fromLTRB(.220, .735, .290, .800)),
+    _BodyHitRegion('front-left-knee', 'Left Knee', Rect.fromLTRB(.310, .735, .380, .800)),
+    _BodyHitRegion('front-right-lower-leg', 'Right Lower Leg', Rect.fromLTRB(.220, .785, .290, .885)),
+    _BodyHitRegion('front-left-lower-leg', 'Left Lower Leg', Rect.fromLTRB(.310, .785, .380, .885)),
+    _BodyHitRegion('front-right-thigh', 'Right Thigh', Rect.fromLTRB(.215, .565, .295, .755)),
+    _BodyHitRegion('front-left-thigh', 'Left Thigh', Rect.fromLTRB(.305, .565, .385, .755)),
+    _BodyHitRegion('front-right-hip', 'Right Hip', Rect.fromLTRB(.185, .500, .250, .590)),
+    _BodyHitRegion('front-left-hip', 'Left Hip', Rect.fromLTRB(.350, .500, .415, .590)),
+    _BodyHitRegion('front-pelvis', 'Pelvis/Groin', Rect.fromLTRB(.245, .485, .355, .585)),
+    _BodyHitRegion('front-abdomen', 'Abdomen', Rect.fromLTRB(.235, .365, .365, .495)),
+    _BodyHitRegion('front-chest', 'Chest', Rect.fromLTRB(.225, .230, .375, .380)),
+
+    // Back view.
+    _BodyHitRegion('back-left-ear', 'Left Ear (Back)', Rect.fromLTRB(.628, .115, .648, .155)),
+    _BodyHitRegion('back-right-ear', 'Right Ear (Back)', Rect.fromLTRB(.742, .115, .762, .155)),
+    _BodyHitRegion('back-head', 'Head (Back)', Rect.fromLTRB(.645, .055, .745, .135)),
+    _BodyHitRegion('back-neck', 'Neck (Back)', Rect.fromLTRB(.665, .180, .725, .225)),
+    _BodyHitRegion('back-left-fingers', 'Left Fingers (Back)', Rect.fromLTRB(.500, .570, .560, .630)),
+    _BodyHitRegion('back-right-fingers', 'Right Fingers (Back)', Rect.fromLTRB(.830, .570, .890, .630)),
+    _BodyHitRegion('back-left-hand', 'Left Hand (Back)', Rect.fromLTRB(.515, .535, .590, .615)),
+    _BodyHitRegion('back-right-hand', 'Right Hand (Back)', Rect.fromLTRB(.800, .535, .875, .615)),
+    _BodyHitRegion('back-left-wrist', 'Left Wrist (Back)', Rect.fromLTRB(.555, .510, .605, .565)),
+    _BodyHitRegion('back-right-wrist', 'Right Wrist (Back)', Rect.fromLTRB(.785, .510, .835, .565)),
+    _BodyHitRegion('back-left-elbow', 'Left Elbow (Back)', Rect.fromLTRB(.565, .390, .625, .450)),
+    _BodyHitRegion('back-right-elbow', 'Right Elbow (Back)', Rect.fromLTRB(.755, .390, .815, .450)),
+    _BodyHitRegion('back-left-forearm', 'Left Forearm (Back)', Rect.fromLTRB(.545, .435, .610, .535)),
+    _BodyHitRegion('back-right-forearm', 'Right Forearm (Back)', Rect.fromLTRB(.770, .435, .835, .535)),
+    _BodyHitRegion('back-left-upper-arm', 'Left Upper Arm (Back)', Rect.fromLTRB(.565, .275, .630, .405)),
+    _BodyHitRegion('back-right-upper-arm', 'Right Upper Arm (Back)', Rect.fromLTRB(.750, .275, .815, .405)),
+    _BodyHitRegion('back-left-shoulder', 'Left Shoulder (Back)', Rect.fromLTRB(.565, .210, .635, .290)),
+    _BodyHitRegion('back-right-shoulder', 'Right Shoulder (Back)', Rect.fromLTRB(.750, .210, .820, .290)),
+    _BodyHitRegion('back-left-toe', 'Left Toes (Back)', Rect.fromLTRB(.640, .930, .705, .970)),
+    _BodyHitRegion('back-right-toe', 'Right Toes (Back)', Rect.fromLTRB(.735, .930, .800, .970)),
+    _BodyHitRegion('back-left-foot', 'Left Foot (Back)', Rect.fromLTRB(.635, .900, .710, .950)),
+    _BodyHitRegion('back-right-foot', 'Right Foot (Back)', Rect.fromLTRB(.730, .900, .805, .950)),
+    _BodyHitRegion('back-left-ankle', 'Left Ankle (Back)', Rect.fromLTRB(.645, .870, .705, .920)),
+    _BodyHitRegion('back-right-ankle', 'Right Ankle (Back)', Rect.fromLTRB(.735, .870, .795, .920)),
+    _BodyHitRegion('back-left-knee', 'Left Knee (Back)', Rect.fromLTRB(.640, .735, .710, .800)),
+    _BodyHitRegion('back-right-knee', 'Right Knee (Back)', Rect.fromLTRB(.730, .735, .800, .800)),
+    _BodyHitRegion('back-left-lower-leg', 'Left Lower Leg (Back)', Rect.fromLTRB(.640, .785, .710, .885)),
+    _BodyHitRegion('back-right-lower-leg', 'Right Lower Leg (Back)', Rect.fromLTRB(.730, .785, .800, .885)),
+    _BodyHitRegion('back-left-thigh', 'Left Thigh (Back)', Rect.fromLTRB(.635, .565, .715, .755)),
+    _BodyHitRegion('back-right-thigh', 'Right Thigh (Back)', Rect.fromLTRB(.725, .565, .805, .755)),
+    _BodyHitRegion('back-left-hip', 'Left Hip (Back)', Rect.fromLTRB(.605, .500, .670, .590)),
+    _BodyHitRegion('back-right-hip', 'Right Hip (Back)', Rect.fromLTRB(.770, .500, .835, .590)),
+    _BodyHitRegion('back-pelvis', 'Pelvis/Groin (Back)', Rect.fromLTRB(.655, .485, .745, .590)),
+    _BodyHitRegion('back-lower-back', 'Lower Back', Rect.fromLTRB(.625, .365, .765, .505)),
+    _BodyHitRegion('back-upper-back', 'Upper Back', Rect.fromLTRB(.615, .225, .775, .380)),
+  ];
+}
+
+class _BodyHitRegion {
+  const _BodyHitRegion(this.id, this.name, this.bounds);
+
+  final String id;
+  final String name;
+  final Rect bounds;
 }

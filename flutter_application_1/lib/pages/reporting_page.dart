@@ -93,7 +93,9 @@ class _ReportingPageState extends State<ReportingPage> {
   final _incidentMunicipality = TextEditingController();
   final _incidentBarangay = TextEditingController();
   final _description = TextEditingController();
+  final _biteArea = TextEditingController();
   final _otherAnimalType = TextEditingController();
+  final _lastVaccinationDate = TextEditingController();
   final _breed = TextEditingController();
   final _color = TextEditingController();
   final _animalAge = TextEditingController();
@@ -106,14 +108,17 @@ class _ReportingPageState extends State<ReportingPage> {
   String? _animalType;
   String _ownership = 'Stray';
   String _animalSex = 'Unknown';
+  String? _animalCaged;
   String? _animalAlive;
   String? _availableForObservation;
   String? _animalVaccinated;
+  String? _exposureCategory;
   String? _exposureType;
   String? _bleeding;
   String? _washedWound;
   String _appliedSubstance = 'None';
   DateTime? _selectedBirthDate;
+  DateTime? _selectedLastVaccinationDate;
   DateTime? _selectedBiteDate;
   TimeOfDay? _selectedBiteTime;
   LatLng? _incidentCoordinates;
@@ -154,7 +159,9 @@ class _ReportingPageState extends State<ReportingPage> {
       _incidentMunicipality,
       _incidentBarangay,
       _description,
+      _biteArea,
       _otherAnimalType,
+      _lastVaccinationDate,
       _breed,
       _color,
       _animalAge,
@@ -257,6 +264,21 @@ class _ReportingPageState extends State<ReportingPage> {
     _age.text = '${_calculateAge(date)}';
   }
 
+  Future<void> _pickLastVaccinationDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedLastVaccinationDate ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedLastVaccinationDate = picked;
+        _lastVaccinationDate.text = _formatDate(picked);
+      });
+    }
+  }
+
   Future<void> _pickBiteDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -320,6 +342,7 @@ class _ReportingPageState extends State<ReportingPage> {
           ..clear()
           ..add(site);
       }
+      _biteArea.text = _bodySites.map((selection) => selection.name).join(', ');
     });
   }
 
@@ -348,7 +371,11 @@ class _ReportingPageState extends State<ReportingPage> {
   }
 
   void _removeBodySite(_BodySiteSelection site) {
-    setState(() => _bodySites.removeWhere((selection) => selection.id == site.id));
+    setState(() {
+      _bodySites.removeWhere((selection) => selection.id == site.id);
+      _biteArea.text =
+          _bodySites.map((selection) => selection.name).join(', ');
+    });
   }
 
   String? _required(String? value, String label) =>
@@ -388,6 +415,9 @@ class _ReportingPageState extends State<ReportingPage> {
   }
 
   Future<void> _submit() async {
+    // The button is disabled while saving, and this guard also protects
+    // against duplicate invocations before the widget rebuilds.
+    if (_submitting) return;
     if (!_certified) {
       _showSnackBar('Please certify that the information is true and correct.');
       return;
@@ -439,6 +469,25 @@ class _ReportingPageState extends State<ReportingPage> {
           .collection('app-database')
           .doc(caseId)
           .set({
+        // Canonical bite-case fields used by Firestore consumers. The nested
+        // data below retains the complete existing report payload.
+        'lastName': _lastName.text.trim(),
+        'firstName': _firstName.text.trim(),
+        'middleName': _middleName.text.trim(),
+        'age': int.tryParse(_age.text.trim()),
+        'sex': _sex,
+        'contactNo': _mobile.text.trim(),
+        'houseStreet': _streetAddress.text.trim(),
+        'barangay': _residenceBarangay.text.trim(),
+        'cityMunicipality': _residenceMunicipality.text.trim(),
+        'province': _province.text.trim(),
+        'biteArea': _bodySites.map((site) => site.name).toList(),
+        'animalType': _resolvedAnimalType(),
+        'animalOther': _animalType == 'Others (Specify)'
+            ? _otherAnimalType.text.trim()
+            : null,
+        'animalCaged': _ownership == 'Owned (Caged)',
+        'priorVaccination': _animalVaccinated,
         'caseId': caseId,
         'reportId': caseId,
         'userId': user.uid,
@@ -511,7 +560,7 @@ class _ReportingPageState extends State<ReportingPage> {
               : null,
           'substanceApplied': _resolvedSubstance(),
         },
-        'submittedAt': Timestamp.fromDate(now),
+        'submittedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -573,82 +622,8 @@ class _ReportingPageState extends State<ReportingPage> {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _section('1. Patient Information', [
-                    SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: _reportingForSelf,
-                        onChanged:
-                            _loadingProfile ? null : _setReportingForSelf,
-                        title: const Text('Reporting for self?'),
-                        subtitle: const Text('Use saved profile details'),
-                        secondary: _loadingProfile
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.person_outline)),
-                    _subheading('Patient Name'),
-                    _twoFields(
-                        _field(_lastName, 'Last Name',
-                            required: true, readOnly: _patientReadOnly),
-                        _field(_firstName, 'First Name',
-                            required: true, readOnly: _patientReadOnly)),
-                    _twoFields(
-                        _field(_middleName, 'Middle Name',
-                            readOnly: _patientReadOnly),
-                        _field(_suffix, 'Suffix (Optional)',
-                            readOnly: _patientReadOnly)),
-                    _subheading('Personal Information'),
-                    _twoFields(
-                        _dropdown('Sex', _sex, const ['Male', 'Female'],
-                            (v) => setState(() => _sex = v),
-                            required: true, enabled: !_patientReadOnly),
-                        _dateField(_birthDate, 'Date of Birth', _pickBirthDate,
-                            required: true, readOnly: _patientReadOnly)),
-                    _twoFields(
-                        _field(_age, 'Age (Automatically calculated)',
-                            readOnly: true),
-                        _field(_civilStatus, 'Civil Status (Optional)',
-                            readOnly: _patientReadOnly)),
-                    _subheading('Contact Information'),
-                    _twoFields(
-                        _field(_mobile, 'Mobile Number',
-                            required: true,
-                            keyboardType: TextInputType.phone,
-                            readOnly: _patientReadOnly),
-                        _field(_email, 'Email Address (Optional)',
-                            validator: _emailValidator,
-                            keyboardType: TextInputType.emailAddress,
-                            readOnly: _patientReadOnly)),
-                    _subheading('Residential Address'),
-                    _field(_province, 'Province',
-                        required: true, readOnly: _patientReadOnly),
-                    const SizedBox(height: 12),
-                    _municipalityField(
-                        _residenceMunicipality, 'Municipality/City',
-                        enabled: !_patientReadOnly),
-                    const SizedBox(height: 12),
-                    _field(_residenceBarangay, 'Barangay',
-                        required: true, readOnly: _patientReadOnly),
-                    const SizedBox(height: 12),
-                    _field(_streetAddress, 'Street Address',
-                        required: true, readOnly: _patientReadOnly),
-                  ]),
-                  _section('2. Bite Incident Information', [
-                    _subheading('Incident Details'),
-                    _twoFields(
-                        _dateField(_biteDate, 'Date of Bite', _pickBiteDate,
-                            required: true),
-                        _timeField()),
-                    _municipalityField(_incidentMunicipality, 'Municipality'),
-                    const SizedBox(height: 12),
-                    _field(_incidentBarangay, 'Barangay', required: true),
-                    _subheading('Incident Location'),
-                    Text(
-                        'Tap the map to pin the exact incident location. This is optional.',
-                        style: Theme.of(context).textTheme.bodySmall),
-                    const SizedBox(height: 8),
+                  _patientInformationSection(),
+                  _section('2. Incident Location', [
                     CRISMap(
                         center: _incidentCoordinates ??
                             const LatLng(10.7202, 122.5621),
@@ -663,20 +638,6 @@ class _ReportingPageState extends State<ReportingPage> {
                                     position: _incidentCoordinates!,
                                     color: AppColors.danger)
                               ]),
-                    if (_incidentCoordinates != null)
-                      Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                              'Pinned: ${_incidentCoordinates!.latitude.toStringAsFixed(6)}, ${_incidentCoordinates!.longitude.toStringAsFixed(6)}')),
-                    _subheading('Incident Description'),
-                    _field(_description, 'Tell us what happened.',
-                        required: true, maxLines: 4),
-                    _subheading('Supporting Evidence (Optional)'),
-                    _photoPicker('Upload Photo of Bite Wound', _woundBytes,
-                        () => _pickPhoto(true)),
-                    const SizedBox(height: 10),
-                    _photoPicker('Upload Photo of the Animal', _animalBytes,
-                        () => _pickPhoto(false)),
                   ]),
                   _section('3. Animal Information', [
                     _subheading('Animal Type'),
@@ -714,17 +675,6 @@ class _ReportingPageState extends State<ReportingPage> {
                     _twoFields(
                         _field(_breed, 'Breed'), _field(_color, 'Color')),
                     _field(_animalAge, 'Approximate Age (Optional)'),
-                    _subheading('Animal Condition'),
-                    _yesNoUnknown('Is the animal alive?', _animalAlive,
-                        (v) => setState(() => _animalAlive = v)),
-                    _yesNoUnknown(
-                        'Is the animal available for observation?',
-                        _availableForObservation,
-                        (v) => setState(() => _availableForObservation = v)),
-                    _yesNoUnknown(
-                        'Is the animal vaccinated against rabies?',
-                        _animalVaccinated,
-                        (v) => setState(() => _animalVaccinated = v)),
                     _subheading('Suspicious Animal Behavior'),
                     ..._behaviorOptions.map((option) => _reportCheckboxTile(
                         title: option,
@@ -733,22 +683,6 @@ class _ReportingPageState extends State<ReportingPage> {
                             _toggleSuspiciousBehavior(option, checked ?? false))),
                   ]),
                   _section('4. Exposure Information', [
-                    _dropdown(
-                        'Exposure Type',
-                        _exposureType,
-                        const [
-                          'Bite',
-                          'Scratch',
-                          'Saliva Contact',
-                          'Other (Specify)'
-                        ],
-                        (v) => setState(() => _exposureType = v),
-                        required: true),
-                    if (_exposureType == 'Other (Specify)') ...[
-                      const SizedBox(height: 12),
-                      _field(_otherExposure, 'Specify exposure type',
-                          required: true)
-                    ],
                     _subheading('Body Part Affected'),
                     _reportCheckboxTile(
                         title: 'Multiple Sites',
@@ -847,28 +781,17 @@ class _ReportingPageState extends State<ReportingPage> {
             _province.text
           ].where((v) => v.trim().isNotEmpty).join(', ')
         }),
-        _summary('Bite Incident Information', {
-          'Date / Time': '${_biteDate.text} ${_biteTime.text}',
-          'Location': [_incidentBarangay.text, _incidentMunicipality.text]
-              .where((v) => v.trim().isNotEmpty)
-              .join(', '),
-          'GPS Location': _incidentCoordinates == null
-              ? ''
-              : '${_incidentCoordinates!.latitude.toStringAsFixed(6)}, ${_incidentCoordinates!.longitude.toStringAsFixed(6)}',
-          'What happened': _description.text,
-          'Evidence': [
-            'Wound photo: ${_woundPhoto == null ? 'Not provided' : 'Attached'}',
-            'Animal photo: ${_animalPhoto == null ? 'Not provided' : 'Attached'}'
-          ].join('\n')
-        }),
+        if (_incidentCoordinates != null)
+          _summary('Incident Location', {
+            'GPS Location':
+                '${_incidentCoordinates!.latitude.toStringAsFixed(6)}, ${_incidentCoordinates!.longitude.toStringAsFixed(6)}',
+          }),
         _summary('Animal Information', {
           'Animal': _resolvedAnimalType(),
           'Ownership / Sex': '$_ownership / $_animalSex',
           'Description': [_breed.text, _color.text, _animalAge.text]
               .where((v) => v.trim().isNotEmpty)
               .join(', '),
-          'Alive / Available / Vaccinated':
-              '${_animalAlive ?? ''} / ${_availableForObservation ?? ''} / ${_animalVaccinated ?? ''}',
           'Suspicious behavior': _behaviors.join(', ')
         }),
         _summary('Exposure & First Aid', {
@@ -913,6 +836,264 @@ class _ReportingPageState extends State<ReportingPage> {
     );
   }
 
+  Widget _patientInformationSection() => Padding(
+        padding: const EdgeInsets.only(top: 20),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.cream),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.cream,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.person_rounded,
+                        color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Patient information',
+                      style:
+                          Theme.of(context).textTheme.titleLarge?.copyWith(
+                                color: const Color(0xFF172554),
+                                fontWeight: FontWeight.w700,
+                              ),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 32, color: AppColors.cream),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _reportingForSelf,
+                onChanged: _loadingProfile ? null : _setReportingForSelf,
+                title: const Text('Reporting for self?'),
+                subtitle: const Text('Use saved profile details'),
+                secondary: _loadingProfile
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.person_outline),
+              ),
+              const SizedBox(height: 12),
+              _responsivePatientFieldGrid([
+                _patientLabeledField(
+                  'Last name',
+                  _field(
+                    _lastName,
+                    'Last Name',
+                    required: true,
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: 'Last name',
+                  ),
+                ),
+                _patientLabeledField(
+                  'First name',
+                  _field(
+                    _firstName,
+                    'First Name',
+                    required: true,
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: 'First name',
+                  ),
+                ),
+                _patientLabeledField(
+                  'Middle name',
+                  _field(
+                    _middleName,
+                    'Middle Name',
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: 'Middle name (optional)',
+                  ),
+                ),
+                _patientLabeledField(
+                  'Age',
+                  _field(
+                    _age,
+                    'Age (Automatically calculated)',
+                    readOnly: true,
+                    showLabel: false,
+                    hintText: 'Automatically calculated',
+                  ),
+                ),
+                _patientLabeledField(
+                  'Sex',
+                  _dropdown(
+                    'Sex',
+                    _sex,
+                    const ['Male', 'Female'],
+                    (v) => setState(() => _sex = v),
+                    required: true,
+                    enabled: !_patientReadOnly,
+                    showLabel: false,
+                    hintText: 'Select',
+                  ),
+                ),
+                _patientLabeledField(
+                  'Contact number',
+                  _field(
+                    _mobile,
+                    'Mobile Number',
+                    required: true,
+                    keyboardType: TextInputType.phone,
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: '09xx xxx xxxx',
+                  ),
+                ),
+                _patientLabeledField(
+                  'House no. / Street',
+                  _field(
+                    _streetAddress,
+                    'Street Address',
+                    required: true,
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: 'House no., street/purok',
+                  ),
+                ),
+                _patientLabeledField(
+                  'Barangay',
+                  _field(
+                    _residenceBarangay,
+                    'Barangay',
+                    required: true,
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: 'Barangay',
+                  ),
+                ),
+                _patientLabeledField(
+                  'City / Municipality',
+                  _municipalityField(
+                    _residenceMunicipality,
+                    'Municipality/City',
+                    enabled: !_patientReadOnly,
+                    showLabel: false,
+                    hintText: 'City or municipality',
+                  ),
+                ),
+                _patientLabeledField(
+                  'Province',
+                  _field(
+                    _province,
+                    'Province',
+                    required: true,
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: 'e.g. Iloilo',
+                  ),
+                ),
+                _patientLabeledField(
+                  'Date of birth',
+                  _dateField(
+                    _birthDate,
+                    'Date of Birth',
+                    _pickBirthDate,
+                    required: true,
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: 'Select date',
+                  ),
+                ),
+                _patientLabeledField(
+                  'Suffix',
+                  _field(
+                    _suffix,
+                    'Suffix (Optional)',
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: 'Suffix (optional)',
+                  ),
+                ),
+                _patientLabeledField(
+                  'Civil status',
+                  _field(
+                    _civilStatus,
+                    'Civil Status (Optional)',
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: 'Civil status (optional)',
+                  ),
+                ),
+                _patientLabeledField(
+                  'Email address',
+                  _field(
+                    _email,
+                    'Email Address (Optional)',
+                    validator: _emailValidator,
+                    keyboardType: TextInputType.emailAddress,
+                    readOnly: _patientReadOnly,
+                    showLabel: false,
+                    hintText: 'Email address (optional)',
+                  ),
+                ),
+              ]),
+            ],
+          ),
+        ),
+      );
+
+  Widget _patientLabeledField(String label, Widget field) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 7),
+          field,
+        ],
+      );
+
+  Widget _responsivePatientFieldGrid(List<Widget> fields) => LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 600) {
+            return Column(
+              children: [
+                for (var index = 0; index < fields.length; index++) ...[
+                  fields[index],
+                  if (index < fields.length - 1) const SizedBox(height: 16),
+                ],
+              ],
+            );
+          }
+
+          return Column(
+            children: [
+              for (var index = 0; index < fields.length; index += 2) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: fields[index]),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: index + 1 < fields.length
+                          ? fields[index + 1]
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+                if (index + 2 < fields.length) const SizedBox(height: 16),
+              ],
+            ],
+          );
+        },
+      );
+
   Widget _section(String title, List<Widget> children) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
@@ -948,6 +1129,8 @@ class _ReportingPageState extends State<ReportingPage> {
           bool readOnly = false,
           int maxLines = 1,
           TextInputType? keyboardType,
+          bool showLabel = true,
+          String? hintText,
           String? Function(String?)? validator}) =>
       TextFormField(
           controller: controller,
@@ -955,21 +1138,26 @@ class _ReportingPageState extends State<ReportingPage> {
           maxLines: maxLines,
           keyboardType: keyboardType,
           textCapitalization: TextCapitalization.words,
-          decoration: InputDecoration(labelText: label),
+          decoration: InputDecoration(
+              labelText: showLabel ? label : null, hintText: hintText),
           validator: validator ??
               (required
                   ? (v) => _required(v, label.replaceAll(' (Optional)', ''))
                   : null));
   Widget _dateField(
           TextEditingController controller, String label, VoidCallback onTap,
-          {bool required = false, bool readOnly = false}) =>
+          {bool required = false,
+          bool readOnly = false,
+          bool showLabel = true,
+          String? hintText}) =>
       TextFormField(
           controller: controller,
           readOnly: true,
           enabled: !readOnly,
           onTap: onTap,
           decoration: InputDecoration(
-              labelText: label,
+              labelText: showLabel ? label : null,
+              hintText: hintText,
               suffixIcon: const Icon(Icons.calendar_today_outlined)),
           validator: required ? (v) => _required(v, label) : null);
   Widget _timeField() => TextFormField(
@@ -982,7 +1170,10 @@ class _ReportingPageState extends State<ReportingPage> {
       validator: (v) => _required(v, 'Time of Bite'));
   Widget _dropdown(String label, String? value, List<String> options,
           ValueChanged<String?> onChanged,
-          {bool required = false, bool enabled = true}) =>
+          {bool required = false,
+          bool enabled = true,
+          bool showLabel = true,
+          String? hintText}) =>
       DropdownButtonFormField<String>(
           initialValue: value,
           isExpanded: true,
@@ -990,8 +1181,8 @@ class _ReportingPageState extends State<ReportingPage> {
           dropdownColor: Colors.white,
           iconEnabledColor: Colors.black54,
           decoration: InputDecoration(
-            labelText: label,
-            hintText: 'Select $label',
+            labelText: showLabel ? label : null,
+            hintText: hintText ?? 'Select $label',
             labelStyle: const TextStyle(color: Colors.black87),
             floatingLabelStyle: const TextStyle(color: AppColors.primary),
             hintStyle: const TextStyle(color: Colors.black54),
@@ -1042,7 +1233,7 @@ class _ReportingPageState extends State<ReportingPage> {
       _dropdown(question, value, const ['Yes', 'No', 'Unknown'], onChanged,
           required: true);
   Widget _municipalityField(TextEditingController controller, String label,
-          {bool enabled = true}) =>
+          {bool enabled = true, bool showLabel = true, String? hintText}) =>
       Autocomplete<String>(
           initialValue: TextEditingValue(text: controller.text),
           optionsBuilder: (value) {
@@ -1082,8 +1273,8 @@ class _ReportingPageState extends State<ReportingPage> {
                 enabled: enabled,
                 style: const TextStyle(color: Colors.black87),
                 decoration: InputDecoration(
-                    labelText: label,
-                    hintText: 'Select or enter $label',
+                    labelText: showLabel ? label : null,
+                    hintText: hintText ?? 'Select or enter $label',
                     labelStyle: const TextStyle(color: Colors.black87),
                     floatingLabelStyle:
                         const TextStyle(color: AppColors.primary),

@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/abtc_model.dart';
+import '../repositories/csv_abtc_repository.dart';
 import '../repositories/firestore_abtc_repository.dart';
 import '../services/location_service.dart';
 import '../services/nearest_abtc_service.dart';
@@ -23,6 +24,7 @@ class ABTCMapScreen extends StatefulWidget {
 }
 
 class _ABTCMapScreenState extends State<ABTCMapScreen> {
+  final _csvRepository = CsvABTCRepository();
   final _repository = FirestoreABTCRepository();
   final _locationService = LocationService();
   final _nearestService = NearestABTCService();
@@ -52,22 +54,51 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
   }
 
   Future<void> _loadABTCs() async {
+    List<ABTCModel> csvABTCs = const [];
+    List<ABTCModel> firestoreABTCs = const [];
+    var csvLoaded = false;
+    var firestoreLoaded = false;
+
+    try {
+      csvABTCs = await _csvRepository.fetchABTCs();
+      csvLoaded = true;
+    } catch (_) {
+      debugPrint('Unable to load bundled ABTC CSV locations.');
+    }
+
     try {
       // This is deliberately the only Firestore read for this screen visit.
-      final abtcs = await _repository.fetchABTCs();
-      if (!mounted) return;
-      setState(() {
-        _abtcs = abtcs;
-        _isLoading = false;
-        _recalculateDistances();
-      });
+      firestoreABTCs = await _repository.fetchABTCs();
+      firestoreLoaded = true;
     } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _loadError = 'Unable to load Animal Bite Treatment Centers. Check your internet connection and try again.';
-      });
+      debugPrint('Unable to load Firestore ABTC locations.');
     }
+
+    if (!mounted) return;
+    setState(() {
+      _abtcs = _mergeABTCs(firestoreABTCs, csvABTCs);
+      _isLoading = false;
+      _loadError = csvLoaded || firestoreLoaded
+          ? null
+          : 'Unable to load Animal Bite Treatment Centers. Please try again later.';
+      _recalculateDistances();
+    });
+  }
+
+  List<ABTCModel> _mergeABTCs(
+    List<ABTCModel> firestoreABTCs,
+    List<ABTCModel> csvABTCs,
+  ) {
+    final locations = <String, ABTCModel>{};
+    for (final abtc in [...firestoreABTCs, ...csvABTCs]) {
+      final key = abtc.hasCoordinates
+          ? '${abtc.name.trim().toLowerCase()}|'
+              '${abtc.latitude!.toStringAsFixed(6)}|'
+              '${abtc.longitude!.toStringAsFixed(6)}'
+          : 'id:${abtc.id}';
+      locations.putIfAbsent(key, () => abtc);
+    }
+    return locations.values.toList(growable: false);
   }
 
   Future<void> _findUserLocation() async {
@@ -89,7 +120,8 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _locationMessage = 'Your location is unavailable. Allow location access to find the nearest center.';
+          _locationMessage =
+              'Your location is unavailable. Allow location access to find the nearest center.';
         });
       }
     }
@@ -148,7 +180,8 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
           label: 'Your location',
           position: LatLng(position.latitude, position.longitude),
           color: Colors.blue,
-          child: const Icon(Icons.person_pin_circle, color: Colors.blue, size: 42),
+          child:
+              const Icon(Icons.person_pin_circle, color: Colors.blue, size: 42),
         ),
       );
     }
@@ -159,7 +192,8 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
         CRISMapMarker(
           label: abtc.name,
           position: LatLng(abtc.latitude!, abtc.longitude!),
-          child: ABTCMarkerWidget(abtc: abtc, onTap: () => _showCenterInfo(abtc)),
+          child:
+              ABTCMarkerWidget(abtc: abtc, onTap: () => _showCenterInfo(abtc)),
         ),
       );
     }
@@ -182,11 +216,14 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
             children: [
               Text(abtc.name, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
-              _InfoLine(icon: Icons.location_on_outlined, text: abtc.completeAddress),
+              _InfoLine(
+                  icon: Icons.location_on_outlined, text: abtc.completeAddress),
               const SizedBox(height: 7),
               _InfoLine(icon: Icons.schedule_outlined, text: abtc.schedule),
               const SizedBox(height: 7),
-              _InfoLine(icon: Icons.medical_information_outlined, text: abtc.availability),
+              _InfoLine(
+                  icon: Icons.medical_information_outlined,
+                  text: abtc.availability),
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -233,7 +270,8 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
       return;
     }
     if (!abtc.hasCoordinates) {
-      _showMessage('Directions are unavailable because this center has no valid coordinates.');
+      _showMessage(
+          'Directions are unavailable because this center has no valid coordinates.');
       return;
     }
 
@@ -243,14 +281,16 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
       'destination': '${abtc.latitude},${abtc.longitude}',
       'travelmode': 'driving',
     });
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        mounted) {
       _showMessage('Google Maps could not be opened on this device.');
     }
   }
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -375,7 +415,9 @@ class _LocationNotice extends StatelessWidget {
             children: [
               const Icon(Icons.location_off_outlined, color: AppColors.primary),
               const SizedBox(width: 8),
-              Expanded(child: Text(message, style: Theme.of(context).textTheme.bodySmall)),
+              Expanded(
+                  child: Text(message,
+                      style: Theme.of(context).textTheme.bodySmall)),
             ],
           ),
         ),

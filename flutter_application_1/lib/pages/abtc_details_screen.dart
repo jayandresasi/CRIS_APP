@@ -32,7 +32,8 @@ class ABTCDetailsScreen extends StatelessWidget {
                       size: 34,
                     ),
                     const SizedBox(height: 12),
-                    Text(abtc.name, style: Theme.of(context).textTheme.titleLarge),
+                    Text(abtc.name,
+                        style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 20),
                     _DetailItem(
                       label: 'Complete Address',
@@ -51,7 +52,14 @@ class ABTCDetailsScreen extends StatelessWidget {
                       value: _valueOrUnavailable(abtc.province),
                     ),
                     _DetailItem(label: 'Schedule', value: abtc.schedule),
-                    _DetailItem(label: 'Availability', value: abtc.availability),
+                    _DetailItem(
+                        label: 'Availability', value: abtc.availability),
+                    if (abtc.telephone.isNotEmpty)
+                      _DetailItem(label: 'Telephone', value: abtc.telephone),
+                    if (abtc.email.isNotEmpty)
+                      _DetailItem(label: 'Email', value: abtc.email),
+                    if (abtc.done.isNotEmpty)
+                      _DetailItem(label: 'Status', value: abtc.done),
                   ],
                 ),
               ),

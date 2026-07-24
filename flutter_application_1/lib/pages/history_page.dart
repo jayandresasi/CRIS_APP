@@ -40,7 +40,7 @@ class HistoryPage extends StatelessWidget {
             : TabBarView(
                 children: [
                   _FirestoreReportsList(
-                    collectionPath: 'bite_reports',
+                    collectionPath: 'app-database',
                     userId: currentUid,
                     emptyMessage: 'No bite reports found.',
                     icon: Icons.warning_amber_rounded,

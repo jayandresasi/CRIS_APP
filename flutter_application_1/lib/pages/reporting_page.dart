@@ -436,7 +436,7 @@ class _ReportingPageState extends State<ReportingPage> {
       );
       await Hive.box<Report>('reports').add(report);
       await FirebaseFirestore.instance
-          .collection('bite_reports')
+          .collection('app-database')
           .doc(caseId)
           .set({
         'caseId': caseId,
@@ -522,11 +522,24 @@ class _ReportingPageState extends State<ReportingPage> {
               builder: (_) =>
                   _SubmissionSuccess(caseId: caseId, submittedAt: now)));
     } on FirebaseException catch (e) {
-      _showSnackBar(e.message ?? 'Unable to submit bite report.');
-    } catch (e) {
-      _showSnackBar('Unable to submit bite report: $e');
+      _showSnackBar(_submissionErrorMessage(e));
+    } catch (_) {
+      _showSnackBar(
+          'Unable to submit your bite report. Please try again shortly.');
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  String _submissionErrorMessage(FirebaseException error) {
+    switch (error.code) {
+      case 'permission-denied':
+        return 'You do not have permission to submit a bite report.';
+      case 'unavailable':
+      case 'network-request-failed':
+        return 'Unable to submit your bite report. Check your connection and try again.';
+      default:
+        return 'Unable to submit your bite report. Please try again shortly.';
     }
   }
 

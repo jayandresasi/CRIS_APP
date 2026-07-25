@@ -482,11 +482,16 @@ class _ReportingPageState extends State<ReportingPage> {
         'cityMunicipality': _residenceMunicipality.text.trim(),
         'province': _province.text.trim(),
         'biteArea': _bodySites.map((site) => site.name).toList(),
+        'biteAreaDescription': _biteArea.text.trim(),
         'animalType': _resolvedAnimalType(),
         'animalOther': _animalType == 'Others (Specify)'
             ? _otherAnimalType.text.trim()
             : null,
-        'animalCaged': _ownership == 'Owned (Caged)',
+        'animalCaged': _animalCaged == 'Yes'
+            ? true
+            : _animalCaged == 'No'
+                ? false
+                : null,
         'priorVaccination': _animalVaccinated,
         'caseId': caseId,
         'reportId': caseId,
@@ -536,6 +541,7 @@ class _ReportingPageState extends State<ReportingPage> {
           'type': _resolvedAnimalType(),
           'species': _resolvedAnimalType(),
           'ownership': _ownership,
+          'caged': _animalCaged,
           'sex': _animalSex,
           'breed': _breed.text.trim(),
           'color': _color.text.trim(),
@@ -549,6 +555,7 @@ class _ReportingPageState extends State<ReportingPage> {
         'exposure': {
           'type': _resolvedExposure(),
           'bodySites': _bodySites.map((site) => site.name).toList(),
+          'areaDescription': _biteArea.text.trim(),
           'multipleSites': _multipleSites,
           'numberOfWounds': int.tryParse(_woundCount.text.trim()),
           'bleeding': _bleeding,
@@ -640,19 +647,6 @@ class _ReportingPageState extends State<ReportingPage> {
                               ]),
                   ]),
                   _section('3. Animal Information', [
-                    _subheading('Animal Type'),
-                    _dropdown(
-                        'Animal Type',
-                        _animalType,
-                        const ['Dog', 'Cat', 'Others (Specify)'],
-                        (v) => setState(() => _animalType = v),
-                        required: true),
-                    if (_animalType == 'Others (Specify)') ...[
-                      const SizedBox(height: 12),
-                      _field(_otherAnimalType, 'Specify animal type',
-                          required: true)
-                    ],
-                    const SizedBox(height: 12),
                     _dropdown(
                         'Ownership',
                         _ownership,
@@ -671,10 +665,6 @@ class _ReportingPageState extends State<ReportingPage> {
                         const ['Male', 'Female', 'Unknown'],
                         (v) => setState(() => _animalSex = v ?? 'Unknown'),
                         required: true),
-                    _subheading('Physical Description'),
-                    _twoFields(
-                        _field(_breed, 'Breed'), _field(_color, 'Color')),
-                    _field(_animalAge, 'Approximate Age (Optional)'),
                     _subheading('Suspicious Animal Behavior'),
                     ..._behaviorOptions.map((option) => _reportCheckboxTile(
                         title: option,
@@ -683,6 +673,22 @@ class _ReportingPageState extends State<ReportingPage> {
                             _toggleSuspiciousBehavior(option, checked ?? false))),
                   ]),
                   _section('4. Exposure Information', [
+                    _subheading('Exposure and Bite Details'),
+                    const Divider(),
+                    _field(_biteArea, 'Area of the Bite',
+                        hintText: 'e.g., Right lower leg'),
+                    _responsivePatientFieldGrid([
+                      _dropdown(
+                          'Type of animal',
+                          _animalType,
+                          const ['Dog', 'Cat', 'Others'],
+                          (v) => setState(() => _animalType = v),
+                          required: true),
+                      _yesNo('Previously vaccinated?', _animalVaccinated,
+                          (v) => setState(() => _animalVaccinated = v)),
+                    ]),
+                    _yesNoUnknown('Was the animal caged?', _animalCaged,
+                        (v) => setState(() => _animalCaged = v)),
                     _subheading('Body Part Affected'),
                     _reportCheckboxTile(
                         title: 'Multiple Sites',
@@ -702,11 +708,6 @@ class _ReportingPageState extends State<ReportingPage> {
                       _SelectedBodyPartsList(
                           selections: _bodySites, onRemove: _removeBodySite),
                     const SizedBox(height: 12),
-                    _field(_woundCount, 'Number of Bite/Scratch Wounds',
-                        required: true,
-                        keyboardType: TextInputType.number,
-                        validator: (v) =>
-                            _numberValidator(v, 'Number of wounds')),
                     _yesNo('Was there bleeding?', _bleeding,
                         (v) => setState(() => _bleeding = v)),
                   ]),
@@ -796,8 +797,11 @@ class _ReportingPageState extends State<ReportingPage> {
         }),
         _summary('Exposure & First Aid', {
           'Exposure': _resolvedExposure(),
+          'Area of bite': _biteArea.text,
           'Body areas': _bodySites.map((site) => site.name).join(', '),
-          'Wounds / Bleeding': '${_woundCount.text} / ${_bleeding ?? ''}',
+          'Animal caged': _animalCaged ?? '',
+          'Previously vaccinated': _animalVaccinated ?? '',
+          'Bleeding': _bleeding ?? '',
           'Washed wound': _washedWound == 'Yes'
               ? 'Yes, ${_washMinutes.text} minutes'
               : _washedWound ?? '',

@@ -658,13 +658,6 @@ class _ReportingPageState extends State<ReportingPage> {
                         ],
                         (v) => setState(() => _ownership = v ?? 'Unknown'),
                         required: true),
-                    const SizedBox(height: 12),
-                    _dropdown(
-                        'Animal Sex',
-                        _animalSex,
-                        const ['Male', 'Female', 'Unknown'],
-                        (v) => setState(() => _animalSex = v ?? 'Unknown'),
-                        required: true),
                     _subheading('Suspicious Animal Behavior'),
                     ..._behaviorOptions.map((option) => _reportCheckboxTile(
                         title: option,
@@ -789,7 +782,7 @@ class _ReportingPageState extends State<ReportingPage> {
           }),
         _summary('Animal Information', {
           'Animal': _resolvedAnimalType(),
-          'Ownership / Sex': '$_ownership / $_animalSex',
+          'Ownership': _ownership,
           'Description': [_breed.text, _color.text, _animalAge.text]
               .where((v) => v.trim().isNotEmpty)
               .join(', '),

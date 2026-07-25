@@ -12,6 +12,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/report.dart';
 import '../theme.dart';
 import '../widgets/cris_map.dart';
+import '../widgets/report_form_ui.dart';
 import 'login_page.dart';
 
 const List<String> iloiloMunicipalities = [
@@ -630,7 +631,11 @@ class _ReportingPageState extends State<ReportingPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _patientInformationSection(),
-                  _section('2. Incident Location', [
+                  _section(
+                    '2. Bite Incident Information',
+                    Icons.location_on_outlined,
+                    'Mark the location where the bite happened.',
+                    [
                     CRISMap(
                         center: _incidentCoordinates ??
                             const LatLng(10.7202, 122.5621),
@@ -645,8 +650,13 @@ class _ReportingPageState extends State<ReportingPage> {
                                     position: _incidentCoordinates!,
                                     color: AppColors.danger)
                               ]),
-                  ]),
-                  _section('3. Animal Information', [
+                    ],
+                  ),
+                  _section(
+                    '3. Animal Information',
+                    Icons.pets_outlined,
+                    'Share only what you know about the animal.',
+                    [
                     _dropdown(
                         'Ownership',
                         _ownership,
@@ -664,8 +674,13 @@ class _ReportingPageState extends State<ReportingPage> {
                         value: _behaviors.contains(option),
                         onChanged: (checked) =>
                             _toggleSuspiciousBehavior(option, checked ?? false))),
-                  ]),
-                  _section('4. Exposure Information', [
+                    ],
+                  ),
+                  _section(
+                    '4. Exposure Information',
+                    Icons.healing_outlined,
+                    'Describe the exposure and select the affected body area.',
+                    [
                     _subheading('Exposure and Bite Details'),
                     const Divider(),
                     _field(_biteArea, 'Area of the Bite',
@@ -703,8 +718,13 @@ class _ReportingPageState extends State<ReportingPage> {
                     const SizedBox(height: 12),
                     _yesNo('Was there bleeding?', _bleeding,
                         (v) => setState(() => _bleeding = v)),
-                  ]),
-                  _section('5. First Aid Performed', [
+                    ],
+                  ),
+                  _section(
+                    '5. First Aid Performed',
+                    Icons.water_drop_outlined,
+                    'Tell us what first aid was given after the exposure.',
+                    [
                     _subheading('Wound Care'),
                     _yesNo('Did you wash the wound with soap and water?',
                         _washedWound, (v) => setState(() => _washedWound = v)),
@@ -733,7 +753,8 @@ class _ReportingPageState extends State<ReportingPage> {
                       _field(_otherSubstance, 'Specify substance',
                           required: true)
                     ],
-                  ]),
+                    ],
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                       height: 52,
@@ -800,12 +821,12 @@ class _ReportingPageState extends State<ReportingPage> {
               : _washedWound ?? '',
           'Substance applied': _resolvedSubstance()
         }),
-        CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _certified,
-            onChanged: (value) => setState(() => _certified = value ?? false),
-            title: const Text(
-                'I certify that the information provided is true and correct to the best of my knowledge.')),
+        ReportCheckboxTile(
+          value: _certified,
+          onChanged: (value) => setState(() => _certified = value ?? false),
+          title:
+              'I certify that the information provided is true and correct to the best of my knowledge.',
+        ),
         const SizedBox(height: 12),
         SizedBox(
             height: 50,
@@ -833,44 +854,11 @@ class _ReportingPageState extends State<ReportingPage> {
     );
   }
 
-  Widget _patientInformationSection() => Padding(
-        padding: const EdgeInsets.only(top: 20),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.cream),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget _patientInformationSection() => ReportFormSection(
+            title: '1. Patient Information',
+            icon: Icons.person_outline,
+            description: 'Enter the details of the person who was bitten.',
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.cream,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.person_rounded,
-                        color: AppColors.primary),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Patient information',
-                      style:
-                          Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: const Color(0xFF172554),
-                                fontWeight: FontWeight.w700,
-                              ),
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(height: 32, color: AppColors.cream),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 value: _reportingForSelf,
@@ -1043,9 +1031,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 ),
               ]),
             ],
-          ),
-        ),
-      );
+          );
 
   Widget _patientLabeledField(String label, Widget field) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1091,27 +1077,18 @@ class _ReportingPageState extends State<ReportingPage> {
         },
       );
 
-  Widget _section(String title, List<Widget> children) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(
-            padding: const EdgeInsets.fromLTRB(0, 20, 0, 8),
-            child: Text(title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.primary, fontWeight: FontWeight.w700))),
-        Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: _spaced(children))))
-      ]);
-  List<Widget> _spaced(List<Widget> children) => [
-        for (var i = 0; i < children.length; i++) ...[
-          children[i],
-          if (i < children.length - 1) const SizedBox(height: 12)
-        ]
-      ];
+  Widget _section(
+    String title,
+    IconData icon,
+    String description,
+    List<Widget> children,
+  ) =>
+      ReportFormSection(
+        title: title,
+        icon: icon,
+        description: description,
+        children: children,
+      );
   Widget _subheading(String value) => Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700)));
@@ -1199,36 +1176,38 @@ class _ReportingPageState extends State<ReportingPage> {
     required ValueChanged<bool?> onChanged,
     String? subtitle,
   }) =>
-      CheckboxListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+      ReportCheckboxTile(
+        title: title,
         value: value,
-        selected: value,
-        tileColor: const Color(0xFFF7F7F7),
-        selectedTileColor: const Color(0xFFFFE7D8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        controlAffinity: ListTileControlAffinity.leading,
-        activeColor: AppColors.primary,
-        checkColor: Colors.white,
-        title: Text(
-          title,
-          style: TextStyle(
-            color: value ? AppColors.primaryVariant : const Color(0xFF4B5563),
-            fontWeight: value ? FontWeight.w700 : FontWeight.w500,
-          ),
-        ),
-        subtitle: subtitle == null
-            ? null
-            : Text(subtitle, style: const TextStyle(color: Color(0xFF5F6B76))),
+        subtitle: subtitle,
         onChanged: onChanged,
       );
   Widget _yesNo(
-          String question, String? value, ValueChanged<String?> onChanged) =>
-      _dropdown(question, value, const ['Yes', 'No'], onChanged,
-          required: true);
+    String question,
+    String? value,
+    ValueChanged<String?> onChanged,
+  ) =>
+      ReportChoiceGroup(
+        label: '$question *',
+        value: value,
+        options: const ['Yes', 'No'],
+        onChanged: onChanged,
+        validator: (selection) =>
+            selection == null ? '$question is required' : null,
+      );
   Widget _yesNoUnknown(
-          String question, String? value, ValueChanged<String?> onChanged) =>
-      _dropdown(question, value, const ['Yes', 'No', 'Unknown'], onChanged,
-          required: true);
+    String question,
+    String? value,
+    ValueChanged<String?> onChanged,
+  ) =>
+      ReportChoiceGroup(
+        label: '$question *',
+        value: value,
+        options: const ['Yes', 'No', 'Unknown'],
+        onChanged: onChanged,
+        validator: (selection) =>
+            selection == null ? '$question is required' : null,
+      );
   Widget _municipalityField(TextEditingController controller, String label,
           {bool enabled = true, bool showLabel = true, String? hintText}) =>
       Autocomplete<String>(
@@ -1288,22 +1267,8 @@ class _ReportingPageState extends State<ReportingPage> {
               ? Icons.add_a_photo_outlined
               : Icons.check_circle_outline),
           label: Text(bytes == null ? label : '$label attached'));
-  Widget _summary(String title, Map<String, String> values) => Card(
-      margin: const EdgeInsets.only(top: 16),
-      child: Padding(
-          padding: const EdgeInsets.all(14),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700, color: AppColors.primary)),
-            const SizedBox(height: 8),
-            ...values.entries
-                .where((entry) => entry.value.trim().isNotEmpty)
-                .map((entry) => Padding(
-                    padding: const EdgeInsets.only(bottom: 7),
-                    child: Text('${entry.key}: ${entry.value}')))
-          ])));
+  Widget _summary(String title, Map<String, String> values) =>
+      ReportReviewCard(title: title, values: values);
   String _resolvedAnimalType() => _animalType == 'Others (Specify)'
       ? _otherAnimalType.text.trim()
       : _animalType ?? '';

@@ -374,8 +374,7 @@ class _ReportingPageState extends State<ReportingPage> {
   void _removeBodySite(_BodySiteSelection site) {
     setState(() {
       _bodySites.removeWhere((selection) => selection.id == site.id);
-      _biteArea.text =
-          _bodySites.map((selection) => selection.name).join(', ');
+      _biteArea.text = _bodySites.map((selection) => selection.name).join(', ');
     });
   }
 
@@ -636,20 +635,20 @@ class _ReportingPageState extends State<ReportingPage> {
                     Icons.location_on_outlined,
                     'Mark the location where the bite happened.',
                     [
-                    CRISMap(
-                        center: _incidentCoordinates ??
-                            const LatLng(10.7202, 122.5621),
-                        zoom: _incidentCoordinates == null ? 10 : 16,
-                        onTap: (point) =>
-                            setState(() => _incidentCoordinates = point),
-                        markers: _incidentCoordinates == null
-                            ? const []
-                            : [
-                                CRISMapMarker(
-                                    label: 'Bite incident',
-                                    position: _incidentCoordinates!,
-                                    color: AppColors.danger)
-                              ]),
+                      CRISMap(
+                          center: _incidentCoordinates ??
+                              const LatLng(10.7202, 122.5621),
+                          zoom: _incidentCoordinates == null ? 10 : 16,
+                          onTap: (point) =>
+                              setState(() => _incidentCoordinates = point),
+                          markers: _incidentCoordinates == null
+                              ? const []
+                              : [
+                                  CRISMapMarker(
+                                      label: 'Bite incident',
+                                      position: _incidentCoordinates!,
+                                      color: AppColors.danger)
+                                ]),
                     ],
                   ),
                   _section(
@@ -657,23 +656,23 @@ class _ReportingPageState extends State<ReportingPage> {
                     Icons.pets_outlined,
                     'Share only what you know about the animal.',
                     [
-                    _dropdown(
-                        'Ownership',
-                        _ownership,
-                        const [
-                          'Owned (Caged)',
-                          'Owned (Allowed to Roam)',
-                          'Stray',
-                          'Unknown'
-                        ],
-                        (v) => setState(() => _ownership = v ?? 'Unknown'),
-                        required: true),
-                    _subheading('Suspicious Animal Behavior'),
-                    ..._behaviorOptions.map((option) => _reportCheckboxTile(
-                        title: option,
-                        value: _behaviors.contains(option),
-                        onChanged: (checked) =>
-                            _toggleSuspiciousBehavior(option, checked ?? false))),
+                      _dropdown(
+                          'Ownership',
+                          _ownership,
+                          const [
+                            'Owned (Caged)',
+                            'Owned (Allowed to Roam)',
+                            'Stray',
+                            'Unknown'
+                          ],
+                          (v) => setState(() => _ownership = v ?? 'Unknown'),
+                          required: true),
+                      _subheading('Suspicious Animal Behavior'),
+                      ..._behaviorOptions.map((option) => _reportCheckboxTile(
+                          title: option,
+                          value: _behaviors.contains(option),
+                          onChanged: (checked) => _toggleSuspiciousBehavior(
+                              option, checked ?? false))),
                     ],
                   ),
                   _section(
@@ -681,43 +680,46 @@ class _ReportingPageState extends State<ReportingPage> {
                     Icons.healing_outlined,
                     'Describe the exposure and select the affected body area.',
                     [
-                    _subheading('Exposure and Bite Details'),
-                    const Divider(),
-                    _field(_biteArea, 'Area of the Bite',
-                        hintText: 'e.g., Right lower leg'),
-                    _responsivePatientFieldGrid([
-                      _dropdown(
-                          'Type of animal',
-                          _animalType,
-                          const ['Dog', 'Cat', 'Others'],
-                          (v) => setState(() => _animalType = v),
-                          required: true),
-                      _yesNoUnknown('Previously vaccinated?', _animalVaccinated,
-                          (v) => setState(() => _animalVaccinated = v)),
-                    ]),
-                    _yesNoUnknown('Was the animal caged?', _animalCaged,
-                        (v) => setState(() => _animalCaged = v)),
-                    _subheading('Body Part Affected'),
-                    _reportCheckboxTile(
-                        title: 'Multiple Sites',
-                        value: _multipleSites,
-                        subtitle:
-                            'Select this before choosing more than one body location.',
-                        onChanged: (value) => _setMultipleSites(value ?? false)),
-                    _AffectedSiteQuantitySelector(
-                        value: _affectedSiteLimit,
-                        enabled: _multipleSites,
-                        onDecrease: () => _changeAffectedSiteLimit(-1),
-                        onIncrease: () => _changeAffectedSiteLimit(1)),
-                    const Text('Tap the affected body part(s).'),
-                    _BodySiteSelector(
-                        selected: _bodySites, onSelected: _selectBodySite),
-                    if (_bodySites.isNotEmpty)
-                      _SelectedBodyPartsList(
-                          selections: _bodySites, onRemove: _removeBodySite),
-                    const SizedBox(height: 12),
-                    _yesNo('Was there bleeding?', _bleeding,
-                        (v) => setState(() => _bleeding = v)),
+                      _subheading('Exposure and Bite Details'),
+                      const Divider(),
+                      _field(_biteArea, 'Area of the Bite',
+                          hintText: 'e.g., Right lower leg'),
+                      _responsivePatientFieldGrid([
+                        _dropdown(
+                            'Type of animal',
+                            _animalType,
+                            const ['Dog', 'Cat', 'Others'],
+                            (v) => setState(() => _animalType = v),
+                            required: true),
+                        _yesNoUnknown(
+                            'Previously vaccinated?',
+                            _animalVaccinated,
+                            (v) => setState(() => _animalVaccinated = v)),
+                      ]),
+                      _yesNoUnknown('Was the animal caged?', _animalCaged,
+                          (v) => setState(() => _animalCaged = v)),
+                      _subheading('Body Part Affected'),
+                      _reportCheckboxTile(
+                          title: 'Multiple Sites',
+                          value: _multipleSites,
+                          subtitle:
+                              'Select this before choosing more than one body location.',
+                          onChanged: (value) =>
+                              _setMultipleSites(value ?? false)),
+                      _AffectedSiteQuantitySelector(
+                          value: _affectedSiteLimit,
+                          enabled: _multipleSites,
+                          onDecrease: () => _changeAffectedSiteLimit(-1),
+                          onIncrease: () => _changeAffectedSiteLimit(1)),
+                      const Text('Tap the affected body part(s).'),
+                      _BodySiteSelector(
+                          selected: _bodySites, onSelected: _selectBodySite),
+                      if (_bodySites.isNotEmpty)
+                        _SelectedBodyPartsList(
+                            selections: _bodySites, onRemove: _removeBodySite),
+                      const SizedBox(height: 12),
+                      _yesNo('Was there bleeding?', _bleeding,
+                          (v) => setState(() => _bleeding = v)),
                     ],
                   ),
                   _section(
@@ -725,34 +727,37 @@ class _ReportingPageState extends State<ReportingPage> {
                     Icons.water_drop_outlined,
                     'Tell us what first aid was given after the exposure.',
                     [
-                    _subheading('Wound Care'),
-                    _yesNo('Did you wash the wound with soap and water?',
-                        _washedWound, (v) => setState(() => _washedWound = v)),
-                    if (_washedWound == 'Yes')
-                      _field(_washMinutes,
-                          'Approximately how many minutes did you wash the wound?',
-                          required: true,
-                          keyboardType: TextInputType.number,
-                          validator: (v) =>
-                              _numberValidator(v, 'Wash duration')),
-                    _subheading('Other First Aid'),
-                    _dropdown(
-                        'Did you apply any substance to the wound?',
-                        _appliedSubstance,
-                        const [
-                          'None',
-                          'Alcohol',
-                          'Betadine',
-                          'Herbal Remedy',
-                          'Other'
-                        ],
-                        (v) => setState(() => _appliedSubstance = v ?? 'None'),
-                        required: true),
-                    if (_appliedSubstance == 'Other') ...[
-                      const SizedBox(height: 12),
-                      _field(_otherSubstance, 'Specify substance',
-                          required: true)
-                    ],
+                      _subheading('Wound Care'),
+                      _yesNo(
+                          'Did you wash the wound with soap and water?',
+                          _washedWound,
+                          (v) => setState(() => _washedWound = v)),
+                      if (_washedWound == 'Yes')
+                        _field(_washMinutes,
+                            'Approximately how many minutes did you wash the wound?',
+                            required: true,
+                            keyboardType: TextInputType.number,
+                            validator: (v) =>
+                                _numberValidator(v, 'Wash duration')),
+                      _subheading('Other First Aid'),
+                      _dropdown(
+                          'Did you apply any substance to the wound?',
+                          _appliedSubstance,
+                          const [
+                            'None',
+                            'Alcohol',
+                            'Betadine',
+                            'Herbal Remedy',
+                            'Other'
+                          ],
+                          (v) =>
+                              setState(() => _appliedSubstance = v ?? 'None'),
+                          required: true),
+                      if (_appliedSubstance == 'Other') ...[
+                        const SizedBox(height: 12),
+                        _field(_otherSubstance, 'Specify substance',
+                            required: true)
+                      ],
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -855,183 +860,183 @@ class _ReportingPageState extends State<ReportingPage> {
   }
 
   Widget _patientInformationSection() => ReportFormSection(
-            title: '1. Patient Information',
-            icon: Icons.person_outline,
-            description: 'Enter the details of the person who was bitten.',
-            children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _reportingForSelf,
-                onChanged: _loadingProfile ? null : _setReportingForSelf,
-                title: const Text('Reporting for self?'),
-                subtitle: const Text('Use saved profile details'),
-                secondary: _loadingProfile
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.person_outline),
+        title: '1. Patient Information',
+        icon: Icons.person_outline,
+        description: 'Enter the details of the person who was bitten.',
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _reportingForSelf,
+            onChanged: _loadingProfile ? null : _setReportingForSelf,
+            title: const Text('Reporting for self?'),
+            subtitle: const Text('Use saved profile details'),
+            secondary: _loadingProfile
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.person_outline),
+          ),
+          const SizedBox(height: 12),
+          _responsivePatientFieldGrid([
+            _patientLabeledField(
+              'Last name',
+              _field(
+                _lastName,
+                'Last Name',
+                required: true,
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: 'Last name',
               ),
-              const SizedBox(height: 12),
-              _responsivePatientFieldGrid([
-                _patientLabeledField(
-                  'Last name',
-                  _field(
-                    _lastName,
-                    'Last Name',
-                    required: true,
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: 'Last name',
-                  ),
-                ),
-                _patientLabeledField(
-                  'First name',
-                  _field(
-                    _firstName,
-                    'First Name',
-                    required: true,
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: 'First name',
-                  ),
-                ),
-                _patientLabeledField(
-                  'Middle name',
-                  _field(
-                    _middleName,
-                    'Middle Name',
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: 'Middle name (optional)',
-                  ),
-                ),
-                _patientLabeledField(
-                  'Age',
-                  _field(
-                    _age,
-                    'Age (Automatically calculated)',
-                    readOnly: true,
-                    showLabel: false,
-                    hintText: 'Automatically calculated',
-                  ),
-                ),
-                _patientLabeledField(
-                  'Sex',
-                  _dropdown(
-                    'Sex',
-                    _sex,
-                    const ['Male', 'Female'],
-                    (v) => setState(() => _sex = v),
-                    required: true,
-                    enabled: !_patientReadOnly,
-                    showLabel: false,
-                    hintText: 'Select',
-                  ),
-                ),
-                _patientLabeledField(
-                  'Contact number',
-                  _field(
-                    _mobile,
-                    'Mobile Number',
-                    required: true,
-                    keyboardType: TextInputType.phone,
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: '09xx xxx xxxx',
-                  ),
-                ),
-                _patientLabeledField(
-                  'House no. / Street',
-                  _field(
-                    _streetAddress,
-                    'Street Address',
-                    required: true,
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: 'House no., street/purok',
-                  ),
-                ),
-                _patientLabeledField(
-                  'Barangay',
-                  _field(
-                    _residenceBarangay,
-                    'Barangay',
-                    required: true,
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: 'Barangay',
-                  ),
-                ),
-                _patientLabeledField(
-                  'City / Municipality',
-                  _municipalityField(
-                    _residenceMunicipality,
-                    'Municipality/City',
-                    enabled: !_patientReadOnly,
-                    showLabel: false,
-                    hintText: 'City or municipality',
-                  ),
-                ),
-                _patientLabeledField(
-                  'Province',
-                  _field(
-                    _province,
-                    'Province',
-                    required: true,
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: 'e.g. Iloilo',
-                  ),
-                ),
-                _patientLabeledField(
-                  'Date of birth',
-                  _dateField(
-                    _birthDate,
-                    'Date of Birth',
-                    _pickBirthDate,
-                    required: true,
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: 'Select date',
-                  ),
-                ),
-                _patientLabeledField(
-                  'Suffix',
-                  _field(
-                    _suffix,
-                    'Suffix (Optional)',
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: 'Suffix (optional)',
-                  ),
-                ),
-                _patientLabeledField(
-                  'Civil status',
-                  _field(
-                    _civilStatus,
-                    'Civil Status (Optional)',
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: 'Civil status (optional)',
-                  ),
-                ),
-                _patientLabeledField(
-                  'Email address',
-                  _field(
-                    _email,
-                    'Email Address (Optional)',
-                    validator: _emailValidator,
-                    keyboardType: TextInputType.emailAddress,
-                    readOnly: _patientReadOnly,
-                    showLabel: false,
-                    hintText: 'Email address (optional)',
-                  ),
-                ),
-              ]),
-            ],
-          );
+            ),
+            _patientLabeledField(
+              'First name',
+              _field(
+                _firstName,
+                'First Name',
+                required: true,
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: 'First name',
+              ),
+            ),
+            _patientLabeledField(
+              'Middle name',
+              _field(
+                _middleName,
+                'Middle Name',
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: 'Middle name (optional)',
+              ),
+            ),
+            _patientLabeledField(
+              'Age',
+              _field(
+                _age,
+                'Age (Automatically calculated)',
+                readOnly: true,
+                showLabel: false,
+                hintText: 'Automatically calculated',
+              ),
+            ),
+            _patientLabeledField(
+              'Sex',
+              _dropdown(
+                'Sex',
+                _sex,
+                const ['Male', 'Female'],
+                (v) => setState(() => _sex = v),
+                required: true,
+                enabled: !_patientReadOnly,
+                showLabel: false,
+                hintText: 'Select',
+              ),
+            ),
+            _patientLabeledField(
+              'Contact number',
+              _field(
+                _mobile,
+                'Mobile Number',
+                required: true,
+                keyboardType: TextInputType.phone,
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: '09xx xxx xxxx',
+              ),
+            ),
+            _patientLabeledField(
+              'House no. / Street',
+              _field(
+                _streetAddress,
+                'Street Address',
+                required: true,
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: 'House no., street/purok',
+              ),
+            ),
+            _patientLabeledField(
+              'Barangay',
+              _field(
+                _residenceBarangay,
+                'Barangay',
+                required: true,
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: 'Barangay',
+              ),
+            ),
+            _patientLabeledField(
+              'City / Municipality',
+              _municipalityField(
+                _residenceMunicipality,
+                'Municipality/City',
+                enabled: !_patientReadOnly,
+                showLabel: false,
+                hintText: 'City or municipality',
+              ),
+            ),
+            _patientLabeledField(
+              'Province',
+              _field(
+                _province,
+                'Province',
+                required: true,
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: 'e.g. Iloilo',
+              ),
+            ),
+            _patientLabeledField(
+              'Date of birth',
+              _dateField(
+                _birthDate,
+                'Date of Birth',
+                _pickBirthDate,
+                required: true,
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: 'Select date',
+              ),
+            ),
+            _patientLabeledField(
+              'Suffix',
+              _field(
+                _suffix,
+                'Suffix (Optional)',
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: 'Suffix (optional)',
+              ),
+            ),
+            _patientLabeledField(
+              'Civil status',
+              _field(
+                _civilStatus,
+                'Civil Status (Optional)',
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: 'Civil status (optional)',
+              ),
+            ),
+            _patientLabeledField(
+              'Email address',
+              _field(
+                _email,
+                'Email Address (Optional)',
+                validator: _emailValidator,
+                keyboardType: TextInputType.emailAddress,
+                readOnly: _patientReadOnly,
+                showLabel: false,
+                hintText: 'Email address (optional)',
+              ),
+            ),
+          ]),
+        ],
+      );
 
   Widget _patientLabeledField(String label, Widget field) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1165,9 +1170,7 @@ class _ReportingPageState extends State<ReportingPage> {
           ),
           items: options
               .map((v) => DropdownMenuItem(
-                  value: v,
-                  child: Text(v,
-                      style: AppFormStyles.dropdownText)))
+                  value: v, child: Text(v, style: AppFormStyles.dropdownText)))
               .toList(),
           onChanged: enabled ? onChanged : null,
           validator:
@@ -1253,8 +1256,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 decoration: InputDecoration(
                     labelText: showLabel ? label : null,
                     hintText: hintText ?? 'Select or enter $label',
-                    labelStyle:
-                        const TextStyle(color: AppColors.textSecondary),
+                    labelStyle: const TextStyle(color: AppColors.textSecondary),
                     floatingLabelStyle:
                         const TextStyle(color: AppColors.primary),
                     hintStyle: const TextStyle(color: AppColors.placeholder),
@@ -1442,8 +1444,7 @@ class _AffectedSiteQuantitySelector extends StatelessWidget {
         Semantics(
             label: '$value affected site${value == 1 ? '' : 's'}',
             child: SizedBox(
-                width: 28,
-                child: Text('$value', textAlign: TextAlign.center))),
+                width: 28, child: Text('$value', textAlign: TextAlign.center))),
         IconButton(
             tooltip: 'Increase affected sites',
             onPressed: enabled ? onIncrease : null,
@@ -1472,7 +1473,8 @@ class _SelectedBodyPartsList extends StatelessWidget {
                   child: Icon(Icons.circle, size: 10, color: AppColors.danger)),
               Expanded(child: Text(selection.name)),
               TextButton(
-                  onPressed: () => onRemove(selection), child: const Text('Remove')),
+                  onPressed: () => onRemove(selection),
+                  child: const Text('Remove')),
             ])),
       ]));
 }
@@ -1501,8 +1503,10 @@ class _BodySiteSelector extends StatelessWidget {
                             behavior: HitTestBehavior.opaque,
                             onTapDown: (details) {
                               final position = Offset(
-                                  details.localPosition.dx / constraints.maxWidth,
-                                  details.localPosition.dy / constraints.maxHeight);
+                                  details.localPosition.dx /
+                                      constraints.maxWidth,
+                                  details.localPosition.dy /
+                                      constraints.maxHeight);
                               final selection = _BodyPartMap.resolve(position);
                               if (selection != null) onSelected(selection);
                             },
@@ -1554,79 +1558,147 @@ class _BodyPartMap {
   static const _regions = <_BodyHitRegion>[
     // Front view: smaller regions come first so fingers, ears and joints are
     // not swallowed by the larger adjacent body-area bounds.
-    _BodyHitRegion('front-right-ear', 'Right Ear', Rect.fromLTRB(.232, .115, .252, .155)),
-    _BodyHitRegion('front-left-ear', 'Left Ear', Rect.fromLTRB(.348, .115, .368, .155)),
+    _BodyHitRegion(
+        'front-right-ear', 'Right Ear', Rect.fromLTRB(.232, .115, .252, .155)),
+    _BodyHitRegion(
+        'front-left-ear', 'Left Ear', Rect.fromLTRB(.348, .115, .368, .155)),
     _BodyHitRegion('front-face', 'Face', Rect.fromLTRB(.245, .105, .355, .190)),
     _BodyHitRegion('front-head', 'Head', Rect.fromLTRB(.250, .055, .350, .120)),
     _BodyHitRegion('front-neck', 'Neck', Rect.fromLTRB(.270, .185, .330, .225)),
-    _BodyHitRegion('front-right-fingers', 'Right Fingers', Rect.fromLTRB(.075, .570, .135, .630)),
-    _BodyHitRegion('front-left-fingers', 'Left Fingers', Rect.fromLTRB(.465, .570, .525, .630)),
-    _BodyHitRegion('front-right-hand', 'Right Hand', Rect.fromLTRB(.105, .535, .180, .615)),
-    _BodyHitRegion('front-left-hand', 'Left Hand', Rect.fromLTRB(.420, .535, .495, .615)),
-    _BodyHitRegion('front-right-wrist', 'Right Wrist', Rect.fromLTRB(.145, .510, .195, .565)),
-    _BodyHitRegion('front-left-wrist', 'Left Wrist', Rect.fromLTRB(.405, .510, .455, .565)),
-    _BodyHitRegion('front-right-elbow', 'Right Elbow', Rect.fromLTRB(.165, .390, .225, .450)),
-    _BodyHitRegion('front-left-elbow', 'Left Elbow', Rect.fromLTRB(.375, .390, .435, .450)),
-    _BodyHitRegion('front-right-forearm', 'Right Forearm', Rect.fromLTRB(.145, .435, .210, .535)),
-    _BodyHitRegion('front-left-forearm', 'Left Forearm', Rect.fromLTRB(.390, .435, .455, .535)),
-    _BodyHitRegion('front-right-upper-arm', 'Right Upper Arm', Rect.fromLTRB(.165, .275, .230, .405)),
-    _BodyHitRegion('front-left-upper-arm', 'Left Upper Arm', Rect.fromLTRB(.370, .275, .435, .405)),
-    _BodyHitRegion('front-right-shoulder', 'Right Shoulder', Rect.fromLTRB(.175, .210, .245, .290)),
-    _BodyHitRegion('front-left-shoulder', 'Left Shoulder', Rect.fromLTRB(.355, .210, .425, .290)),
-    _BodyHitRegion('front-right-toe', 'Right Toes', Rect.fromLTRB(.220, .930, .285, .970)),
-    _BodyHitRegion('front-left-toe', 'Left Toes', Rect.fromLTRB(.315, .930, .380, .970)),
-    _BodyHitRegion('front-right-foot', 'Right Foot', Rect.fromLTRB(.215, .900, .290, .950)),
-    _BodyHitRegion('front-left-foot', 'Left Foot', Rect.fromLTRB(.310, .900, .385, .950)),
-    _BodyHitRegion('front-right-ankle', 'Right Ankle', Rect.fromLTRB(.225, .870, .285, .920)),
-    _BodyHitRegion('front-left-ankle', 'Left Ankle', Rect.fromLTRB(.315, .870, .375, .920)),
-    _BodyHitRegion('front-right-knee', 'Right Knee', Rect.fromLTRB(.220, .735, .290, .800)),
-    _BodyHitRegion('front-left-knee', 'Left Knee', Rect.fromLTRB(.310, .735, .380, .800)),
-    _BodyHitRegion('front-right-lower-leg', 'Right Lower Leg', Rect.fromLTRB(.220, .785, .290, .885)),
-    _BodyHitRegion('front-left-lower-leg', 'Left Lower Leg', Rect.fromLTRB(.310, .785, .380, .885)),
-    _BodyHitRegion('front-right-thigh', 'Right Thigh', Rect.fromLTRB(.215, .565, .295, .755)),
-    _BodyHitRegion('front-left-thigh', 'Left Thigh', Rect.fromLTRB(.305, .565, .385, .755)),
-    _BodyHitRegion('front-right-hip', 'Right Hip', Rect.fromLTRB(.185, .500, .250, .590)),
-    _BodyHitRegion('front-left-hip', 'Left Hip', Rect.fromLTRB(.350, .500, .415, .590)),
-    _BodyHitRegion('front-pelvis', 'Pelvis/Groin', Rect.fromLTRB(.245, .485, .355, .585)),
-    _BodyHitRegion('front-abdomen', 'Abdomen', Rect.fromLTRB(.235, .365, .365, .495)),
-    _BodyHitRegion('front-chest', 'Chest', Rect.fromLTRB(.225, .230, .375, .380)),
+    _BodyHitRegion('front-right-fingers', 'Right Fingers',
+        Rect.fromLTRB(.075, .570, .135, .630)),
+    _BodyHitRegion('front-left-fingers', 'Left Fingers',
+        Rect.fromLTRB(.465, .570, .525, .630)),
+    _BodyHitRegion('front-right-hand', 'Right Hand',
+        Rect.fromLTRB(.105, .535, .180, .615)),
+    _BodyHitRegion(
+        'front-left-hand', 'Left Hand', Rect.fromLTRB(.420, .535, .495, .615)),
+    _BodyHitRegion('front-right-wrist', 'Right Wrist',
+        Rect.fromLTRB(.145, .510, .195, .565)),
+    _BodyHitRegion('front-left-wrist', 'Left Wrist',
+        Rect.fromLTRB(.405, .510, .455, .565)),
+    _BodyHitRegion('front-right-elbow', 'Right Elbow',
+        Rect.fromLTRB(.165, .390, .225, .450)),
+    _BodyHitRegion('front-left-elbow', 'Left Elbow',
+        Rect.fromLTRB(.375, .390, .435, .450)),
+    _BodyHitRegion('front-right-forearm', 'Right Forearm',
+        Rect.fromLTRB(.145, .435, .210, .535)),
+    _BodyHitRegion('front-left-forearm', 'Left Forearm',
+        Rect.fromLTRB(.390, .435, .455, .535)),
+    _BodyHitRegion('front-right-upper-arm', 'Right Upper Arm',
+        Rect.fromLTRB(.165, .275, .230, .405)),
+    _BodyHitRegion('front-left-upper-arm', 'Left Upper Arm',
+        Rect.fromLTRB(.370, .275, .435, .405)),
+    _BodyHitRegion('front-right-shoulder', 'Right Shoulder',
+        Rect.fromLTRB(.175, .210, .245, .290)),
+    _BodyHitRegion('front-left-shoulder', 'Left Shoulder',
+        Rect.fromLTRB(.355, .210, .425, .290)),
+    _BodyHitRegion(
+        'front-right-toe', 'Right Toes', Rect.fromLTRB(.220, .930, .285, .970)),
+    _BodyHitRegion(
+        'front-left-toe', 'Left Toes', Rect.fromLTRB(.315, .930, .380, .970)),
+    _BodyHitRegion('front-right-foot', 'Right Foot',
+        Rect.fromLTRB(.215, .900, .290, .950)),
+    _BodyHitRegion(
+        'front-left-foot', 'Left Foot', Rect.fromLTRB(.310, .900, .385, .950)),
+    _BodyHitRegion('front-right-ankle', 'Right Ankle',
+        Rect.fromLTRB(.225, .870, .285, .920)),
+    _BodyHitRegion('front-left-ankle', 'Left Ankle',
+        Rect.fromLTRB(.315, .870, .375, .920)),
+    _BodyHitRegion('front-right-knee', 'Right Knee',
+        Rect.fromLTRB(.220, .735, .290, .800)),
+    _BodyHitRegion(
+        'front-left-knee', 'Left Knee', Rect.fromLTRB(.310, .735, .380, .800)),
+    _BodyHitRegion('front-right-lower-leg', 'Right Lower Leg',
+        Rect.fromLTRB(.220, .785, .290, .885)),
+    _BodyHitRegion('front-left-lower-leg', 'Left Lower Leg',
+        Rect.fromLTRB(.310, .785, .380, .885)),
+    _BodyHitRegion('front-right-thigh', 'Right Thigh',
+        Rect.fromLTRB(.215, .565, .295, .755)),
+    _BodyHitRegion('front-left-thigh', 'Left Thigh',
+        Rect.fromLTRB(.305, .565, .385, .755)),
+    _BodyHitRegion(
+        'front-right-hip', 'Right Hip', Rect.fromLTRB(.185, .500, .250, .590)),
+    _BodyHitRegion(
+        'front-left-hip', 'Left Hip', Rect.fromLTRB(.350, .500, .415, .590)),
+    _BodyHitRegion(
+        'front-pelvis', 'Pelvis/Groin', Rect.fromLTRB(.245, .485, .355, .585)),
+    _BodyHitRegion(
+        'front-abdomen', 'Abdomen', Rect.fromLTRB(.235, .365, .365, .495)),
+    _BodyHitRegion(
+        'front-chest', 'Chest', Rect.fromLTRB(.225, .230, .375, .380)),
 
     // Back view.
-    _BodyHitRegion('back-left-ear', 'Left Ear (Back)', Rect.fromLTRB(.628, .115, .648, .155)),
-    _BodyHitRegion('back-right-ear', 'Right Ear (Back)', Rect.fromLTRB(.742, .115, .762, .155)),
-    _BodyHitRegion('back-head', 'Head (Back)', Rect.fromLTRB(.645, .055, .745, .135)),
-    _BodyHitRegion('back-neck', 'Neck (Back)', Rect.fromLTRB(.665, .180, .725, .225)),
-    _BodyHitRegion('back-left-fingers', 'Left Fingers (Back)', Rect.fromLTRB(.500, .570, .560, .630)),
-    _BodyHitRegion('back-right-fingers', 'Right Fingers (Back)', Rect.fromLTRB(.830, .570, .890, .630)),
-    _BodyHitRegion('back-left-hand', 'Left Hand (Back)', Rect.fromLTRB(.515, .535, .590, .615)),
-    _BodyHitRegion('back-right-hand', 'Right Hand (Back)', Rect.fromLTRB(.800, .535, .875, .615)),
-    _BodyHitRegion('back-left-wrist', 'Left Wrist (Back)', Rect.fromLTRB(.555, .510, .605, .565)),
-    _BodyHitRegion('back-right-wrist', 'Right Wrist (Back)', Rect.fromLTRB(.785, .510, .835, .565)),
-    _BodyHitRegion('back-left-elbow', 'Left Elbow (Back)', Rect.fromLTRB(.565, .390, .625, .450)),
-    _BodyHitRegion('back-right-elbow', 'Right Elbow (Back)', Rect.fromLTRB(.755, .390, .815, .450)),
-    _BodyHitRegion('back-left-forearm', 'Left Forearm (Back)', Rect.fromLTRB(.545, .435, .610, .535)),
-    _BodyHitRegion('back-right-forearm', 'Right Forearm (Back)', Rect.fromLTRB(.770, .435, .835, .535)),
-    _BodyHitRegion('back-left-upper-arm', 'Left Upper Arm (Back)', Rect.fromLTRB(.565, .275, .630, .405)),
-    _BodyHitRegion('back-right-upper-arm', 'Right Upper Arm (Back)', Rect.fromLTRB(.750, .275, .815, .405)),
-    _BodyHitRegion('back-left-shoulder', 'Left Shoulder (Back)', Rect.fromLTRB(.565, .210, .635, .290)),
-    _BodyHitRegion('back-right-shoulder', 'Right Shoulder (Back)', Rect.fromLTRB(.750, .210, .820, .290)),
-    _BodyHitRegion('back-left-toe', 'Left Toes (Back)', Rect.fromLTRB(.640, .930, .705, .970)),
-    _BodyHitRegion('back-right-toe', 'Right Toes (Back)', Rect.fromLTRB(.735, .930, .800, .970)),
-    _BodyHitRegion('back-left-foot', 'Left Foot (Back)', Rect.fromLTRB(.635, .900, .710, .950)),
-    _BodyHitRegion('back-right-foot', 'Right Foot (Back)', Rect.fromLTRB(.730, .900, .805, .950)),
-    _BodyHitRegion('back-left-ankle', 'Left Ankle (Back)', Rect.fromLTRB(.645, .870, .705, .920)),
-    _BodyHitRegion('back-right-ankle', 'Right Ankle (Back)', Rect.fromLTRB(.735, .870, .795, .920)),
-    _BodyHitRegion('back-left-knee', 'Left Knee (Back)', Rect.fromLTRB(.640, .735, .710, .800)),
-    _BodyHitRegion('back-right-knee', 'Right Knee (Back)', Rect.fromLTRB(.730, .735, .800, .800)),
-    _BodyHitRegion('back-left-lower-leg', 'Left Lower Leg (Back)', Rect.fromLTRB(.640, .785, .710, .885)),
-    _BodyHitRegion('back-right-lower-leg', 'Right Lower Leg (Back)', Rect.fromLTRB(.730, .785, .800, .885)),
-    _BodyHitRegion('back-left-thigh', 'Left Thigh (Back)', Rect.fromLTRB(.635, .565, .715, .755)),
-    _BodyHitRegion('back-right-thigh', 'Right Thigh (Back)', Rect.fromLTRB(.725, .565, .805, .755)),
-    _BodyHitRegion('back-left-hip', 'Left Hip (Back)', Rect.fromLTRB(.605, .500, .670, .590)),
-    _BodyHitRegion('back-right-hip', 'Right Hip (Back)', Rect.fromLTRB(.770, .500, .835, .590)),
-    _BodyHitRegion('back-pelvis', 'Pelvis/Groin (Back)', Rect.fromLTRB(.655, .485, .745, .590)),
-    _BodyHitRegion('back-lower-back', 'Lower Back', Rect.fromLTRB(.625, .365, .765, .505)),
-    _BodyHitRegion('back-upper-back', 'Upper Back', Rect.fromLTRB(.615, .225, .775, .380)),
+    _BodyHitRegion('back-left-ear', 'Left Ear (Back)',
+        Rect.fromLTRB(.628, .115, .648, .155)),
+    _BodyHitRegion('back-right-ear', 'Right Ear (Back)',
+        Rect.fromLTRB(.742, .115, .762, .155)),
+    _BodyHitRegion(
+        'back-head', 'Head (Back)', Rect.fromLTRB(.645, .055, .745, .135)),
+    _BodyHitRegion(
+        'back-neck', 'Neck (Back)', Rect.fromLTRB(.665, .180, .725, .225)),
+    _BodyHitRegion('back-left-fingers', 'Left Fingers (Back)',
+        Rect.fromLTRB(.500, .570, .560, .630)),
+    _BodyHitRegion('back-right-fingers', 'Right Fingers (Back)',
+        Rect.fromLTRB(.830, .570, .890, .630)),
+    _BodyHitRegion('back-left-hand', 'Left Hand (Back)',
+        Rect.fromLTRB(.515, .535, .590, .615)),
+    _BodyHitRegion('back-right-hand', 'Right Hand (Back)',
+        Rect.fromLTRB(.800, .535, .875, .615)),
+    _BodyHitRegion('back-left-wrist', 'Left Wrist (Back)',
+        Rect.fromLTRB(.555, .510, .605, .565)),
+    _BodyHitRegion('back-right-wrist', 'Right Wrist (Back)',
+        Rect.fromLTRB(.785, .510, .835, .565)),
+    _BodyHitRegion('back-left-elbow', 'Left Elbow (Back)',
+        Rect.fromLTRB(.565, .390, .625, .450)),
+    _BodyHitRegion('back-right-elbow', 'Right Elbow (Back)',
+        Rect.fromLTRB(.755, .390, .815, .450)),
+    _BodyHitRegion('back-left-forearm', 'Left Forearm (Back)',
+        Rect.fromLTRB(.545, .435, .610, .535)),
+    _BodyHitRegion('back-right-forearm', 'Right Forearm (Back)',
+        Rect.fromLTRB(.770, .435, .835, .535)),
+    _BodyHitRegion('back-left-upper-arm', 'Left Upper Arm (Back)',
+        Rect.fromLTRB(.565, .275, .630, .405)),
+    _BodyHitRegion('back-right-upper-arm', 'Right Upper Arm (Back)',
+        Rect.fromLTRB(.750, .275, .815, .405)),
+    _BodyHitRegion('back-left-shoulder', 'Left Shoulder (Back)',
+        Rect.fromLTRB(.565, .210, .635, .290)),
+    _BodyHitRegion('back-right-shoulder', 'Right Shoulder (Back)',
+        Rect.fromLTRB(.750, .210, .820, .290)),
+    _BodyHitRegion('back-left-toe', 'Left Toes (Back)',
+        Rect.fromLTRB(.640, .930, .705, .970)),
+    _BodyHitRegion('back-right-toe', 'Right Toes (Back)',
+        Rect.fromLTRB(.735, .930, .800, .970)),
+    _BodyHitRegion('back-left-foot', 'Left Foot (Back)',
+        Rect.fromLTRB(.635, .900, .710, .950)),
+    _BodyHitRegion('back-right-foot', 'Right Foot (Back)',
+        Rect.fromLTRB(.730, .900, .805, .950)),
+    _BodyHitRegion('back-left-ankle', 'Left Ankle (Back)',
+        Rect.fromLTRB(.645, .870, .705, .920)),
+    _BodyHitRegion('back-right-ankle', 'Right Ankle (Back)',
+        Rect.fromLTRB(.735, .870, .795, .920)),
+    _BodyHitRegion('back-left-knee', 'Left Knee (Back)',
+        Rect.fromLTRB(.640, .735, .710, .800)),
+    _BodyHitRegion('back-right-knee', 'Right Knee (Back)',
+        Rect.fromLTRB(.730, .735, .800, .800)),
+    _BodyHitRegion('back-left-lower-leg', 'Left Lower Leg (Back)',
+        Rect.fromLTRB(.640, .785, .710, .885)),
+    _BodyHitRegion('back-right-lower-leg', 'Right Lower Leg (Back)',
+        Rect.fromLTRB(.730, .785, .800, .885)),
+    _BodyHitRegion('back-left-thigh', 'Left Thigh (Back)',
+        Rect.fromLTRB(.635, .565, .715, .755)),
+    _BodyHitRegion('back-right-thigh', 'Right Thigh (Back)',
+        Rect.fromLTRB(.725, .565, .805, .755)),
+    _BodyHitRegion('back-left-hip', 'Left Hip (Back)',
+        Rect.fromLTRB(.605, .500, .670, .590)),
+    _BodyHitRegion('back-right-hip', 'Right Hip (Back)',
+        Rect.fromLTRB(.770, .500, .835, .590)),
+    _BodyHitRegion('back-pelvis', 'Pelvis/Groin (Back)',
+        Rect.fromLTRB(.655, .485, .745, .590)),
+    _BodyHitRegion(
+        'back-lower-back', 'Lower Back', Rect.fromLTRB(.625, .365, .765, .505)),
+    _BodyHitRegion(
+        'back-upper-back', 'Upper Back', Rect.fromLTRB(.615, .225, .775, .380)),
   ];
 }
 

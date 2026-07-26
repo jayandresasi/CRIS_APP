@@ -14,7 +14,7 @@ class VaccineScheduleCard extends StatefulWidget {
 class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
   DateTime _visibleMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selectedDate = _dateOnly(DateTime.now());
-  late final Stream<DocumentSnapshot<Map<String, dynamic>>>? _trackerStream;
+  Future<DocumentSnapshot<Map<String, dynamic>>>? _trackerFuture;
 
   DocumentReference<Map<String, dynamic>>? get _trackerRef {
     final user = FirebaseAuth.instance.currentUser;
@@ -29,10 +29,10 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
   @override
   void initState() {
     super.initState();
-    // Keep one subscription for this card's lifetime. Creating snapshots() in
-    // build recreated the Firestore listener whenever the user changed the
-    // selected day or month.
-    _trackerStream = _trackerRef?.snapshots();
+    // The treatment plan is only changed through this card, so a one-time
+    // fetch avoids keeping a Firestore listener open while the dashboard is
+    // displayed. The future is replaced after a successful save below.
+    _trackerFuture = _trackerRef?.get();
   }
 
   List<_DoseVisit> _doseVisitsFromPlan(Map<String, dynamic>? plan) {
@@ -84,6 +84,7 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
       final startDate =
           DateTime.tryParse(generated['startDate'] as String? ?? '');
       setState(() {
+        _trackerFuture = ref.get();
         if (startDate != null) {
           _selectedDate = _dateOnly(startDate);
           _visibleMonth = DateTime(startDate.year, startDate.month);
@@ -172,8 +173,8 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
                 statusIcon: _statusIcon,
                 formatDate: _formatDate,
               )
-            : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                stream: _trackerStream,
+            : FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                future: _trackerFuture,
                 builder: (context, snapshot) {
                   final plan =
                       snapshot.data?.exists == true ? snapshot.data!.data() : null;

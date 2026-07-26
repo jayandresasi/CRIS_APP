@@ -156,7 +156,8 @@ class AppTheme {
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) return AppColors.inputBorder;
+          if (states.contains(WidgetState.disabled))
+            return AppColors.inputBorder;
           return states.contains(WidgetState.selected)
               ? AppColors.primary
               : AppColors.surface;
@@ -166,25 +167,38 @@ class AppTheme {
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) return AppColors.textDisabled;
+          if (states.contains(WidgetState.disabled))
+            return AppColors.textDisabled;
           return states.contains(WidgetState.selected)
               ? AppColors.primary
               : AppColors.textSecondary;
         }),
       ),
-      textTheme: const TextTheme(
-        titleLarge: TextStyle(
+      // IMPORTANT: use base.textTheme.copyWith(...) here, NOT `const TextTheme(...)`.
+      // Passing a brand-new TextTheme to ThemeData.copyWith() *replaces* the
+      // whole text theme instead of merging with it, which silently nulls out
+      // every style we don't mention here (bodyLarge, titleMedium, etc.).
+      // TextField/TextFormField use exactly those null styles to color the
+      // text you type, so the input text ends up with no color at all
+      // (invisible) instead of falling back to something visible.
+      textTheme: base.textTheme.copyWith(
+        titleLarge: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.2,
           color: AppColors.textPrimary,
         ),
-        bodyMedium: TextStyle(
+        bodyLarge: const TextStyle(
+          fontSize: 16,
+          color: AppColors.textPrimary,
+        ),
+        bodyMedium: const TextStyle(
           fontSize: 14,
           color: AppColors.textPrimary,
           height: 1.3,
         ),
-        bodySmall: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        bodySmall:
+            const TextStyle(fontSize: 12, color: AppColors.textSecondary),
       ),
     );
   }

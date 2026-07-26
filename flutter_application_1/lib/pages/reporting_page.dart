@@ -1117,6 +1117,7 @@ class _ReportingPageState extends State<ReportingPage> {
           maxLines: maxLines,
           keyboardType: keyboardType,
           textCapitalization: TextCapitalization.words,
+          style: const TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
               labelText: showLabel ? label : null, hintText: hintText),
           validator: validator ??

@@ -14,6 +14,7 @@ class VaccineScheduleCard extends StatefulWidget {
 class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
   DateTime _visibleMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selectedDate = _dateOnly(DateTime.now());
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>>? _trackerStream;
 
   DocumentReference<Map<String, dynamic>>? get _trackerRef {
     final user = FirebaseAuth.instance.currentUser;
@@ -23,6 +24,15 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
         .doc(user.uid)
         .collection('treatment_trackers')
         .doc('current');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Keep one subscription for this card's lifetime. Creating snapshots() in
+    // build recreated the Firestore listener whenever the user changed the
+    // selected day or month.
+    _trackerStream = _trackerRef?.snapshots();
   }
 
   List<_DoseVisit> _doseVisitsFromPlan(Map<String, dynamic>? plan) {
@@ -163,7 +173,7 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
                 formatDate: _formatDate,
               )
             : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                stream: ref.snapshots(),
+                stream: _trackerStream,
                 builder: (context, snapshot) {
                   final plan =
                       snapshot.data?.exists == true ? snapshot.data!.data() : null;

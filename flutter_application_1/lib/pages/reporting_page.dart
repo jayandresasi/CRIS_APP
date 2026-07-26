@@ -692,7 +692,7 @@ class _ReportingPageState extends State<ReportingPage> {
                           const ['Dog', 'Cat', 'Others'],
                           (v) => setState(() => _animalType = v),
                           required: true),
-                      _yesNo('Previously vaccinated?', _animalVaccinated,
+                      _yesNoUnknown('Previously vaccinated?', _animalVaccinated,
                           (v) => setState(() => _animalVaccinated = v)),
                     ]),
                     _yesNoUnknown('Was the animal caged?', _animalCaged,

@@ -64,7 +64,7 @@ class HistoryPage extends StatelessWidget {
   }
 }
 
-class _FirestoreReportsList extends StatelessWidget {
+class _FirestoreReportsList extends StatefulWidget {
   const _FirestoreReportsList({
     required this.collectionPath,
     required this.userId,
@@ -85,17 +85,52 @@ class _FirestoreReportsList extends StatelessWidget {
       mapReport;
 
   @override
-  Widget build(BuildContext context) {
-    final query = FirebaseFirestore.instance
-        .collection(collectionPath)
-        .where('userId', isEqualTo: userId);
+  State<_FirestoreReportsList> createState() => _FirestoreReportsListState();
+}
 
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: query.snapshots(),
+class _FirestoreReportsListState extends State<_FirestoreReportsList> {
+  late Future<QuerySnapshot<Map<String, dynamic>>> _reportsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _reportsFuture = _fetchReports();
+  }
+
+  Future<QuerySnapshot<Map<String, dynamic>>> _fetchReports() {
+    return FirebaseFirestore.instance
+        .collection(widget.collectionPath)
+        .where('userId', isEqualTo: widget.userId)
+        .get();
+  }
+
+  Future<void> _reload() async {
+    final future = _fetchReports();
+    setState(() => _reportsFuture = future);
+    await future;
+  }
+
+  Widget _refreshableMessage(Widget child) {
+    return RefreshIndicator(
+      onRefresh: _reload,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 96),
+          Center(child: Padding(padding: const EdgeInsets.all(16), child: child)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      future: _reportsFuture,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return _EmptyState(
-            message: 'Unable to load reports: ${snapshot.error}',
+          return _refreshableMessage(
+            _EmptyState(message: 'Unable to load reports: ${snapshot.error}'),
           );
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -109,75 +144,84 @@ class _FirestoreReportsList extends StatelessWidget {
           return bTime.compareTo(aTime);
         });
 
-        if (docs.isEmpty) return _EmptyState(message: emptyMessage);
+        if (docs.isEmpty) {
+          return _refreshableMessage(_EmptyState(message: widget.emptyMessage));
+        }
 
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: docs.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
-            final doc = docs[index];
-            final report = mapReport(doc);
-            return Dismissible(
-              key: ValueKey('${collectionPath}_${doc.id}'),
-              direction: DismissDirection.endToStart,
-              confirmDismiss: (_) => _confirmDelete(context, report.title),
-              onDismissed: (_) => doc.reference.delete(),
-              background: _deleteBackground(),
-              child: Card(
-                elevation: 1,
-                color: AppColors.surface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => _showReportDetails(context, report),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: iconBackground,
-                      child: Icon(icon, color: iconColor),
-                    ),
-                    title: Text(
-                      report.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          report.subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          report.location,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
+        return RefreshIndicator(
+          onRefresh: _reload,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final doc = docs[index];
+              final report = widget.mapReport(doc);
+              return Dismissible(
+                key: ValueKey('${widget.collectionPath}_${doc.id}'),
+                direction: DismissDirection.endToStart,
+                confirmDismiss: (_) => _confirmDelete(context, report.title),
+                onDismissed: (_) async {
+                  await doc.reference.delete();
+                  if (mounted) await _reload();
+                },
+                background: _deleteBackground(),
+                child: Card(
+                  elevation: 1,
+                  color: AppColors.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _showReportDetails(context, report),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: widget.iconBackground,
+                        child: Icon(widget.icon, color: widget.iconColor),
+                      ),
+                      title: Text(
+                        report.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            report.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        Text(
-                          report.date,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
+                          Text(
+                            report.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            report.date,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing:
+                          const Icon(Icons.chevron_right, color: Colors.grey),
+                      isThreeLine: true,
                     ),
-                    trailing:
-                        const Icon(Icons.chevron_right, color: Colors.grey),
-                    isThreeLine: true,
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );

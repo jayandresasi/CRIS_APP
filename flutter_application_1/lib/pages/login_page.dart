@@ -96,18 +96,22 @@ class _LoginPageState extends State<LoginPage> {
     // If logged in via Firebase, pre-populate name from Firestore into settings
     if (userCred != null) {
       final uid = userCred.user!.uid;
-      try {
-        final doc =
-            await FirebaseFirestore.instance.collection('users').doc(uid).get();
-        final name = (doc.exists && doc.data() != null)
-            ? (doc.data()!['name'] ?? '') as String
-            : '';
-        final profileBox = Hive.box('settings');
-        if ((profileBox.get('name', defaultValue: '') as String).isEmpty) {
+      final profileBox = Hive.box('settings');
+      final hasCachedName =
+          (profileBox.get('name', defaultValue: '') as String).isNotEmpty;
+      if (!hasCachedName) {
+        try {
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .get();
+          final name = (doc.exists && doc.data() != null)
+              ? (doc.data()!['name'] ?? '') as String
+              : '';
           await profileBox.put('name', name);
+        } catch (e) {
+          // Ignore fetch errors; the app can proceed without a cached name.
         }
-      } catch (e) {
-        // ignore fetch errors; app can proceed
       }
     }
 

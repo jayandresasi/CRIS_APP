@@ -595,6 +595,11 @@ class _AddTreatmentDialogState extends State<_AddTreatmentDialog> {
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: _patientType,
+                        style: AppFormStyles.dropdownText,
+                        dropdownColor: AppFormStyles.dropdownMenu,
+                        focusColor: AppFormStyles.dropdownFocus,
+                        iconEnabledColor: AppFormStyles.dropdownIcon,
+                        iconDisabledColor: AppFormStyles.disabledDropdownIcon,
                         decoration: const InputDecoration(
                           labelText: 'Patient Profile',
                         ),
@@ -602,7 +607,10 @@ class _AddTreatmentDialogState extends State<_AddTreatmentDialog> {
                             .map(
                               (value) => DropdownMenuItem(
                                 value: value,
-                                child: Text(value),
+                                child: Text(
+                                  value,
+                                  style: AppFormStyles.dropdownText,
+                                ),
                               ),
                             )
                             .toList(),
@@ -613,6 +621,11 @@ class _AddTreatmentDialogState extends State<_AddTreatmentDialog> {
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: _exposureType,
+                        style: AppFormStyles.dropdownText,
+                        dropdownColor: AppFormStyles.dropdownMenu,
+                        focusColor: AppFormStyles.dropdownFocus,
+                        iconEnabledColor: AppFormStyles.dropdownIcon,
+                        iconDisabledColor: AppFormStyles.disabledDropdownIcon,
                         decoration: const InputDecoration(
                           labelText: 'Exposure Category',
                         ),
@@ -620,7 +633,10 @@ class _AddTreatmentDialogState extends State<_AddTreatmentDialog> {
                             .map(
                               (value) => DropdownMenuItem(
                                 value: value,
-                                child: Text(value),
+                                child: Text(
+                                  value,
+                                  style: AppFormStyles.dropdownText,
+                                ),
                               ),
                             )
                             .toList(),
@@ -631,6 +647,11 @@ class _AddTreatmentDialogState extends State<_AddTreatmentDialog> {
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: _healthFacility,
+                        style: AppFormStyles.dropdownText,
+                        dropdownColor: AppFormStyles.dropdownMenu,
+                        focusColor: AppFormStyles.dropdownFocus,
+                        iconEnabledColor: AppFormStyles.dropdownIcon,
+                        iconDisabledColor: AppFormStyles.disabledDropdownIcon,
                         decoration: const InputDecoration(
                           labelText: 'Health Facility',
                         ),
@@ -638,7 +659,10 @@ class _AddTreatmentDialogState extends State<_AddTreatmentDialog> {
                             .map(
                               (value) => DropdownMenuItem(
                                 value: value,
-                                child: Text(value),
+                                child: Text(
+                                  value,
+                                  style: AppFormStyles.dropdownText,
+                                ),
                               ),
                             )
                             .toList(),

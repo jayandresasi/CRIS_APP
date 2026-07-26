@@ -15,6 +15,7 @@ class AppColors {
   static const Color background = Color(0xFFFFF8F0);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceMuted = Color(0xFFF5F7FA);
+  static const Color selectionSurface = Color(0xFFFFE3B3);
   static const Color inputBorder = Color(0xFF9AA6B2);
   static const Color inputDisabled = Color(0xFFE6EBF0);
   static const Color textPrimary = Color(0xFF1B2530);
@@ -25,6 +26,21 @@ class AppColors {
   static const Color onSecondary = Colors.black87;
 }
 
+/// Shared styles for every legacy [DropdownButtonFormField].
+///
+/// This SDK does not expose DropdownButtonThemeData, so controls use these
+/// tokens directly rather than relying on platform defaults.
+class AppFormStyles {
+  static const TextStyle dropdownText = TextStyle(
+    color: AppColors.textPrimary,
+    fontSize: 16,
+  );
+  static const Color dropdownMenu = AppColors.surface;
+  static const Color dropdownFocus = AppColors.selectionSurface;
+  static const Color dropdownIcon = AppColors.textSecondary;
+  static const Color disabledDropdownIcon = AppColors.textDisabled;
+}
+
 class AppTheme {
   static ThemeData lightTheme() {
     final base = ThemeData.light();
@@ -33,6 +49,9 @@ class AppTheme {
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.background,
       disabledColor: AppColors.textDisabled,
+      // Legacy dropdown menus use Theme.focusColor for their selected row.
+      focusColor: AppFormStyles.dropdownFocus,
+      hoverColor: const Color(0x1FEA6113),
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.secondary,

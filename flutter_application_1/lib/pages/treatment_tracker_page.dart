@@ -270,6 +270,11 @@ class _AddTreatmentProfileDialogState
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedProfileType,
+                        style: AppFormStyles.dropdownText,
+                        dropdownColor: AppFormStyles.dropdownMenu,
+                        focusColor: AppFormStyles.dropdownFocus,
+                        iconEnabledColor: AppFormStyles.dropdownIcon,
+                        iconDisabledColor: AppFormStyles.disabledDropdownIcon,
                         decoration: const InputDecoration(
                           labelText: 'Patient Profile',
                           prefixIcon: Icon(Icons.badge_outlined),
@@ -278,7 +283,10 @@ class _AddTreatmentProfileDialogState
                             .map(
                               (label) => DropdownMenuItem(
                                 value: label,
-                                child: Text(label),
+                                child: Text(
+                                  label,
+                                  style: AppFormStyles.dropdownText,
+                                ),
                               ),
                             )
                             .toList(),
@@ -305,6 +313,11 @@ class _AddTreatmentProfileDialogState
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedFacility,
+                        style: AppFormStyles.dropdownText,
+                        dropdownColor: AppFormStyles.dropdownMenu,
+                        focusColor: AppFormStyles.dropdownFocus,
+                        iconEnabledColor: AppFormStyles.dropdownIcon,
+                        iconDisabledColor: AppFormStyles.disabledDropdownIcon,
                         decoration: const InputDecoration(
                           labelText: 'Health Facility',
                           prefixIcon: Icon(Icons.local_hospital_outlined),
@@ -313,7 +326,10 @@ class _AddTreatmentProfileDialogState
                             .map(
                               (label) => DropdownMenuItem(
                                 value: label,
-                                child: Text(label),
+                                child: Text(
+                                  label,
+                                  style: AppFormStyles.dropdownText,
+                                ),
                               ),
                             )
                             .toList(),

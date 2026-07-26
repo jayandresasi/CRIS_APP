@@ -346,15 +346,26 @@ class _UserInfoPageState extends State<UserInfoPage> {
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: _sex,
+                        style: AppFormStyles.dropdownText,
+                        dropdownColor: AppFormStyles.dropdownMenu,
+                        focusColor: AppFormStyles.dropdownFocus,
+                        iconEnabledColor: AppFormStyles.dropdownIcon,
+                        iconDisabledColor: AppFormStyles.disabledDropdownIcon,
                         decoration: const InputDecoration(
                           labelText: 'Sex',
                           prefixIcon: Icon(Icons.wc_outlined),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'Male', child: Text('Male')),
+                          DropdownMenuItem(
+                            value: 'Male',
+                            child: Text('Male', style: AppFormStyles.dropdownText),
+                          ),
                           DropdownMenuItem(
                             value: 'Female',
-                            child: Text('Female'),
+                            child: Text(
+                              'Female',
+                              style: AppFormStyles.dropdownText,
+                            ),
                           ),
                         ],
                         onChanged: (value) => setState(() => _sex = value),

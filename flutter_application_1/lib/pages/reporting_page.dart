@@ -1151,9 +1151,11 @@ class _ReportingPageState extends State<ReportingPage> {
       DropdownButtonFormField<String>(
           initialValue: value,
           isExpanded: true,
-          style: const TextStyle(color: AppColors.textPrimary),
-          dropdownColor: AppColors.surface,
-          iconEnabledColor: AppColors.textSecondary,
+          style: AppFormStyles.dropdownText,
+          dropdownColor: AppFormStyles.dropdownMenu,
+          focusColor: AppFormStyles.dropdownFocus,
+          iconEnabledColor: AppFormStyles.dropdownIcon,
+          iconDisabledColor: AppFormStyles.disabledDropdownIcon,
           decoration: InputDecoration(
             labelText: showLabel ? label : null,
             hintText: hintText ?? 'Select $label',
@@ -1165,7 +1167,7 @@ class _ReportingPageState extends State<ReportingPage> {
               .map((v) => DropdownMenuItem(
                   value: v,
                   child: Text(v,
-                      style: const TextStyle(color: AppColors.textPrimary))))
+                      style: AppFormStyles.dropdownText)))
               .toList(),
           onChanged: enabled ? onChanged : null,
           validator:

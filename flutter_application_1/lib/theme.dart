@@ -2,18 +2,25 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Sunset Palette
-  static const Color primary = Color(0xFFEA6113); // deep orange-red
-  static const Color primaryVariant = Color(0xFFC85010); // darker orange
-  static const Color secondary = Color(0xFFF88F22); // orange
-  static const Color accent = Color(0xFFFBB931); // golden yellow
-  static const Color cream = Color(0xFFFFE3B3); // lightest cream
+  static const Color primary = Color(0xFFEA6113);
+  static const Color primaryVariant = Color(0xFFC85010);
+  static const Color secondary = Color(0xFFF88F22);
+  static const Color accent = Color(0xFFFBB931);
+  static const Color cream = Color(0xFFFFE3B3);
 
-  // Semantic
+  // Semantic and contrast-safe surface tokens.
   static const Color success = Color(0xFF00C48C);
   static const Color danger = Color(0xFFE53935);
   static const Color warning = Color(0xFFF88F22);
-  static const Color background = Color(0xFFFFF8F0); // warm cream background
+  static const Color background = Color(0xFFFFF8F0);
   static const Color surface = Color(0xFFFFFFFF);
+  static const Color surfaceMuted = Color(0xFFF5F7FA);
+  static const Color inputBorder = Color(0xFF9AA6B2);
+  static const Color inputDisabled = Color(0xFFE6EBF0);
+  static const Color textPrimary = Color(0xFF1B2530);
+  static const Color textSecondary = Color(0xFF4B5563);
+  static const Color textDisabled = Color(0xFF5F6B76);
+  static const Color placeholder = Color(0xFF66727F);
   static const Color onPrimary = Colors.white;
   static const Color onSecondary = Colors.black87;
 }
@@ -25,14 +32,16 @@ class AppTheme {
     return base.copyWith(
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.background,
+      disabledColor: AppColors.textDisabled,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
         surface: AppColors.surface,
         onPrimary: AppColors.onPrimary,
         onSecondary: AppColors.onSecondary,
-        // These two fix invisible text inside text fields
-        onSurface: Colors.black87,
+        onSurface: AppColors.textPrimary,
+        error: AppColors.danger,
+        onError: Colors.white,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.primary,
@@ -43,39 +52,120 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.onPrimary,
+          disabledBackgroundColor: const Color(0xFFFFD3B7),
+          disabledForegroundColor: AppColors.textSecondary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
         ),
       ),
-      // Global input field text styling — fixes invisible typed text everywhere
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.onPrimary,
+          disabledBackgroundColor: const Color(0xFFFFD3B7),
+          disabledForegroundColor: AppColors.textSecondary,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primaryVariant,
+          disabledForegroundColor: AppColors.textDisabled,
+          side: const BorderSide(color: AppColors.inputBorder),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primaryVariant,
+          disabledForegroundColor: AppColors.textDisabled,
+        ),
+      ),
+      // Applies to text fields, text areas, and date/time picker fields.
       inputDecorationTheme: InputDecorationTheme(
-        labelStyle: const TextStyle(color: Colors.black54),
-        hintStyle: const TextStyle(color: Colors.black38),
+        filled: true,
+        fillColor: AppColors.surface,
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        floatingLabelStyle: const TextStyle(color: AppColors.primary),
+        hintStyle: const TextStyle(color: AppColors.placeholder),
+        helperStyle: const TextStyle(color: AppColors.textSecondary),
+        errorStyle: const TextStyle(color: AppColors.danger, fontSize: 12),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFCDD5DF)),
+          borderSide: const BorderSide(color: AppColors.inputBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.danger),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.inputBorder),
         ),
         contentPadding: const EdgeInsets.symmetric(
           vertical: 16,
           horizontal: 16,
         ),
       ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.surface,
+        textStyle: const TextStyle(color: AppColors.textPrimary),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.surface,
+        titleTextStyle: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+        contentTextStyle: const TextStyle(color: AppColors.textPrimary),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.surface,
+        modalBackgroundColor: AppColors.surface,
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) return AppColors.inputBorder;
+          return states.contains(WidgetState.selected)
+              ? AppColors.primary
+              : AppColors.surface;
+        }),
+        checkColor: const WidgetStatePropertyAll(AppColors.onPrimary),
+        side: const BorderSide(color: AppColors.textSecondary, width: 1.5),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) return AppColors.textDisabled;
+          return states.contains(WidgetState.selected)
+              ? AppColors.primary
+              : AppColors.textSecondary;
+        }),
+      ),
       textTheme: const TextTheme(
         titleLarge: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.2,
-          color: Colors.black87,
+          color: AppColors.textPrimary,
         ),
-        bodyMedium: TextStyle(fontSize: 14, color: Colors.black87, height: 1.3),
-        bodySmall: TextStyle(fontSize: 12, color: Colors.black54),
+        bodyMedium: TextStyle(
+          fontSize: 14,
+          color: AppColors.textPrimary,
+          height: 1.3,
+        ),
+        bodySmall: TextStyle(fontSize: 12, color: AppColors.textSecondary),
       ),
     );
   }

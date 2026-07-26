@@ -1151,21 +1151,21 @@ class _ReportingPageState extends State<ReportingPage> {
       DropdownButtonFormField<String>(
           initialValue: value,
           isExpanded: true,
-          style: const TextStyle(color: Colors.black87),
-          dropdownColor: Colors.white,
-          iconEnabledColor: Colors.black54,
+          style: const TextStyle(color: AppColors.textPrimary),
+          dropdownColor: AppColors.surface,
+          iconEnabledColor: AppColors.textSecondary,
           decoration: InputDecoration(
             labelText: showLabel ? label : null,
             hintText: hintText ?? 'Select $label',
-            labelStyle: const TextStyle(color: Colors.black87),
+            labelStyle: const TextStyle(color: AppColors.textSecondary),
             floatingLabelStyle: const TextStyle(color: AppColors.primary),
-            hintStyle: const TextStyle(color: Colors.black54),
+            hintStyle: const TextStyle(color: AppColors.placeholder),
           ),
           items: options
               .map((v) => DropdownMenuItem(
                   value: v,
                   child: Text(v,
-                      style: const TextStyle(color: Colors.black87))))
+                      style: const TextStyle(color: AppColors.textPrimary))))
               .toList(),
           onChanged: enabled ? onChanged : null,
           validator:
@@ -1222,7 +1222,7 @@ class _ReportingPageState extends State<ReportingPage> {
           onSelected: (value) => controller.text = value,
           optionsViewBuilder: (_, onSelected, options) => Material(
               elevation: 4,
-              color: Colors.white,
+              color: AppColors.surface,
               child: ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 240),
                   child: ListView(
@@ -1236,7 +1236,7 @@ class _ReportingPageState extends State<ReportingPage> {
                                       horizontal: 16, vertical: 14),
                                   child: Text(option,
                                       style: const TextStyle(
-                                          color: Colors.black87)))))
+                                          color: AppColors.textPrimary)))))
                           .toList()))),
           fieldViewBuilder: (_, textController, focusNode, __) {
             textController.value = TextEditingValue(
@@ -1247,14 +1247,15 @@ class _ReportingPageState extends State<ReportingPage> {
                 controller: textController,
                 focusNode: focusNode,
                 enabled: enabled,
-                style: const TextStyle(color: Colors.black87),
+                style: const TextStyle(color: AppColors.textPrimary),
                 decoration: InputDecoration(
                     labelText: showLabel ? label : null,
                     hintText: hintText ?? 'Select or enter $label',
-                    labelStyle: const TextStyle(color: Colors.black87),
+                    labelStyle:
+                        const TextStyle(color: AppColors.textSecondary),
                     floatingLabelStyle:
                         const TextStyle(color: AppColors.primary),
-                    hintStyle: const TextStyle(color: Colors.black54),
+                    hintStyle: const TextStyle(color: AppColors.placeholder),
                     suffixIcon: const Icon(Icons.search)),
                 textCapitalization: TextCapitalization.words,
                 onChanged: (value) => controller.text = value,
@@ -1403,8 +1404,13 @@ class _SubmissionSuccess extends StatelessWidget {
   Widget _successLine(String label, String value) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label,
-            style: const TextStyle(color: Colors.black54, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+          ),
+        ),
         Text(value, style: const TextStyle(fontWeight: FontWeight.w700))
       ]));
 }

@@ -246,7 +246,10 @@ class _AddTreatmentProfileDialogState
                 },
               ),
               AnimatedOpacity(
-                opacity: _fieldsEnabled ? 1 : 0.45,
+                // Keep disabled labels and existing values readable. Their
+                // disabled input styling already communicates that editing is
+                // unavailable, so reducing the entire section harms contrast.
+                opacity: 1,
                 duration: const Duration(milliseconds: 180),
                 child: IgnorePointer(
                   ignoring: !_fieldsEnabled,

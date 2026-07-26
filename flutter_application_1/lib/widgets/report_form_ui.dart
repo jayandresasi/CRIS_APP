@@ -62,7 +62,7 @@ class ReportFormSection extends StatelessWidget {
                         Text(
                           description!,
                           style: const TextStyle(
-                            color: Colors.black54,
+                            color: AppColors.textSecondary,
                             fontSize: 12,
                           ),
                         ),
@@ -106,12 +106,21 @@ class ReportChoiceGroup extends StatelessWidget {
         builder: (state) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             if (helper != null) ...[
               const SizedBox(height: 3),
               Text(
                 helper!,
-                style: const TextStyle(color: Colors.black54, fontSize: 12),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
               ),
             ],
             const SizedBox(height: 8),
@@ -136,7 +145,9 @@ class ReportChoiceGroup extends StatelessWidget {
                   ),
                   labelStyle: TextStyle(
                     color:
-                        selected ? AppColors.primaryVariant : Colors.black87,
+                        selected
+                            ? AppColors.primaryVariant
+                            : AppColors.textPrimary,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 );
@@ -173,8 +184,8 @@ class ReportCheckboxTile extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         value: value,
         selected: value,
-        tileColor: const Color(0xFFF7F7F7),
-        selectedTileColor: const Color(0xFFE9EAEC),
+        tileColor: AppColors.surfaceMuted,
+        selectedTileColor: AppColors.cream,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
           side: BorderSide(
@@ -187,13 +198,16 @@ class ReportCheckboxTile extends StatelessWidget {
         title: Text(
           title,
           style: TextStyle(
-            color: Colors.black87,
+            color: AppColors.textPrimary,
             fontWeight: value ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
         subtitle: subtitle == null
             ? null
-            : Text(subtitle!, style: const TextStyle(color: Colors.black54)),
+            : Text(
+                subtitle!,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
         onChanged: onChanged,
       );
 }

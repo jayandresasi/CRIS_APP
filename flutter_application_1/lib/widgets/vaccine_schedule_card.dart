@@ -532,7 +532,10 @@ class _AddTreatmentDialogState extends State<_AddTreatmentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final fieldOpacity = _medicalConfirmation ? 1.0 : 0.45;
+    // Disabled controls use the shared disabled palette. Do not fade their
+    // text, since the confirmation message and any retained values must stay
+    // readable.
+    const fieldOpacity = 1.0;
 
     return AlertDialog(
       title: const Text('Add Treatment Tracker'),

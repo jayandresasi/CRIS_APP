@@ -113,15 +113,11 @@ class _ReportingPageState extends State<ReportingPage> {
   String? _animalAlive;
   String? _availableForObservation;
   String? _animalVaccinated;
-  String? _exposureCategory;
   String? _exposureType;
   String? _bleeding;
   String? _washedWound;
   String _appliedSubstance = 'None';
   DateTime? _selectedBirthDate;
-  DateTime? _selectedLastVaccinationDate;
-  DateTime? _selectedBiteDate;
-  TimeOfDay? _selectedBiteTime;
   LatLng? _incidentCoordinates;
   XFile? _woundPhoto;
   XFile? _animalPhoto;
@@ -263,66 +259,6 @@ class _ReportingPageState extends State<ReportingPage> {
     _selectedBirthDate = date;
     _birthDate.text = _formatDate(date);
     _age.text = '${_calculateAge(date)}';
-  }
-
-  Future<void> _pickLastVaccinationDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedLastVaccinationDate ?? DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedLastVaccinationDate = picked;
-        _lastVaccinationDate.text = _formatDate(picked);
-      });
-    }
-  }
-
-  Future<void> _pickBiteDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedBiteDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedBiteDate = picked;
-        _biteDate.text = _formatDate(picked);
-      });
-    }
-  }
-
-  Future<void> _pickBiteTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedBiteTime ?? TimeOfDay.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedBiteTime = picked;
-        _biteTime.text = picked.format(context);
-      });
-    }
-  }
-
-  Future<void> _pickPhoto(bool wound) async {
-    final photo = await ImagePicker()
-        .pickImage(source: ImageSource.gallery, imageQuality: 85);
-    if (photo == null) return;
-    final bytes = await photo.readAsBytes();
-    if (!mounted) return;
-    setState(() {
-      if (wound) {
-        _woundPhoto = photo;
-        _woundBytes = bytes;
-      } else {
-        _animalPhoto = photo;
-        _animalBytes = bytes;
-      }
-    });
   }
 
   void _selectBodySite(_BodySiteSelection site) {
@@ -1097,12 +1033,7 @@ class _ReportingPageState extends State<ReportingPage> {
   Widget _subheading(String value) => Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700)));
-  Widget _twoFields(Widget left, Widget right) =>
-      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(child: left),
-        const SizedBox(width: 12),
-        Expanded(child: right)
-      ]);
+
   Widget _field(TextEditingController controller, String label,
           {bool required = false,
           bool readOnly = false,
@@ -1140,14 +1071,7 @@ class _ReportingPageState extends State<ReportingPage> {
               hintText: hintText,
               suffixIcon: const Icon(Icons.calendar_today_outlined)),
           validator: required ? (v) => _required(v, label) : null);
-  Widget _timeField() => TextFormField(
-      controller: _biteTime,
-      readOnly: true,
-      onTap: _pickBiteTime,
-      decoration: const InputDecoration(
-          labelText: 'Time of Bite',
-          suffixIcon: Icon(Icons.access_time_outlined)),
-      validator: (v) => _required(v, 'Time of Bite'));
+
   Widget _dropdown(String label, String? value, List<String> options,
           ValueChanged<String?> onChanged,
           {bool required = false,
@@ -1266,13 +1190,7 @@ class _ReportingPageState extends State<ReportingPage> {
                 onChanged: (value) => controller.text = value,
                 validator: (value) => _required(value, label));
           });
-  Widget _photoPicker(String label, Uint8List? bytes, VoidCallback onPressed) =>
-      OutlinedButton.icon(
-          onPressed: onPressed,
-          icon: Icon(bytes == null
-              ? Icons.add_a_photo_outlined
-              : Icons.check_circle_outline),
-          label: Text(bytes == null ? label : '$label attached'));
+
   Widget _summary(String title, Map<String, String> values) =>
       ReportReviewCard(title: title, values: values);
   String _resolvedAnimalType() => _animalType == 'Others (Specify)'

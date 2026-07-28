@@ -40,7 +40,7 @@ class HistoryPage extends StatelessWidget {
             : TabBarView(
                 children: [
                   _FirestoreReportsList(
-                    collectionPath: 'app-database',
+                    collectionPath: 'patient-database',
                     userId: currentUid,
                     emptyMessage: 'No bite reports found.',
                     icon: Icons.warning_amber_rounded,
@@ -51,7 +51,8 @@ class HistoryPage extends StatelessWidget {
                   _FirestoreReportsList(
                     collectionPath: 'SAB_reports',
                     userId: currentUid,
-                    emptyMessage: 'No suspicious animal behavior reports found.',
+                    emptyMessage:
+                        'No suspicious animal behavior reports found.',
                     icon: Icons.shield_outlined,
                     iconColor: Color(0xFFFFA726),
                     iconBackground: Color(0xFFFFF3E0),
@@ -117,7 +118,8 @@ class _FirestoreReportsListState extends State<_FirestoreReportsList> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           const SizedBox(height: 96),
-          Center(child: Padding(padding: const EdgeInsets.all(16), child: child)),
+          Center(
+              child: Padding(padding: const EdgeInsets.all(16), child: child)),
         ],
       ),
     );

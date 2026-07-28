@@ -402,7 +402,7 @@ class _ReportingPageState extends State<ReportingPage> {
       );
       await Hive.box<Report>('reports').add(report);
       await FirebaseFirestore.instance
-          .collection('app-database')
+          .collection('patient-database')
           .doc(caseId)
           .set({
         // Canonical bite-case fields used by Firestore consumers. The nested

@@ -268,17 +268,7 @@ class _TreatmentTrackerBody extends StatelessWidget {
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            else if (plan == null)
-              TextButton.icon(
-                onPressed: isSignedIn ? onAdd : null,
-                icon: const Icon(Icons.add_task_outlined, size: 16),
-                label: const Text('Add Treatment'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-              )
-            else
+            else if (plan != null)
               const Tooltip(
                 message: 'Generated vaccine dates are locked in Firebase.',
                 child: Icon(Icons.lock_outline, color: AppColors.primary),

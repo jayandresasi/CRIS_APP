@@ -18,14 +18,50 @@ import '../widgets/report_form_ui.dart';
 
 /// Official municipalities and cities within the CRIS service area.
 const List<String> iloiloMunicipalities = [
-  'Ajuy', 'Alimodian', 'Anilao', 'Badiangan', 'Balasan', 'Banate',
-  'Barotac Nuevo', 'Barotac Viejo', 'Batad', 'Bingawan', 'Cabatuan',
-  'Calinog', 'Carles', 'Concepcion', 'Dingle', 'Dueñas', 'Dumangas',
-  'Estancia', 'Guimbal', 'Igbaras', 'Iloilo City', 'Janiuay', 'Lambunao',
-  'Leganes', 'Lemery', 'Leon', 'Maasin', 'Miagao', 'Mina', 'New Lucena',
-  'Oton', 'Passi City', 'Pavia', 'Pototan', 'San Dionisio', 'San Enrique',
-  'San Joaquin', 'San Miguel', 'San Rafael', 'Santa Barbara', 'Sara',
-  'Tigbauan', 'Tubungan', 'Zarraga',
+  'Ajuy',
+  'Alimodian',
+  'Anilao',
+  'Badiangan',
+  'Balasan',
+  'Banate',
+  'Barotac Nuevo',
+  'Barotac Viejo',
+  'Batad',
+  'Bingawan',
+  'Cabatuan',
+  'Calinog',
+  'Carles',
+  'Concepcion',
+  'Dingle',
+  'Dueñas',
+  'Dumangas',
+  'Estancia',
+  'Guimbal',
+  'Igbaras',
+  'Iloilo City',
+  'Janiuay',
+  'Lambunao',
+  'Leganes',
+  'Lemery',
+  'Leon',
+  'Maasin',
+  'Miagao',
+  'Mina',
+  'New Lucena',
+  'Oton',
+  'Passi City',
+  'Pavia',
+  'Pototan',
+  'San Dionisio',
+  'San Enrique',
+  'San Joaquin',
+  'San Miguel',
+  'San Rafael',
+  'Santa Barbara',
+  'Sara',
+  'Tigbauan',
+  'Tubungan',
+  'Zarraga',
 ];
 
 const _behaviorOptions = [
@@ -91,10 +127,17 @@ class _SABReportingPageState extends State<SABReportingPage> {
   void initState() {
     super.initState();
     for (final controller in [
-      _municipalityController, _barangayController, _streetController,
-      _landmarkController, _animalDescriptionController, _animalCountController,
-      _otherAnimalController, _otherBehaviorController, _descriptionController,
-      _contactOtherController, _contactDescriptionController,
+      _municipalityController,
+      _barangayController,
+      _streetController,
+      _landmarkController,
+      _animalDescriptionController,
+      _animalCountController,
+      _otherAnimalController,
+      _otherBehaviorController,
+      _descriptionController,
+      _contactOtherController,
+      _contactDescriptionController,
     ]) {
       controller.addListener(_refresh);
     }
@@ -107,10 +150,17 @@ class _SABReportingPageState extends State<SABReportingPage> {
   @override
   void dispose() {
     for (final controller in [
-      _municipalityController, _barangayController, _streetController,
-      _landmarkController, _animalDescriptionController, _animalCountController,
-      _otherAnimalController, _otherBehaviorController, _descriptionController,
-      _contactOtherController, _contactDescriptionController,
+      _municipalityController,
+      _barangayController,
+      _streetController,
+      _landmarkController,
+      _animalDescriptionController,
+      _animalCountController,
+      _otherAnimalController,
+      _otherBehaviorController,
+      _descriptionController,
+      _contactOtherController,
+      _contactDescriptionController,
     ]) {
       controller.dispose();
     }
@@ -120,7 +170,8 @@ class _SABReportingPageState extends State<SABReportingPage> {
   bool get _hasLocation => _observationPoint != null;
   bool get _readyToReview =>
       _animalType != null &&
-      (_animalType != 'Other' || _otherAnimalController.text.trim().isNotEmpty) &&
+      (_animalType != 'Other' ||
+          _otherAnimalController.text.trim().isNotEmpty) &&
       int.tryParse(_animalCountController.text) != null &&
       int.tryParse(_animalCountController.text)! > 0 &&
       _ownership != null &&
@@ -139,7 +190,8 @@ class _SABReportingPageState extends State<SABReportingPage> {
       _descriptionController.text.trim().isNotEmpty &&
       _contactStatus != null &&
       (_contactStatus != 'Yes' ||
-          (_contactType != null && _affectedParty != null &&
+          (_contactType != null &&
+              _affectedParty != null &&
               (_contactType != 'Other (Specify)' ||
                   _contactOtherController.text.trim().isNotEmpty) &&
               _contactDescriptionController.text.trim().isNotEmpty)) &&
@@ -195,7 +247,8 @@ class _SABReportingPageState extends State<SABReportingPage> {
         _locationMethod = 'current_location';
       });
     } catch (e) {
-      if (mounted) setState(() => _locationError = 'Unable to use current location: $e');
+      if (mounted)
+        setState(() => _locationError = 'Unable to use current location: $e');
     } finally {
       if (mounted) setState(() => _gettingLocation = false);
     }
@@ -230,9 +283,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
 
   String? _positiveNumber(String? value) {
     final number = int.tryParse(value ?? '');
-    return number == null || number < 1
-        ? 'Enter at least one animal'
-        : null;
+    return number == null || number < 1 ? 'Enter at least one animal' : null;
   }
 
   Future<void> _review() async {
@@ -266,17 +317,21 @@ class _SABReportingPageState extends State<SABReportingPage> {
           'Number of animals': _animalCountController.text.trim(),
           'Ownership status': _ownership ?? '',
           'Description': _animalDescriptionController.text.trim().isEmpty
-              ? 'Not provided' : _animalDescriptionController.text.trim(),
+              ? 'Not provided'
+              : _animalDescriptionController.text.trim(),
         }),
-        _ReviewSection('Observed Behavior', {'Selected behaviors': _behaviorValue()}),
+        _ReviewSection(
+            'Observed Behavior', {'Selected behaviors': _behaviorValue()}),
         _ReviewSection('Location', {
           'Municipality/City': _municipality ?? '',
           'Barangay': _barangayController.text.trim(),
           'Street or specific location': _streetController.text.trim(),
           'Nearest landmark': _landmarkController.text.trim(),
           'Location method': _locationMethod == 'current_location'
-              ? 'Current location' : 'Map pin',
-          'Map location': '${_observationPoint!.latitude.toStringAsFixed(6)}, ${_observationPoint!.longitude.toStringAsFixed(6)}',
+              ? 'Current location'
+              : 'Map pin',
+          'Map location':
+              '${_observationPoint!.latitude.toStringAsFixed(6)}, ${_observationPoint!.longitude.toStringAsFixed(6)}',
         }),
         _ReviewSection('Observation Details', {
           'Date observed': _formatDate(_dateObserved!),
@@ -292,16 +347,21 @@ class _SABReportingPageState extends State<SABReportingPage> {
                 ? 'Other: ${_contactOtherController.text.trim()}'
                 : _contactType ?? '',
           if (_contactStatus == 'Yes') 'Who was affected': _affectedParty ?? '',
-          if (_contactStatus == 'Yes') 'Description': _contactDescriptionController.text.trim(),
+          if (_contactStatus == 'Yes')
+            'Description': _contactDescriptionController.text.trim(),
         }),
         _ReviewSection('Photo Evidence', {
-          'Supporting evidence': _photo == null ? 'None provided' : 'Photo attached',
+          'Supporting evidence':
+              _photo == null ? 'None provided' : 'Photo attached',
         }),
       ];
 
   Future<String?> _uploadPhoto(String uid) async {
     if (_photo == null) return null;
-    final ref = FirebaseStorage.instance.ref().child('sab_images').child(uid)
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('sab_images')
+        .child(uid)
         .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
     if (kIsWeb) {
       await ref.putData(_webPhoto ?? await _photo!.readAsBytes(),
@@ -329,57 +389,93 @@ class _SABReportingPageState extends State<SABReportingPage> {
     }
     setState(() => _submitting = true);
     try {
-      setState(() => _submitStatus = _photo == null ? 'Saving report...' : 'Uploading photo...');
-      final imageUrl = await _uploadPhoto(user.uid).timeout(const Duration(seconds: 45));
+      setState(() => _submitStatus =
+          _photo == null ? 'Saving report...' : 'Uploading photo...');
+      final imageUrl =
+          await _uploadPhoto(user.uid).timeout(const Duration(seconds: 45));
       final point = _observationPoint!;
-      final location = '${_streetController.text.trim()}, ${_barangayController.text.trim()}, ${_municipality!}';
+      final location =
+          '${_streetController.text.trim()}, ${_barangayController.text.trim()}, ${_municipality!}';
       final report = SABReport(
-        lastName: '', firstName: '', middleInitial: '', suffix: '', contactNumber: '',
-        address: location, dateOfObservation: _formatDate(_dateObserved!),
-        timeOfObservation: _timeObserved!.format(context), location: location,
-        animalType: _animalValue(), behaviorObserved: _behaviorValue(),
-        description: _descriptionController.text.trim(), photoPath: _photo?.path ?? '',
-        latitude: point.latitude, longitude: point.longitude, reportedAt: DateTime.now(),
+        lastName: '',
+        firstName: '',
+        middleInitial: '',
+        suffix: '',
+        contactNumber: '',
+        address: location,
+        dateOfObservation: _formatDate(_dateObserved!),
+        timeOfObservation: _timeObserved!.format(context),
+        location: location,
+        animalType: _animalValue(),
+        behaviorObserved: _behaviorValue(),
+        description: _descriptionController.text.trim(),
+        photoPath: _photo?.path ?? '',
+        latitude: point.latitude,
+        longitude: point.longitude,
+        reportedAt: DateTime.now(),
       );
       await Hive.box<SABReport>('sab_reports').add(report);
       setState(() => _submitStatus = 'Submitting report...');
       final doc = FirebaseFirestore.instance.collection('SAB_reports').doc();
       await doc.set({
-        'reportId': doc.id, 'userId': user.uid, 'submittedBy': user.uid,
-        'reportedByUID': user.uid, 'province': 'Iloilo',
-        'animalType': _animalValue(), 'numberOfAnimals': int.parse(_animalCountController.text),
-        'ownershipStatus': _ownership, 'animalDescription': _animalDescriptionController.text.trim(),
-        'observedBehaviors': _behaviors.toList(), 'behaviorObserved': _behaviorValue(),
+        'reportId': doc.id,
+        'userId': user.uid,
+        'submittedBy': user.uid,
+        'reportedByUID': user.uid,
+        'province': 'Iloilo',
+        'animalType': _animalValue(),
+        'numberOfAnimals': int.parse(_animalCountController.text),
+        'ownershipStatus': _ownership,
+        'animalDescription': _animalDescriptionController.text.trim(),
+        'observedBehaviors': _behaviors.toList(),
+        'behaviorObserved': _behaviorValue(),
         'otherBehavior': _otherBehaviorController.text.trim(),
-        'municipality': _municipality, 'barangay': _barangayController.text.trim(),
+        'municipality': _municipality,
+        'barangay': _barangayController.text.trim(),
         'streetOrSpecificLocation': _streetController.text.trim(),
-        'nearestLandmark': _landmarkController.text.trim(), 'location': location,
-        'latitude': point.latitude, 'longitude': point.longitude, 'locationSource': _locationMethod,
-        'dateOfObservation': _formatDate(_dateObserved!), 'timeOfObservation': _timeObserved!.format(context),
-        'animalStillPresent': _stillPresent, 'immediateDanger': _immediateDanger,
-        'description': _descriptionController.text.trim(), 'contactStatus': _contactStatus,
+        'nearestLandmark': _landmarkController.text.trim(),
+        'location': location,
+        'latitude': point.latitude,
+        'longitude': point.longitude,
+        'locationSource': _locationMethod,
+        'dateOfObservation': _formatDate(_dateObserved!),
+        'timeOfObservation': _timeObserved!.format(context),
+        'animalStillPresent': _stillPresent,
+        'immediateDanger': _immediateDanger,
+        'description': _descriptionController.text.trim(),
+        'contactStatus': _contactStatus,
         'contactType': _contactStatus == 'Yes'
             ? (_contactType == 'Other (Specify)'
                 ? _contactOtherController.text.trim()
                 : _contactType)
             : null,
         'affectedParty': _contactStatus == 'Yes' ? _affectedParty : null,
-        'contactDescription': _contactStatus == 'Yes' ? _contactDescriptionController.text.trim() : null,
-        'imageURL': imageUrl, 'imagePath': _photo?.path ?? '', 'consentGiven': true,
-        'reportStatus': 'pending', 'createdAt': FieldValue.serverTimestamp(),
+        'contactDescription': _contactStatus == 'Yes'
+            ? _contactDescriptionController.text.trim()
+            : null,
+        'imageURL': imageUrl,
+        'imagePath': _photo?.path ?? '',
+        'consentGiven': true,
+        'reportStatus': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       }).timeout(const Duration(seconds: 30));
       if (!mounted) return;
       _snack('SAB report submitted successfully.');
       Navigator.pop(context);
     } on TimeoutException {
-      _snack('Submission is taking too long. Please check your connection and try again.');
+      _snack(
+          'Submission is taking too long. Please check your connection and try again.');
     } on FirebaseException catch (e) {
       _snack(e.message ?? 'Unable to submit the report.');
     } catch (e) {
       _snack('Unable to submit the report: $e');
     } finally {
-      if (mounted) setState(() { _submitting = false; _submitStatus = null; });
+      if (mounted)
+        setState(() {
+          _submitting = false;
+          _submitStatus = null;
+        });
     }
   }
 
@@ -458,93 +554,389 @@ class _SABReportingPageState extends State<SABReportingPage> {
       );
 
   Widget _municipalityField() => Autocomplete<String>(
-    initialValue: TextEditingValue(text: _municipalityController.text),
-    optionsBuilder: (value) => iloiloMunicipalities.where((city) => city.toLowerCase().contains(value.text.toLowerCase())),
-    onSelected: (city) => setState(() { _municipality = city; _municipalityController.text = city; }),
-    fieldViewBuilder: (_, controller, focusNode, __) {
-      if (controller.text != _municipalityController.text) controller.text = _municipalityController.text;
-      return TextFormField(controller: controller, focusNode: focusNode,
-        decoration: const InputDecoration(labelText: 'Municipality/City *', suffixIcon: Icon(Icons.search)),
-        textCapitalization: TextCapitalization.words,
-        onChanged: (text) { _municipalityController.text = text; if (text != _municipality) setState(() => _municipality = null); },
-        validator: (_) => _municipality == null ? 'Select a municipality or city from the official list' : null);
-    },
-  );
+        initialValue: TextEditingValue(text: _municipalityController.text),
+        optionsBuilder: (value) => iloiloMunicipalities.where(
+            (city) => city.toLowerCase().contains(value.text.toLowerCase())),
+        onSelected: (city) => setState(() {
+          _municipality = city;
+          _municipalityController.text = city;
+        }),
+        fieldViewBuilder: (_, controller, focusNode, __) {
+          if (controller.text != _municipalityController.text)
+            controller.text = _municipalityController.text;
+          return TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              decoration: const InputDecoration(
+                  labelText: 'Municipality/City *',
+                  suffixIcon: Icon(Icons.search)),
+              textCapitalization: TextCapitalization.words,
+              onChanged: (text) {
+                _municipalityController.text = text;
+                if (text != _municipality) setState(() => _municipality = null);
+              },
+              validator: (_) => _municipality == null
+                  ? 'Select a municipality or city from the official list'
+                  : null);
+        },
+      );
 
   Widget _photoPreview() {
-    if (kIsWeb && _webPhoto != null) return Image.memory(_webPhoto!, height: 180, fit: BoxFit.cover);
-    if (!kIsWeb && _devicePhoto != null) return Image.file(_devicePhoto!, height: 180, fit: BoxFit.cover);
+    if (kIsWeb && _webPhoto != null)
+      return Image.memory(_webPhoto!, height: 180, fit: BoxFit.cover);
+    if (!kIsWeb && _devicePhoto != null)
+      return Image.file(_devicePhoto!, height: 180, fit: BoxFit.cover);
     return const SizedBox.shrink();
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
-    appBar: AppBar(title: const Text('Report Suspicious Animal Behavior')),
-    body: SafeArea(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Form(
-      key: _formKey, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Text('Report only what you personally observed. You do not need to diagnose rabies.', style: TextStyle(color: Colors.black54)),
-        _section('1. Animal Information', [
-          _choice('Animal type *', _animalType, (v) => setState(() => _animalType = v), const ['Dog', 'Cat', 'Other', 'Unknown']),
-          if (_animalType == 'Other') ...[const SizedBox(height: 12), TextFormField(controller: _otherAnimalController, decoration: const InputDecoration(labelText: 'Specify animal type *'), validator: (_) => _animalType == 'Other' ? _required(_otherAnimalController.text, 'Animal type') : null)],
-          const SizedBox(height: 12), TextFormField(controller: _animalCountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Number of animals observed *'), validator: _positiveNumber),
-          const SizedBox(height: 12), _choice('Ownership status *', _ownership, (v) => setState(() => _ownership = v), const ['Owned', 'Stray', 'Unknown']),
-          const SizedBox(height: 12), TextFormField(controller: _animalDescriptionController, maxLines: 3, decoration: const InputDecoration(labelText: 'Animal description (optional)', hintText: 'Describe the animal if you can, such as its color, size, breed, or other identifying features.')),
-        ]),
-        _section('2. Observed Suspicious Behavior', [
-          ..._behaviorOptions.map(_behaviorTile),
-          if (_behaviors.contains('Other (Specify)')) TextFormField(controller: _otherBehaviorController, maxLines: 2, decoration: const InputDecoration(labelText: 'Describe the other behavior *'), validator: (_) => _behaviors.contains('Other (Specify)') ? _required(_otherBehaviorController.text, 'Other behavior') : null),
-          FormField<Set<String>>(initialValue: _behaviors, validator: (_) => _behaviors.isEmpty ? 'Select at least one observed behavior' : null, builder: (state) => state.hasError ? Padding(padding: const EdgeInsets.only(top: 8), child: Text(state.errorText!, style: const TextStyle(color: AppColors.danger))) : const SizedBox.shrink()),
-        ], instruction: 'Select all behaviors you personally observed.'),
-        _section('3. Location of Observation', [
-          _municipalityField(), const SizedBox(height: 12),
-          TextFormField(controller: _barangayController, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Barangay *'), validator: (v) => _required(v, 'Barangay')),
-          const SizedBox(height: 12), TextFormField(controller: _streetController, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Street or Specific Location *', hintText: 'e.g., Along Rizal Street'), validator: (v) => _required(v, 'Street or specific location')),
-          const SizedBox(height: 12), TextFormField(controller: _landmarkController, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Nearest Landmark *', hintText: 'e.g., Near the public market'), validator: (v) => _required(v, 'Nearest landmark')),
-          const SizedBox(height: 16), const Text('Pin the observation location *', style: TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 5), const Text('Tap the map to place or adjust the pin. It may be different from your current location.', style: TextStyle(color: Colors.black54, fontSize: 12)),
-          const SizedBox(height: 10), CRISMap(center: _observationPoint ?? const LatLng(10.7202, 122.5621), zoom: _observationPoint == null ? 10 : 16, onTap: _pinLocation, markers: _observationPoint == null ? const [] : [CRISMapMarker(label: 'Observed animal', position: _observationPoint!, color: AppColors.danger)]),
-          const SizedBox(height: 12), OutlinedButton.icon(onPressed: _gettingLocation ? null : _useCurrentLocation, icon: _gettingLocation ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.my_location_outlined), label: const Text('Use current location')),
-          if (_observationPoint != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Location provided: ${_locationMethod == 'current_location' ? 'Current location' : 'Map pin'} (${_observationPoint!.latitude.toStringAsFixed(5)}, ${_observationPoint!.longitude.toStringAsFixed(5)})', style: const TextStyle(color: Colors.black54, fontSize: 12))),
-          if (_observationPoint == null && _locationError == null) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Please provide the location where the animal was observed by either placing a pin on the map or using your current location.', style: TextStyle(color: AppColors.danger, fontSize: 12))),
-          if (_locationError != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_locationError!, style: const TextStyle(color: AppColors.danger))),
-        ]),
-        _section('4. Observation Details', [
-          TextFormField(readOnly: true, controller: TextEditingController(text: _dateObserved == null ? '' : _formatDate(_dateObserved!)), onTap: _pickDate, decoration: const InputDecoration(labelText: 'Date observed *', suffixIcon: Icon(Icons.calendar_today_outlined)), validator: (_) => _dateObserved == null ? 'Date observed is required' : null),
-          const SizedBox(height: 12), TextFormField(readOnly: true, controller: TextEditingController(text: _timeObserved?.format(context) ?? ''), onTap: _pickTime, decoration: const InputDecoration(labelText: 'Approximate time or time period *', suffixIcon: Icon(Icons.access_time_outlined)), validator: (_) => _timeObserved == null ? 'Time or time period is required' : null),
-          const SizedBox(height: 12), _choice('Is the animal still in the reported location? *', _stillPresent, (v) => setState(() => _stillPresent = v), const ['Yes', 'No', 'Unknown']),
-          const SizedBox(height: 12), _choice('Is the animal currently posing an immediate danger to people or animals? *', _immediateDanger, (v) => setState(() => _immediateDanger = v), const ['Yes', 'No', 'Unsure']),
-          const SizedBox(height: 12), TextFormField(controller: _descriptionController, maxLines: 4, textCapitalization: TextCapitalization.sentences, decoration: const InputDecoration(labelText: 'Description of what happened *', hintText: 'Tell us what the animal was doing and what made its behavior seem unusual.'), validator: (v) => _required(v, 'Description of what happened')),
-        ]),
-        _section('5. Possible Contact or Exposure', [
-          _choice('Did the animal bite, scratch, or have direct contact with a person or animal? *', _contactStatus, (v) => setState(() => _contactStatus = v), const ['Yes', 'No', 'Unsure']),
-          if (_contactStatus == 'Yes') ...[
-            const SizedBox(height: 14), _choice('Type of contact *', _contactType, (v) => setState(() => _contactType = v), const ['Bite', 'Scratch', 'Saliva Contact', 'Other (Specify)']),
-            if (_contactType == 'Other (Specify)') ...[const SizedBox(height: 10), TextFormField(controller: _contactOtherController, decoration: const InputDecoration(labelText: 'Specify contact type *'), validator: (_) => _contactType == 'Other (Specify)' ? _required(_contactOtherController.text, 'Contact type') : null)],
-            const SizedBox(height: 14), _choice('Who was affected? *', _affectedParty, (v) => setState(() => _affectedParty = v), const ['Person', 'Animal', 'Both', 'Unknown']),
-            const SizedBox(height: 12), TextFormField(controller: _contactDescriptionController, maxLines: 3, decoration: const InputDecoration(labelText: 'Brief description of contact *'), validator: (_) => _contactStatus == 'Yes' ? _required(_contactDescriptionController.text, 'Contact description') : null),
-          ],
-        ]),
-        _section('6. Photo Evidence', [
-          const Text('Supporting Evidence (Optional)', style: TextStyle(fontWeight: FontWeight.w600)), const SizedBox(height: 6),
-          const Text('Do not approach or put yourself in danger to obtain a photo.', style: TextStyle(color: AppColors.danger)),
-          if (_photo != null) ...[const SizedBox(height: 12), ClipRRect(borderRadius: BorderRadius.circular(12), child: _photoPreview())],
-          const SizedBox(height: 12), Row(children: [Expanded(child: OutlinedButton.icon(onPressed: () => _pickPhoto(ImageSource.camera), icon: const Icon(Icons.camera_alt_outlined), label: const Text('Take photo'))), const SizedBox(width: 10), Expanded(child: OutlinedButton.icon(onPressed: () => _pickPhoto(ImageSource.gallery), icon: const Icon(Icons.photo_library_outlined), label: const Text('Upload photo')))]),
-        ]),
-        _section('7. Review and Submit', [
-          ReportCheckboxTile(
-            value: _consentGiven,
-            onChanged: (value) => setState(() => _consentGiven = value ?? false),
-            title: 'I confirm that this report is based on what I personally observed.',
-            subtitle: 'I understand that this is not a diagnosis of rabies.',
-          ),
-          if (_submitStatus != null) Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(_submitStatus!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.primary))),
-          SizedBox(height: 52, child: FilledButton.icon(onPressed: _readyToReview && !_submitting ? _review : null, icon: _submitting ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.fact_check_outlined), label: Text(_submitting ? 'Submitting...' : 'Review report'))),
-          if (!_readyToReview) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Complete all required fields, provide a location, and confirm consent to review your report.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.black54))),
-        ]), const SizedBox(height: 24),
-      ]),
-    ))),
-  );
+        backgroundColor: AppColors.background,
+        appBar: AppBar(title: const Text('Report Suspicious Animal Behavior')),
+        body: SafeArea(
+            child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                            'Report only what you personally observed. You do not need to diagnose rabies.',
+                            style: TextStyle(color: Colors.black54)),
+                        _section('1. Animal Information', [
+                          _choice(
+                              'Animal type *',
+                              _animalType,
+                              (v) => setState(() => _animalType = v),
+                              const ['Dog', 'Cat', 'Other']),
+                          if (_animalType == 'Other') ...[
+                            const SizedBox(height: 12),
+                            TextFormField(
+                                controller: _otherAnimalController,
+                                decoration: const InputDecoration(
+                                    labelText: 'Specify animal type *'),
+                                validator: (_) => _animalType == 'Other'
+                                    ? _required(_otherAnimalController.text,
+                                        'Animal type')
+                                    : null)
+                          ],
+                          const SizedBox(height: 12),
+                          TextFormField(
+                              controller: _animalCountController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                  labelText: 'Number of animals observed *'),
+                              validator: _positiveNumber),
+                          const SizedBox(height: 12),
+                          _choice(
+                              'Ownership status *',
+                              _ownership,
+                              (v) => setState(() => _ownership = v),
+                              const ['Owned', 'Stray']),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                              controller: _animalDescriptionController,
+                              maxLines: 3,
+                              decoration: const InputDecoration(
+                                  labelText: 'Animal description (optional)',
+                                  hintText:
+                                      'Describe the animal if you can, such as its color, size, breed, or other identifying features.')),
+                        ]),
+                        _section(
+                            '2. Observed Suspicious Behavior',
+                            [
+                              ..._behaviorOptions.map(_behaviorTile),
+                              if (_behaviors.contains('Other (Specify)'))
+                                TextFormField(
+                                    controller: _otherBehaviorController,
+                                    maxLines: 2,
+                                    decoration: const InputDecoration(
+                                        labelText:
+                                            'Describe the other behavior *'),
+                                    validator: (_) =>
+                                        _behaviors.contains('Other (Specify)')
+                                            ? _required(
+                                                _otherBehaviorController.text,
+                                                'Other behavior')
+                                            : null),
+                              FormField<Set<String>>(
+                                  initialValue: _behaviors,
+                                  validator: (_) => _behaviors.isEmpty
+                                      ? 'Select at least one observed behavior'
+                                      : null,
+                                  builder: (state) => state.hasError
+                                      ? Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 8),
+                                          child: Text(state.errorText!,
+                                              style: const TextStyle(
+                                                  color: AppColors.danger)))
+                                      : const SizedBox.shrink()),
+                            ],
+                            instruction:
+                                'Select all behaviors you personally observed.'),
+                        _section('3. Location of Observation', [
+                          _municipalityField(),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                              controller: _barangayController,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(
+                                  labelText: 'Barangay *'),
+                              validator: (v) => _required(v, 'Barangay')),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                              controller: _streetController,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(
+                                  labelText: 'Street or Specific Location *',
+                                  hintText: 'e.g., Along Rizal Street'),
+                              validator: (v) =>
+                                  _required(v, 'Street or specific location')),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                              controller: _landmarkController,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(
+                                  labelText: 'Nearest Landmark *',
+                                  hintText: 'e.g., Near the public market'),
+                              validator: (v) =>
+                                  _required(v, 'Nearest landmark')),
+                          const SizedBox(height: 16),
+                          const Text('Pin the observation location *',
+                              style: TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 5),
+                          const Text(
+                              'Tap the map to place or adjust the pin. It may be different from your current location.',
+                              style: TextStyle(
+                                  color: Colors.black54, fontSize: 12)),
+                          const SizedBox(height: 10),
+                          CRISMap(
+                              center: _observationPoint ??
+                                  const LatLng(10.7202, 122.5621),
+                              zoom: _observationPoint == null ? 10 : 16,
+                              onTap: _pinLocation,
+                              markers: _observationPoint == null
+                                  ? const []
+                                  : [
+                                      CRISMapMarker(
+                                          label: 'Observed animal',
+                                          position: _observationPoint!,
+                                          color: AppColors.danger)
+                                    ]),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                              onPressed:
+                                  _gettingLocation ? null : _useCurrentLocation,
+                              icon: _gettingLocation
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
+                                  : const Icon(Icons.my_location_outlined),
+                              label: const Text('Use current location')),
+                          if (_observationPoint != null)
+                            Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                    'Location provided: ${_locationMethod == 'current_location' ? 'Current location' : 'Map pin'} (${_observationPoint!.latitude.toStringAsFixed(5)}, ${_observationPoint!.longitude.toStringAsFixed(5)})',
+                                    style: const TextStyle(
+                                        color: Colors.black54, fontSize: 12))),
+                          if (_observationPoint == null &&
+                              _locationError == null)
+                            const Padding(
+                                padding: EdgeInsets.only(top: 8),
+                                child: Text(
+                                    'Please provide the location where the animal was observed by either placing a pin on the map or using your current location.',
+                                    style: TextStyle(
+                                        color: AppColors.danger,
+                                        fontSize: 12))),
+                          if (_locationError != null)
+                            Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(_locationError!,
+                                    style: const TextStyle(
+                                        color: AppColors.danger))),
+                        ]),
+                        _section('4. Observation Details', [
+                          TextFormField(
+                              readOnly: true,
+                              controller: TextEditingController(
+                                  text: _dateObserved == null
+                                      ? ''
+                                      : _formatDate(_dateObserved!)),
+                              onTap: _pickDate,
+                              decoration: const InputDecoration(
+                                  labelText: 'Date observed *',
+                                  suffixIcon:
+                                      Icon(Icons.calendar_today_outlined)),
+                              validator: (_) => _dateObserved == null
+                                  ? 'Date observed is required'
+                                  : null),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                              readOnly: true,
+                              controller: TextEditingController(
+                                  text: _timeObserved?.format(context) ?? ''),
+                              onTap: _pickTime,
+                              decoration: const InputDecoration(
+                                  labelText:
+                                      'Approximate time or time period *',
+                                  suffixIcon: Icon(Icons.access_time_outlined)),
+                              validator: (_) => _timeObserved == null
+                                  ? 'Time or time period is required'
+                                  : null),
+                          const SizedBox(height: 12),
+                          _choice(
+                              'Is the animal still in the reported location? *',
+                              _stillPresent,
+                              (v) => setState(() => _stillPresent = v),
+                              const ['Yes', 'No', 'Unknown']),
+                          const SizedBox(height: 12),
+                          _choice(
+                              'Is the animal currently posing an immediate danger to people or animals? *',
+                              _immediateDanger,
+                              (v) => setState(() => _immediateDanger = v),
+                              const ['Yes', 'No', 'Unsure']),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                              controller: _descriptionController,
+                              maxLines: 4,
+                              textCapitalization: TextCapitalization.sentences,
+                              decoration: const InputDecoration(
+                                  labelText: 'Description of what happened *',
+                                  hintText:
+                                      'Tell us what the animal was doing and what made its behavior seem unusual.'),
+                              validator: (v) =>
+                                  _required(v, 'Description of what happened')),
+                        ]),
+                        _section('5. Possible Contact or Exposure', [
+                          _choice(
+                              'Did the animal bite, scratch, or have direct contact with a person or animal? *',
+                              _contactStatus,
+                              (v) => setState(() => _contactStatus = v),
+                              const ['Yes', 'No', 'Unsure']),
+                          if (_contactStatus == 'Yes') ...[
+                            const SizedBox(height: 14),
+                            _choice('Type of contact *', _contactType,
+                                (v) => setState(() => _contactType = v), const [
+                              'Bite',
+                              'Scratch',
+                              'Saliva Contact',
+                              'Other (Specify)'
+                            ]),
+                            if (_contactType == 'Other (Specify)') ...[
+                              const SizedBox(height: 10),
+                              TextFormField(
+                                  controller: _contactOtherController,
+                                  decoration: const InputDecoration(
+                                      labelText: 'Specify contact type *'),
+                                  validator: (_) =>
+                                      _contactType == 'Other (Specify)'
+                                          ? _required(
+                                              _contactOtherController.text,
+                                              'Contact type')
+                                          : null)
+                            ],
+                            const SizedBox(height: 14),
+                            _choice(
+                                'Who was affected? *',
+                                _affectedParty,
+                                (v) => setState(() => _affectedParty = v),
+                                const ['Person', 'Animal', 'Both', 'Unknown']),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                                controller: _contactDescriptionController,
+                                maxLines: 3,
+                                decoration: const InputDecoration(
+                                    labelText:
+                                        'Brief description of contact *'),
+                                validator: (_) => _contactStatus == 'Yes'
+                                    ? _required(
+                                        _contactDescriptionController.text,
+                                        'Contact description')
+                                    : null),
+                          ],
+                        ]),
+                        _section('6. Photo Evidence', [
+                          const Text('Supporting Evidence (Optional)',
+                              style: TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 6),
+                          const Text(
+                              'Do not approach or put yourself in danger to obtain a photo.',
+                              style: TextStyle(color: AppColors.danger)),
+                          if (_photo != null) ...[
+                            const SizedBox(height: 12),
+                            ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: _photoPreview())
+                          ],
+                          const SizedBox(height: 12),
+                          Row(children: [
+                            Expanded(
+                                child: OutlinedButton.icon(
+                                    onPressed: () =>
+                                        _pickPhoto(ImageSource.camera),
+                                    icon: const Icon(Icons.camera_alt_outlined),
+                                    label: const Text('Take photo'))),
+                            const SizedBox(width: 10),
+                            Expanded(
+                                child: OutlinedButton.icon(
+                                    onPressed: () =>
+                                        _pickPhoto(ImageSource.gallery),
+                                    icon: const Icon(
+                                        Icons.photo_library_outlined),
+                                    label: const Text('Upload photo')))
+                          ]),
+                        ]),
+                        _section('7. Review and Submit', [
+                          ReportCheckboxTile(
+                            value: _consentGiven,
+                            onChanged: (value) =>
+                                setState(() => _consentGiven = value ?? false),
+                            title:
+                                'I confirm that this report is based on what I personally observed.',
+                            subtitle:
+                                'I understand that this is not a diagnosis of rabies.',
+                          ),
+                          if (_submitStatus != null)
+                            Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Text(_submitStatus!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                        color: AppColors.primary))),
+                          SizedBox(
+                              height: 52,
+                              child: FilledButton.icon(
+                                  onPressed: _readyToReview && !_submitting
+                                      ? _review
+                                      : null,
+                                  icon: _submitting
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2))
+                                      : const Icon(Icons.fact_check_outlined),
+                                  label: Text(_submitting
+                                      ? 'Submitting...'
+                                      : 'Review report'))),
+                          if (!_readyToReview)
+                            const Padding(
+                                padding: EdgeInsets.only(top: 8),
+                                child: Text(
+                                    'Complete all required fields, provide a location, and confirm consent to review your report.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.black54))),
+                        ]),
+                        const SizedBox(height: 24),
+                      ]),
+                ))),
+      );
 }
 
 class _ReviewSection {
@@ -554,31 +946,49 @@ class _ReviewSection {
 }
 
 class _ReviewSheet extends StatelessWidget {
-  const _ReviewSheet({required this.sections, required this.onEdit, required this.onSubmit});
+  const _ReviewSheet(
+      {required this.sections, required this.onEdit, required this.onSubmit});
   final List<_ReviewSection> sections;
   final VoidCallback onEdit;
   final Future<void> Function() onSubmit;
 
   @override
-  Widget build(BuildContext context) => SafeArea(child: DraggableScrollableSheet(
-    initialChildSize: .88, minChildSize: .55, maxChildSize: .95,
-    builder: (_, controller) => Column(children: [
-      const Padding(padding: EdgeInsets.all(16), child: Text('Review your report', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
-      Expanded(
-        child: ListView(
-          controller: controller,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          children: sections
-              .map(
-                (section) => ReportReviewCard(
-                  title: section.title,
-                  values: section.values,
-                ),
-              )
-              .toList(),
-        ),
-      ),
-      Padding(padding: const EdgeInsets.all(16), child: Row(children: [Expanded(child: OutlinedButton(onPressed: onEdit, child: const Text('Edit'))), const SizedBox(width: 12), Expanded(child: FilledButton(onPressed: onSubmit, child: const Text('Submit report')))])),
-    ]),
-  ));
+  Widget build(BuildContext context) => SafeArea(
+          child: DraggableScrollableSheet(
+        initialChildSize: .88,
+        minChildSize: .55,
+        maxChildSize: .95,
+        builder: (_, controller) => Column(children: [
+          const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Review your report',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
+          Expanded(
+            child: ListView(
+              controller: controller,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              children: sections
+                  .map(
+                    (section) => ReportReviewCard(
+                      title: section.title,
+                      values: section.values,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(children: [
+                Expanded(
+                    child: OutlinedButton(
+                        onPressed: onEdit, child: const Text('Edit'))),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: FilledButton(
+                        onPressed: onSubmit,
+                        child: const Text('Submit report')))
+              ])),
+        ]),
+      ));
 }

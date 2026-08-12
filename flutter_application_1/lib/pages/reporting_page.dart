@@ -587,30 +587,30 @@ class _ReportingPageState extends State<ReportingPage> {
                                 ]),
                     ],
                   ),
-                  _section(
-                    '3. Animal Information',
-                    Icons.pets_outlined,
-                    'Share only what you know about the animal.',
-                    [
-                      _dropdown(
-                          'Ownership',
-                          _ownership,
-                          const [
-                            'Owned (Caged)',
-                            'Owned (Allowed to Roam)',
-                            'Stray',
-                            'Unknown'
-                          ],
-                          (v) => setState(() => _ownership = v ?? 'Unknown'),
-                          required: true),
-                      _subheading('Suspicious Animal Behavior'),
-                      ..._behaviorOptions.map((option) => _reportCheckboxTile(
-                          title: option,
-                          value: _behaviors.contains(option),
-                          onChanged: (checked) => _toggleSuspiciousBehavior(
-                              option, checked ?? false))),
-                    ],
-                  ),
+                  // _section(
+                  //   '3. Animal Information',
+                  //   Icons.pets_outlined,
+                  //   'Share only what you know about the animal.',
+                  //   [
+                  //     _dropdown(
+                  //         'Ownership',
+                  //         _ownership,
+                  //         const [
+                  //           'Owned (Caged)',
+                  //           'Owned (Allowed to Roam)',
+                  //           'Stray',
+                  //           'Unknown'
+                  //         ],
+                  //         (v) => setState(() => _ownership = v ?? 'Unknown'),
+                  //         required: true),
+                  //     _subheading('Suspicious Animal Behavior'),
+                  //     ..._behaviorOptions.map((option) => _reportCheckboxTile(
+                  //         title: option,
+                  //         value: _behaviors.contains(option),
+                  //         onChanged: (checked) => _toggleSuspiciousBehavior(
+                  //             option, checked ?? false))),
+                  //   ],
+                  // ),
                   _section(
                     '4. Exposure Information',
                     Icons.healing_outlined,

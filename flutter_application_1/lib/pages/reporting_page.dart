@@ -616,24 +616,6 @@ class _ReportingPageState extends State<ReportingPage> {
                     Icons.healing_outlined,
                     'Describe the exposure and select the affected body area.',
                     [
-                      _subheading('Exposure and Bite Details'),
-                      const Divider(),
-                      _field(_biteArea, 'Area of the Bite',
-                          hintText: 'e.g., Right lower leg'),
-                      _responsivePatientFieldGrid([
-                        _dropdown(
-                            'Type of animal',
-                            _animalType,
-                            const ['Dog', 'Cat', 'Others'],
-                            (v) => setState(() => _animalType = v),
-                            required: true),
-                        _yesNoUnknown(
-                            'Previously vaccinated?',
-                            _animalVaccinated,
-                            (v) => setState(() => _animalVaccinated = v)),
-                      ]),
-                      _yesNoUnknown('Was the animal caged?', _animalCaged,
-                          (v) => setState(() => _animalCaged = v)),
                       _subheading('Body Part Affected'),
                       _reportCheckboxTile(
                           title: 'Multiple Sites',
@@ -654,6 +636,24 @@ class _ReportingPageState extends State<ReportingPage> {
                         _SelectedBodyPartsList(
                             selections: _bodySites, onRemove: _removeBodySite),
                       const SizedBox(height: 12),
+                      _subheading('Exposure and Bite Details'),
+                      const Divider(),
+                      _field(_biteArea, 'Area of the Bite',
+                          hintText: 'e.g., Right lower leg'),
+                      _responsivePatientFieldGrid([
+                        _dropdown(
+                            'Type of animal',
+                            _animalType,
+                            const ['Dog', 'Cat', 'Others'],
+                            (v) => setState(() => _animalType = v),
+                            required: true),
+                        _yesNoUnknown(
+                            'Previously vaccinated?',
+                            _animalVaccinated,
+                            (v) => setState(() => _animalVaccinated = v)),
+                      ]),
+                      _yesNoUnknown('Was the animal caged?', _animalCaged,
+                          (v) => setState(() => _animalCaged = v)),
                       _yesNo('Was there bleeding?', _bleeding,
                           (v) => setState(() => _bleeding = v)),
                     ],

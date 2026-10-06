@@ -7,7 +7,7 @@ Future<SelectedCsvFile?> chooseCsv() async {
   input.click();
   await input.onChange.first;
   final files = input.files;
-  final file = files != null && files.length > 0 ? files[0] : null;
+  final file = files != null && files.isNotEmpty ? files[0] : null;
   if (file == null) return null;
 
   final reader = html.FileReader()..readAsText(file);

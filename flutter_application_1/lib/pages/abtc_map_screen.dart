@@ -297,7 +297,7 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
   Widget build(BuildContext context) {
     final mapCenter = _mapCenter;
     return Theme(
-      data: Theme.of(context).copyWith(useMaterial3: true),
+      data: Theme.of(context).copyWith(),
       child: Scaffold(
         appBar: AppBar(title: const Text('Animal Bite Treatment Centers')),
         body: Stack(

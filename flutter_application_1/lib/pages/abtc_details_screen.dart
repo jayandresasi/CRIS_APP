@@ -11,7 +11,7 @@ class ABTCDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: Theme.of(context).copyWith(useMaterial3: true),
+      data: Theme.of(context).copyWith(),
       child: Scaffold(
         appBar: AppBar(title: const Text('ABTC Details')),
         body: ListView(

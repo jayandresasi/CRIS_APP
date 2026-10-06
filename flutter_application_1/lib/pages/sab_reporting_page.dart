@@ -247,8 +247,9 @@ class _SABReportingPageState extends State<SABReportingPage> {
         _locationMethod = 'current_location';
       });
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() => _locationError = 'Unable to use current location: $e');
+      }
     } finally {
       if (mounted) setState(() => _gettingLocation = false);
     }
@@ -471,11 +472,12 @@ class _SABReportingPageState extends State<SABReportingPage> {
     } catch (e) {
       _snack('Unable to submit the report: $e');
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _submitting = false;
           _submitStatus = null;
         });
+      }
     }
   }
 
@@ -562,8 +564,9 @@ class _SABReportingPageState extends State<SABReportingPage> {
           _municipalityController.text = city;
         }),
         fieldViewBuilder: (_, controller, focusNode, __) {
-          if (controller.text != _municipalityController.text)
+          if (controller.text != _municipalityController.text) {
             controller.text = _municipalityController.text;
+          }
           return TextFormField(
               controller: controller,
               focusNode: focusNode,
@@ -582,10 +585,12 @@ class _SABReportingPageState extends State<SABReportingPage> {
       );
 
   Widget _photoPreview() {
-    if (kIsWeb && _webPhoto != null)
+    if (kIsWeb && _webPhoto != null) {
       return Image.memory(_webPhoto!, height: 180, fit: BoxFit.cover);
-    if (!kIsWeb && _devicePhoto != null)
+    }
+    if (!kIsWeb && _devicePhoto != null) {
       return Image.file(_devicePhoto!, height: 180, fit: BoxFit.cover);
+    }
     return const SizedBox.shrink();
   }
 

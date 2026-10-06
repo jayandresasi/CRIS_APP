@@ -156,8 +156,9 @@ class AppTheme {
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled))
+          if (states.contains(WidgetState.disabled)) {
             return AppColors.inputBorder;
+          }
           return states.contains(WidgetState.selected)
               ? AppColors.primary
               : AppColors.surface;
@@ -167,8 +168,9 @@ class AppTheme {
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled))
+          if (states.contains(WidgetState.disabled)) {
             return AppColors.textDisabled;
+          }
           return states.contains(WidgetState.selected)
               ? AppColors.primary
               : AppColors.textSecondary;

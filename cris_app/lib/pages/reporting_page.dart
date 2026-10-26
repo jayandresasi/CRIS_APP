@@ -113,10 +113,10 @@ const List<_BodySite> _frontBodySites = [
   _BodySite('Right Lower Leg', Alignment(0.25, 0.92)),
   _BodySite('Left Ankle', Alignment(-0.20, 1.00)),
   _BodySite('Right Ankle', Alignment(0.20, 1.00)),
-  _BodySite('Left Foot', Alignment(-0.10, 1.08)),
-  _BodySite('Right Foot', Alignment(0.10, 1.08)),
-  _BodySite('Left Toes', Alignment(-0.30, 1.08)),
-  _BodySite('Right Toes', Alignment(0.30, 1.08)),
+  _BodySite('Left Foot', Alignment(-0.10, 0.92)),
+  _BodySite('Right Foot', Alignment(0.10, 0.92)),
+  _BodySite('Left Toes', Alignment(-0.30, 0.92)),
+  _BodySite('Right Toes', Alignment(0.30, 0.92)),
 ];
 
 const List<_BodySite> _backBodySites = [
@@ -145,6 +145,8 @@ class _ReportingPageState extends State<ReportingPage> {
   final _dobController = TextEditingController();
   final _ageController = TextEditingController();
   final _civilStatusController = TextEditingController();
+  final _guardianNameController = TextEditingController();
+  final _guardianContactController = TextEditingController();
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
   final _provinceController = TextEditingController(text: 'Iloilo');
@@ -155,7 +157,16 @@ class _ReportingPageState extends State<ReportingPage> {
   final _timeController = TextEditingController();
   final _incidentMunicipalityController = TextEditingController();
   final _incidentBarangayController = TextEditingController();
+  final _incidentProvinceController = TextEditingController(text: 'Iloilo');
+  final _incidentStreetController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _symptomDetailsController = TextEditingController();
+  final _allergyDetailsController = TextEditingController();
+  final _medicalProblemsController = TextEditingController();
+  final _currentMedicationsController = TextEditingController();
+  final _otherMedicalInfoController = TextEditingController();
+  final _previousVaccinationDetailsController = TextEditingController();
+  final _woundDescriptionController = TextEditingController();
   final _otherAnimalController = TextEditingController();
   final _breedController = TextEditingController();
   final _colorController = TextEditingController();
@@ -169,12 +180,14 @@ class _ReportingPageState extends State<ReportingPage> {
   DateTime? _dateOfBite;
   TimeOfDay? _timeOfBite;
   String? _sex;
+  String? _patientVaccinated;
+  String? _allergiesKnown;
   String _animalType = 'Dog';
   String _ownership = 'Stray';
   String _animalSex = 'Unknown';
   String _animalAlive = 'Unknown';
   String _animalAvailable = 'Unknown';
-  String _animalVaccinated = 'Unknown';
+  String? _animalVaccinated;
   String _exposureType = 'Bite';
   String? _bleeding;
   String? _washedWound;
@@ -186,15 +199,17 @@ class _ReportingPageState extends State<ReportingPage> {
   bool _isSubmitting = false;
   bool _isLoadingProfile = false;
   bool _reportingForSelf = false;
-  final bool _claimedByAbtc = false;
   LatLng? _incidentPin;
   File? _woundPhoto;
   File? _animalPhoto;
   final Set<String> _behaviors = {};
+  final Set<String> _symptoms = {};
+  final Set<String> _woundTypes = {};
   final List<String> _bodySites = [];
   final _bodySiteCountController = TextEditingController();
 
   bool get _patientFieldsReadOnly => _reportingForSelf || _isLoadingProfile;
+  bool get _isMinor => (int.tryParse(_ageController.text.trim()) ?? 18) < 18;
 
   @override
   void dispose() {
@@ -206,6 +221,8 @@ class _ReportingPageState extends State<ReportingPage> {
       _dobController,
       _ageController,
       _civilStatusController,
+      _guardianNameController,
+      _guardianContactController,
       _mobileController,
       _emailController,
       _provinceController,
@@ -216,7 +233,16 @@ class _ReportingPageState extends State<ReportingPage> {
       _timeController,
       _incidentMunicipalityController,
       _incidentBarangayController,
+      _incidentProvinceController,
+      _incidentStreetController,
       _descriptionController,
+      _symptomDetailsController,
+      _allergyDetailsController,
+      _medicalProblemsController,
+      _currentMedicationsController,
+      _otherMedicalInfoController,
+      _previousVaccinationDetailsController,
+      _woundDescriptionController,
       _otherAnimalController,
       _breedController,
       _colorController,
@@ -302,6 +328,15 @@ class _ReportingPageState extends State<ReportingPage> {
       _dobController.clear();
       _ageController.clear();
       _civilStatusController.clear();
+      _guardianNameController.clear();
+      _guardianContactController.clear();
+      _patientVaccinated = null;
+      _previousVaccinationDetailsController.clear();
+      _allergiesKnown = null;
+      _allergyDetailsController.clear();
+      _medicalProblemsController.clear();
+      _currentMedicationsController.clear();
+      _otherMedicalInfoController.clear();
       _mobileController.clear();
       _emailController.clear();
       _municipalityController.clear();
@@ -324,6 +359,10 @@ class _ReportingPageState extends State<ReportingPage> {
       _dateOfBirth = picked;
       _dobController.text = _formatDate(picked);
       _ageController.text = _calculateAge(picked).toString();
+      if ((_calculateAge(picked) ?? 18) >= 18) {
+        _guardianNameController.clear();
+        _guardianContactController.clear();
+      }
     });
   }
 
@@ -534,7 +573,36 @@ class _ReportingPageState extends State<ReportingPage> {
     );
   }
 
+  Future<void> _confirmAndSubmit() async {
+    if (_isSubmitting) return;
+    if (!_certified) {
+      _showSnackBar('Please certify that the information is true and correct.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Submit animal bite report?'),
+        content: const Text(
+          'Your report will be sent to the appropriate ABTC for review. This submission does not confirm a diagnosis or treatment.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Confirm submission'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) await _submit();
+  }
+
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showSnackBar('Please sign in to submit a report.');
@@ -572,10 +640,10 @@ class _ReportingPageState extends State<ReportingPage> {
         exposureType: _selectedExposure,
         animalSpecies: _selectedAnimalType,
         animalOwnership: _ownership,
-        animalVaccinationStatus: _animalVaccinated,
+        animalVaccinationStatus: _animalVaccinated ?? '',
         incidentDescription: _descriptionController.text.trim(),
         firstAidGiven: _firstAidSummary,
-        patientVaccinationStatus: '',
+        patientVaccinationStatus: _patientVaccinated ?? '',
         reportedAt: submittedAt,
       );
       await Hive.box<Report>('reports').add(report);
@@ -595,6 +663,7 @@ class _ReportingPageState extends State<ReportingPage> {
           'middleName': _middleNameController.text.trim(),
           'suffix': _suffixController.text.trim(),
           'sex': _sex,
+          'rabiesVaccinationStatus': _patientVaccinated,
           'dateOfBirth': _dobController.text.trim(),
           'age': int.tryParse(_ageController.text.trim()),
           'civilStatus': _civilStatusController.text.trim(),
@@ -605,12 +674,16 @@ class _ReportingPageState extends State<ReportingPage> {
           'barangay': _barangayController.text.trim(),
           'streetAddress': _streetController.text.trim(),
           'fullName': _patientName,
+          'guardianName': _guardianNameController.text.trim(),
+          'guardianContactNumber': _guardianContactController.text.trim(),
         },
         'incident': {
           'date': _dateController.text.trim(),
           'time': _timeController.text.trim(),
+          'province': _incidentProvinceController.text.trim(),
           'municipality': _incidentMunicipalityController.text.trim(),
           'barangay': _incidentBarangayController.text.trim(),
+          'streetPurokLandmark': _incidentStreetController.text.trim(),
           'description': _descriptionController.text.trim(),
           'latitude': _incidentPin?.latitude,
           'longitude': _incidentPin?.longitude,
@@ -631,6 +704,10 @@ class _ReportingPageState extends State<ReportingPage> {
         },
         'exposure': {
           'type': _selectedExposure,
+          'symptoms': _symptoms.toList()..sort(),
+          'symptomDetails': _symptomDetailsController.text.trim(),
+          'woundTypes': _woundTypes.toList()..sort(),
+          'woundDescription': _woundDescriptionController.text.trim(),
           'bodyPartsAffected': _bodySites.toList()..sort(),
           'multipleSites': _multipleSites,
           'woundCount': int.tryParse(_woundCountController.text.trim()),
@@ -640,6 +717,16 @@ class _ReportingPageState extends State<ReportingPage> {
           'washedWithSoapAndWater': _washedWound,
           'washMinutes': int.tryParse(_washMinutesController.text.trim()),
           'substanceApplied': _selectedSubstance,
+        },
+        'medicalHistory': {
+          'residentReported': true,
+          'previousVaccinationDetails':
+              _previousVaccinationDetailsController.text.trim(),
+          'knownAllergies': _allergiesKnown,
+          'allergyDetails': _allergyDetailsController.text.trim(),
+          'medicalProblems': _medicalProblemsController.text.trim(),
+          'currentMedications': _currentMedicationsController.text.trim(),
+          'otherInformation': _otherMedicalInfoController.text.trim(),
         },
         'evidence': evidenceUrls,
         'status': status,
@@ -701,8 +788,10 @@ class _ReportingPageState extends State<ReportingPage> {
       ].where((value) => value.isNotEmpty).join(', ');
 
   String get _incidentLocationSummary => [
+        _incidentStreetController.text.trim(),
         _incidentBarangayController.text.trim(),
         _incidentMunicipalityController.text.trim(),
+        _incidentProvinceController.text.trim(),
         if (_incidentPin != null)
           '${_incidentPin!.latitude.toStringAsFixed(6)}, ${_incidentPin!.longitude.toStringAsFixed(6)}',
       ].where((value) => value.isNotEmpty).join(', ');
@@ -798,6 +887,7 @@ class _ReportingPageState extends State<ReportingPage> {
     required TextEditingController controller,
     required String label,
     bool enabled = true,
+    TextEditingController? dependentBarangayController,
   }) {
     return Autocomplete<String>(
       initialValue: TextEditingValue(text: controller.text),
@@ -808,7 +898,10 @@ class _ReportingPageState extends State<ReportingPage> {
           (municipality) => municipality.toLowerCase().contains(query),
         );
       },
-      onSelected: (value) => controller.text = value,
+      onSelected: (value) {
+        if (controller.text != value) dependentBarangayController?.clear();
+        controller.text = value;
+      },
       fieldViewBuilder: (context, textController, focusNode, onSubmitted) {
         if (textController.text != controller.text) {
           textController.text = controller.text;
@@ -822,7 +915,13 @@ class _ReportingPageState extends State<ReportingPage> {
             suffixIcon: const Icon(Icons.search),
           ),
           textCapitalization: TextCapitalization.words,
-          onChanged: (value) => controller.text = value,
+          onChanged: (value) {
+            if (controller.text != value &&
+                dependentBarangayController != null) {
+              dependentBarangayController.clear();
+            }
+            controller.text = value;
+          },
           validator: (value) => _required(value, label),
         );
       },
@@ -853,6 +952,7 @@ class _ReportingPageState extends State<ReportingPage> {
     required String label,
     required String selected,
     required ValueChanged<String> onSelected,
+    List<String> values = const ['Yes', 'No', 'Unknown'],
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -860,7 +960,7 @@ class _ReportingPageState extends State<ReportingPage> {
         Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         _choiceChips(
-          values: const ['Yes', 'No', 'Unknown'],
+          values: values,
           selected: selected,
           onSelected: onSelected,
         ),
@@ -1076,38 +1176,74 @@ class _ReportingPageState extends State<ReportingPage> {
     );
   }
 
-  List<_SummaryItem> get _summaryItems => [
-        _SummaryItem('Patient Name', _patientName),
-        _SummaryItem('Sex', _sex ?? ''),
-        _SummaryItem('Date of Birth', _dobController.text),
-        _SummaryItem('Age', _ageController.text),
-        _SummaryItem('Civil Status', _civilStatusController.text),
-        _SummaryItem('Mobile Number', _mobileController.text),
-        _SummaryItem('Email Address', _emailController.text),
-        _SummaryItem('Residential Address', _addressSummary),
-        _SummaryItem('Date of Bite', _dateController.text),
-        _SummaryItem('Time of Bite', _timeController.text),
-        _SummaryItem('Incident Location', _incidentLocationSummary),
-        _SummaryItem('What Happened', _descriptionController.text),
-        _SummaryItem('Bite Wound Photo', _woundPhoto == null ? '' : 'Selected'),
-        _SummaryItem('Animal Photo', _animalPhoto == null ? '' : 'Selected'),
-        _SummaryItem('Animal Type', _selectedAnimalType),
-        _SummaryItem('Ownership', _ownership),
-        _SummaryItem('Animal Sex', _animalSex),
-        _SummaryItem('Breed', _breedController.text),
-        _SummaryItem('Color', _colorController.text),
-        _SummaryItem('Approximate Age', _animalAgeController.text),
-        _SummaryItem('Animal Alive', _animalAlive),
-        _SummaryItem('Available for Observation', _animalAvailable),
-        _SummaryItem('Vaccinated Against Rabies', _animalVaccinated),
-        _SummaryItem('Suspicious Behavior', _behaviors.join(', ')),
-        _SummaryItem('Exposure Type', _selectedExposure),
-        _SummaryItem('Body Part Affected', _bodySites.join(', ')),
-        _SummaryItem('Number of Wounds', _woundCountController.text),
-        _SummaryItem('Bleeding', _bleeding ?? ''),
-        _SummaryItem('Washed with Soap and Water', _washedWound ?? ''),
-        _SummaryItem('Wash Minutes', _washMinutesController.text),
-        _SummaryItem('Substance Applied', _selectedSubstance),
+  List<_SummarySection> get _summarySections => [
+        _SummarySection('Patient Information', 0, [
+          _SummaryItem('Patient Name', _patientName),
+          _SummaryItem('Sex', _sex ?? ''),
+          _SummaryItem('Date of Birth', _dobController.text),
+          _SummaryItem('Age', _ageController.text),
+          _SummaryItem('Civil Status', _civilStatusController.text),
+          _SummaryItem('Mobile Number', _mobileController.text),
+          _SummaryItem('Email Address', _emailController.text),
+          _SummaryItem('Residential Address', _addressSummary),
+          if (_isMinor) ...[
+            _SummaryItem('Parent / Guardian', _guardianNameController.text),
+            _SummaryItem('Guardian Contact', _guardianContactController.text),
+          ],
+        ]),
+        _SummarySection('Animal Information', 1, [
+          _SummaryItem('Species', _selectedAnimalType),
+          _SummaryItem('Ownership', _ownership),
+          _SummaryItem('Animal Sex', _animalSex),
+          _SummaryItem('Breed', _breedController.text),
+          _SummaryItem('Color', _colorController.text),
+          _SummaryItem('Approximate Age', _animalAgeController.text),
+          _SummaryItem('Animal Status', _animalAlive),
+          _SummaryItem('Available for Observation', _animalAvailable),
+          _SummaryItem(
+              'Animal Rabies Vaccination Status', _animalVaccinated ?? ''),
+          _SummaryItem('Observed Behavior', _behaviors.join(', ')),
+          _SummaryItem('Animal Photo', _animalPhoto == null ? '' : 'Selected'),
+        ]),
+        _SummarySection('Bite Incident Information', 2, [
+          _SummaryItem('Date of Exposure', _dateController.text),
+          _SummaryItem('Est. Time of Exposure', _timeController.text),
+          _SummaryItem('Incident Location', _incidentLocationSummary),
+          _SummaryItem('What Happened', _descriptionController.text),
+          _SummaryItem(
+              'GPS Pin',
+              _incidentPin == null
+                  ? ''
+                  : '${_incidentPin!.latitude}, ${_incidentPin!.longitude}'),
+        ]),
+        _SummarySection('Symptoms and Wound Information', 3, [
+          _SummaryItem('Symptoms', _symptoms.join(', ')),
+          _SummaryItem('Other Symptoms', _symptomDetailsController.text),
+          _SummaryItem('Type of Exposure', _selectedExposure),
+          _SummaryItem('Type of Wound', _woundTypes.join(', ')),
+          _SummaryItem('Body Parts Affected', _bodySites.join(', ')),
+          _SummaryItem('Number of Wounds', _woundCountController.text),
+          _SummaryItem('Bleeding', _bleeding ?? ''),
+          _SummaryItem('Wound Photo', _woundPhoto == null ? '' : 'Selected'),
+          _SummaryItem(
+              'Additional Wound Description', _woundDescriptionController.text),
+          _SummaryItem('Washed with Soap and Water', _washedWound ?? ''),
+          _SummaryItem('Wash Minutes', _washMinutesController.text),
+          _SummaryItem('Substance Applied', _selectedSubstance),
+        ]),
+        _SummarySection('Relevant Medical History', 4, [
+          _SummaryItem(
+              'Patient Rabies Vaccination Status', _patientVaccinated ?? ''),
+          _SummaryItem('Previous Vaccination Details',
+              _previousVaccinationDetailsController.text),
+          _SummaryItem('Known Allergies', _allergiesKnown ?? ''),
+          _SummaryItem('Allergy Details', _allergyDetailsController.text),
+          _SummaryItem('Medical Problems', _medicalProblemsController.text),
+          _SummaryItem(
+              'Current Medications', _currentMedicationsController.text),
+          _SummaryItem(
+              'Other Medical Information', _otherMedicalInfoController.text),
+        ]),
       ];
 
   @override
@@ -1121,424 +1257,655 @@ class _ReportingPageState extends State<ReportingPage> {
     );
   }
 
-  Widget _buildForm() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+  List<Widget> _patientFields() => [
+        SwitchListTile(
+          value: _reportingForSelf,
+          onChanged: _isLoadingProfile ? null : _setReportingForSelf,
+          title: const Text('Reporting for self?'),
+          subtitle: const Text('Use saved profile details'),
+          secondary: _isLoadingProfile
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.person_outline),
+          contentPadding: EdgeInsets.zero,
+        ),
+        _sectionTitle('Page 1 - Patient Information', Icons.person_outline),
+        TextFormField(
+          controller: _lastNameController,
+          readOnly: _patientFieldsReadOnly,
+          decoration: const InputDecoration(labelText: 'Last Name'),
+          textCapitalization: TextCapitalization.words,
+          validator: (value) => _required(value, 'Last Name'),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _firstNameController,
+          readOnly: _patientFieldsReadOnly,
+          decoration: const InputDecoration(labelText: 'First Name'),
+          textCapitalization: TextCapitalization.words,
+          validator: (value) => _required(value, 'First Name'),
+        ),
+        const SizedBox(height: 12),
+        Row(
           children: [
-            SwitchListTile(
-              value: _reportingForSelf,
-              onChanged: _isLoadingProfile ? null : _setReportingForSelf,
-              title: const Text('Reporting for self?'),
-              subtitle: const Text('Use saved profile details'),
-              secondary: _isLoadingProfile
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.person_outline),
-              contentPadding: EdgeInsets.zero,
+            Expanded(
+              child: TextFormField(
+                controller: _middleNameController,
+                readOnly: _patientFieldsReadOnly,
+                decoration: const InputDecoration(labelText: 'Middle Name'),
+                textCapitalization: TextCapitalization.words,
+              ),
             ),
-            _sectionTitle(
-                'Section 1 - Patient Information', Icons.person_outline),
-            TextFormField(
-              controller: _lastNameController,
-              readOnly: _patientFieldsReadOnly,
-              decoration: const InputDecoration(labelText: 'Last Name'),
-              textCapitalization: TextCapitalization.words,
-              validator: (value) => _required(value, 'Last Name'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _firstNameController,
-              readOnly: _patientFieldsReadOnly,
-              decoration: const InputDecoration(labelText: 'First Name'),
-              textCapitalization: TextCapitalization.words,
-              validator: (value) => _required(value, 'First Name'),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _middleNameController,
-                    readOnly: _patientFieldsReadOnly,
-                    decoration: const InputDecoration(labelText: 'Middle Name'),
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _suffixController,
-                    readOnly: _patientFieldsReadOnly,
-                    decoration:
-                        const InputDecoration(labelText: 'Suffix (Optional)'),
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _sex,
-              decoration: const InputDecoration(labelText: 'Sex'),
-              items: const [
-                DropdownMenuItem(value: 'Male', child: Text('Male')),
-                DropdownMenuItem(value: 'Female', child: Text('Female')),
-              ],
-              onChanged: _patientFieldsReadOnly
-                  ? null
-                  : (value) => setState(() => _sex = value),
-              validator: (value) => value == null ? 'Sex is required' : null,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _dobController,
-                    readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Date of Birth',
-                      suffixIcon: Icon(Icons.calendar_today_outlined),
-                    ),
-                    onTap: _patientFieldsReadOnly ? null : _pickBirthDate,
-                    validator: (value) => _required(value, 'Date of Birth'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _ageController,
-                    readOnly: true,
-                    decoration: const InputDecoration(labelText: 'Age'),
-                    validator: (value) => _required(value, 'Age'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _civilStatusController,
-              readOnly: _patientFieldsReadOnly,
-              decoration:
-                  const InputDecoration(labelText: 'Civil Status (Optional)'),
-              textCapitalization: TextCapitalization.words,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _mobileController,
-              readOnly: _patientFieldsReadOnly,
-              decoration: const InputDecoration(labelText: 'Mobile Number'),
-              keyboardType: TextInputType.phone,
-              validator: (value) => _required(value, 'Mobile Number'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _emailController,
-              readOnly: _patientFieldsReadOnly,
-              decoration:
-                  const InputDecoration(labelText: 'Email Address (Optional)'),
-              keyboardType: TextInputType.emailAddress,
-              validator: _optionalEmail,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _provinceController,
-              readOnly: _patientFieldsReadOnly,
-              decoration: const InputDecoration(labelText: 'Province'),
-              validator: (value) => _required(value, 'Province'),
-            ),
-            const SizedBox(height: 12),
-            _municipalityField(
-              controller: _municipalityController,
-              label: 'Municipality/City',
-              enabled: !_patientFieldsReadOnly,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _barangayController,
-              readOnly: _patientFieldsReadOnly,
-              decoration: const InputDecoration(labelText: 'Barangay'),
-              textCapitalization: TextCapitalization.words,
-              validator: (value) => _required(value, 'Barangay'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _streetController,
-              readOnly: _patientFieldsReadOnly,
-              decoration: const InputDecoration(labelText: 'Street Address'),
-              textCapitalization: TextCapitalization.sentences,
-              validator: (value) => _required(value, 'Street Address'),
-            ),
-            _sectionTitle(
-                'Section 2 - Bite Incident Information', Icons.place_outlined),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _dateController,
-                    readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Date of Bite',
-                      suffixIcon: Icon(Icons.calendar_today_outlined),
-                    ),
-                    onTap: _pickBiteDate,
-                    validator: (value) => _required(value, 'Date of Bite'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _timeController,
-                    readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Time of Bite',
-                      suffixIcon: Icon(Icons.access_time_outlined),
-                    ),
-                    onTap: _pickBiteTime,
-                    validator: (value) => _required(value, 'Time of Bite'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _municipalityField(
-              controller: _incidentMunicipalityController,
-              label: 'Incident Municipality',
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _incidentBarangayController,
-              decoration: const InputDecoration(labelText: 'Incident Barangay'),
-              textCapitalization: TextCapitalization.words,
-              validator: (value) => _required(value, 'Incident Barangay'),
-            ),
-            const SizedBox(height: 12),
-            _mapPicker(),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _descriptionController,
-              decoration:
-                  const InputDecoration(labelText: 'Tell us what happened.'),
-              maxLines: 5,
-              textCapitalization: TextCapitalization.sentences,
-              validator: (value) => _required(value, 'Tell us what happened.'),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _photoPicker('Upload Photo of Bite Wound', _woundPhoto,
-                    _EvidenceType.wound),
-                _photoPicker('Upload Photo of the Animal', _animalPhoto,
-                    _EvidenceType.animal),
-              ],
-            ),
-            _sectionTitle(
-                'Section 3 - Animal Information', Icons.pets_outlined),
-            _choiceChips(
-              values: const ['Dog', 'Cat', 'Others'],
-              selected: _animalType,
-              onSelected: (value) => _animalType = value,
-            ),
-            if (_animalType == 'Others') ...[
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _otherAnimalController,
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _suffixController,
+                readOnly: _patientFieldsReadOnly,
                 decoration:
-                    const InputDecoration(labelText: 'Others (Specify)'),
-                validator: (value) => _required(value, 'Animal type'),
-              ),
-            ],
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _ownership,
-              decoration: const InputDecoration(labelText: 'Ownership'),
-              items: const [
-                DropdownMenuItem(
-                    value: 'Owned (Caged)', child: Text('Owned (Caged)')),
-                DropdownMenuItem(
-                    value: 'Owned (Allowed to Roam)',
-                    child: Text('Owned (Allowed to Roam)')),
-                DropdownMenuItem(value: 'Stray', child: Text('Stray')),
-                DropdownMenuItem(value: 'Unknown', child: Text('Unknown')),
-              ],
-              onChanged: (value) =>
-                  setState(() => _ownership = value ?? 'Stray'),
-            ),
-            const SizedBox(height: 12),
-            _choiceChips(
-              values: const ['Male', 'Female', 'Unknown'],
-              selected: _animalSex,
-              onSelected: (value) => _animalSex = value,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _breedController,
-                    decoration: const InputDecoration(labelText: 'Breed'),
-                    textCapitalization: TextCapitalization.words,
-                    validator: (value) => _required(value, 'Breed'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _colorController,
-                    decoration: const InputDecoration(labelText: 'Color'),
-                    textCapitalization: TextCapitalization.words,
-                    validator: (value) => _required(value, 'Color'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _animalAgeController,
-              decoration: const InputDecoration(
-                  labelText: 'Approximate Age (Optional)'),
-            ),
-            const SizedBox(height: 16),
-            _yesNoUnknown(
-              label: 'Is the animal alive?',
-              selected: _animalAlive,
-              onSelected: (value) => _animalAlive = value,
-            ),
-            const SizedBox(height: 16),
-            _yesNoUnknown(
-              label: 'Is the animal available for observation?',
-              selected: _animalAvailable,
-              onSelected: (value) => _animalAvailable = value,
-            ),
-            const SizedBox(height: 16),
-            _yesNoUnknown(
-              label: 'Is the animal vaccinated against rabies?',
-              selected: _animalVaccinated,
-              onSelected: (value) => _animalVaccinated = value,
-            ),
-            const SizedBox(height: 16),
-            const Text('Suspicious Animal Behavior',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-            ..._suspiciousBehaviors.map(
-              (behavior) => CheckboxListTile(
-                value: _behaviors.contains(behavior),
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: Text(behavior),
-                onChanged: (checked) => setState(() {
-                  if (checked ?? false) {
-                    if (behavior == 'No suspicious behavior observed' ||
-                        behavior == 'Unknown') {
-                      _behaviors.clear();
-                    } else {
-                      _behaviors.remove('No suspicious behavior observed');
-                      _behaviors.remove('Unknown');
-                    }
-                    _behaviors.add(behavior);
-                  } else {
-                    _behaviors.remove(behavior);
-                  }
-                }),
-              ),
-            ),
-            _sectionTitle(
-                'Section 4 - Exposure Information', Icons.healing_outlined),
-            _choiceChips(
-              values: const ['Bite', 'Scratch', 'Saliva Contact', 'Other'],
-              selected: _exposureType,
-              onSelected: (value) => _exposureType = value,
-            ),
-            if (_exposureType == 'Other') ...[
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _otherExposureController,
-                decoration: const InputDecoration(labelText: 'Other (Specify)'),
-                validator: (value) => _required(value, 'Exposure type'),
-              ),
-            ],
-            const SizedBox(height: 12),
-            _bodyDiagram(),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _woundCountController,
-              decoration: const InputDecoration(
-                  labelText: 'Number of Bite/Scratch Wounds'),
-              keyboardType: TextInputType.number,
-              validator: (value) =>
-                  _numberRequired(value, 'Number of Bite/Scratch Wounds'),
-            ),
-            const SizedBox(height: 12),
-            _radioLine(
-              label: 'Was there bleeding?',
-              groupValue: _bleeding,
-              values: const ['Yes', 'No'],
-              onChanged: (value) => setState(() => _bleeding = value),
-            ),
-            _sectionTitle('Section 5 - First Aid Performed',
-                Icons.medical_services_outlined),
-            _radioLine(
-              label: 'Did you wash the wound with soap and water?',
-              groupValue: _washedWound,
-              values: const ['Yes', 'No'],
-              onChanged: (value) => setState(() => _washedWound = value),
-            ),
-            if (_washedWound == 'Yes') ...[
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _washMinutesController,
-                decoration: const InputDecoration(
-                  labelText:
-                      'Approximately how many minutes did you wash the wound?',
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) => _numberRequired(value, 'Wash minutes'),
-              ),
-            ],
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _substance,
-              decoration: const InputDecoration(
-                labelText: 'Did you apply any substance to the wound?',
-              ),
-              items: const [
-                DropdownMenuItem(value: 'None', child: Text('None')),
-                DropdownMenuItem(value: 'Alcohol', child: Text('Alcohol')),
-                DropdownMenuItem(value: 'Betadine', child: Text('Betadine')),
-                DropdownMenuItem(
-                    value: 'Herbal Remedy', child: Text('Herbal Remedy')),
-                DropdownMenuItem(value: 'Other', child: Text('Other')),
-              ],
-              onChanged: (value) =>
-                  setState(() => _substance = value ?? 'None'),
-            ),
-            if (_substance == 'Other') ...[
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _otherSubstanceController,
-                decoration: const InputDecoration(labelText: 'Other (Specify)'),
-                validator: (value) => _required(value, 'Substance applied'),
-              ),
-            ],
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 52,
-              child: FilledButton.icon(
-                onPressed: _continueToReview,
-                icon: const Icon(Icons.fact_check_outlined),
-                label: const Text('Review Information'),
+                    const InputDecoration(labelText: 'Suffix (Optional)'),
+                textCapitalization: TextCapitalization.words,
               ),
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: _sex,
+          decoration: const InputDecoration(labelText: 'Sex'),
+          items: const [
+            DropdownMenuItem(value: 'Male', child: Text('Male')),
+            DropdownMenuItem(value: 'Female', child: Text('Female')),
+          ],
+          onChanged: _patientFieldsReadOnly
+              ? null
+              : (value) => setState(() => _sex = value),
+          validator: (value) => value == null ? 'Sex is required' : null,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _dobController,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Date of Birth',
+                  suffixIcon: Icon(Icons.calendar_today_outlined),
+                ),
+                onTap: _patientFieldsReadOnly ? null : _pickBirthDate,
+                validator: (value) => _required(value, 'Date of Birth'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _ageController,
+                readOnly: true,
+                decoration: const InputDecoration(labelText: 'Age'),
+                validator: (value) => _required(value, 'Age'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _civilStatusController,
+          readOnly: _patientFieldsReadOnly,
+          decoration:
+              const InputDecoration(labelText: 'Civil Status (Optional)'),
+          textCapitalization: TextCapitalization.words,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _mobileController,
+          readOnly: _patientFieldsReadOnly,
+          decoration: const InputDecoration(labelText: 'Mobile Number'),
+          keyboardType: TextInputType.phone,
+          validator: (value) => _required(value, 'Mobile Number'),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _emailController,
+          readOnly: _patientFieldsReadOnly,
+          decoration:
+              const InputDecoration(labelText: 'Email Address (Optional)'),
+          keyboardType: TextInputType.emailAddress,
+          validator: _optionalEmail,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _provinceController,
+          readOnly: _patientFieldsReadOnly,
+          decoration: const InputDecoration(labelText: 'Province'),
+          validator: (value) => _required(value, 'Province'),
+        ),
+        const SizedBox(height: 12),
+        _municipalityField(
+          controller: _municipalityController,
+          label: 'Municipality/City',
+          enabled: !_patientFieldsReadOnly,
+          dependentBarangayController: _barangayController,
+        ),
+        const SizedBox(height: 12),
+        if (_isMinor) ...[
+          TextFormField(
+            controller: _guardianNameController,
+            decoration:
+                const InputDecoration(labelText: 'Parent / Guardian Name'),
+            textCapitalization: TextCapitalization.words,
+            validator: (value) => _required(value, 'Parent / Guardian Name'),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _guardianContactController,
+            decoration: const InputDecoration(
+                labelText: 'Parent / Guardian Contact Number'),
+            keyboardType: TextInputType.phone,
+            validator: (value) =>
+                _required(value, 'Parent / Guardian Contact Number'),
+          ),
+          const SizedBox(height: 12),
+        ],
+        TextFormField(
+          controller: _barangayController,
+          readOnly: _patientFieldsReadOnly,
+          decoration: const InputDecoration(labelText: 'Barangay'),
+          textCapitalization: TextCapitalization.words,
+          validator: (value) => _required(value, 'Barangay'),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _streetController,
+          readOnly: _patientFieldsReadOnly,
+          decoration:
+              const InputDecoration(labelText: 'House Number / Street / Purok'),
+          textCapitalization: TextCapitalization.sentences,
+          validator: (value) => _required(value, 'Street Address'),
+        ),
+      ];
+
+  List<Widget> _animalFields() => [
+        _sectionTitle('Page 2 - Animal Information', Icons.pets_outlined),
+        _choiceChips(
+          values: const ['Dog', 'Cat', 'Others'],
+          selected: _animalType,
+          onSelected: (value) => _animalType = value,
+        ),
+        if (_animalType == 'Others') ...[
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _otherAnimalController,
+            decoration: const InputDecoration(labelText: 'Others (Specify)'),
+            validator: (value) => _required(value, 'Animal type'),
+          ),
+        ],
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: _ownership,
+          decoration: const InputDecoration(labelText: 'Ownership'),
+          items: const [
+            DropdownMenuItem(
+                value: 'Owned (Caged)', child: Text('Owned (Caged)')),
+            DropdownMenuItem(
+                value: 'Owned (Allowed to Roam)',
+                child: Text('Owned (Allowed to Roam)')),
+            DropdownMenuItem(value: 'Stray', child: Text('Stray')),
+            DropdownMenuItem(value: 'Unknown', child: Text('Unknown')),
+          ],
+          onChanged: (value) => setState(() => _ownership = value ?? 'Stray'),
+        ),
+        const SizedBox(height: 12),
+        _choiceChips(
+          values: const ['Male', 'Female', 'Unknown'],
+          selected: _animalSex,
+          onSelected: (value) => _animalSex = value,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _breedController,
+                decoration: const InputDecoration(labelText: 'Breed'),
+                textCapitalization: TextCapitalization.words,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _colorController,
+                decoration: const InputDecoration(labelText: 'Color'),
+                textCapitalization: TextCapitalization.words,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _animalAgeController,
+          decoration:
+              const InputDecoration(labelText: 'Approximate Age (Optional)'),
+        ),
+        const SizedBox(height: 16),
+        _yesNoUnknown(
+          label: 'Is the animal alive?',
+          selected: _animalAlive,
+          onSelected: (value) => _animalAlive = value,
+        ),
+        const SizedBox(height: 16),
+        _yesNoUnknown(
+          label: 'Is the animal available for observation?',
+          selected: _animalAvailable,
+          onSelected: (value) => _animalAvailable = value,
+        ),
+        const SizedBox(height: 16),
+        _yesNoUnknown(
+          label: 'Animal Rabies Vaccination Status',
+          selected: _animalVaccinated ?? '',
+          onSelected: (value) => setState(() => _animalVaccinated = value),
+        ),
+        const SizedBox(height: 16),
+        const Text('Suspicious Animal Behavior',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        ..._suspiciousBehaviors.map(
+          (behavior) => CheckboxListTile(
+            value: _behaviors.contains(behavior),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(behavior),
+            onChanged: (checked) => setState(() {
+              if (checked ?? false) {
+                if (behavior == 'No suspicious behavior observed' ||
+                    behavior == 'Unknown') {
+                  _behaviors.clear();
+                } else {
+                  _behaviors.remove('No suspicious behavior observed');
+                  _behaviors.remove('Unknown');
+                }
+                _behaviors.add(behavior);
+              } else {
+                _behaviors.remove(behavior);
+              }
+            }),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _photoPicker('Upload Photo of the Animal (Optional)', _animalPhoto,
+            _EvidenceType.animal),
+      ];
+
+  List<Widget> _incidentFields() => [
+        _sectionTitle(
+            'Page 3 - Bite Incident Information', Icons.place_outlined),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _dateController,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Date of Exposure',
+                  suffixIcon: Icon(Icons.calendar_today_outlined),
+                ),
+                onTap: _pickBiteDate,
+                validator: (value) => _required(value, 'Date of Exposure'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _timeController,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Est. Time of Exposure',
+                  suffixIcon: Icon(Icons.access_time_outlined),
+                ),
+                onTap: _pickBiteTime,
+                validator: (value) => _required(value, 'Est. Time of Exposure'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _incidentProvinceController,
+          decoration: const InputDecoration(labelText: 'Province'),
+          validator: (value) => _required(value, 'Province'),
+        ),
+        const SizedBox(height: 12),
+        _municipalityField(
+          controller: _incidentMunicipalityController,
+          label: 'City / Municipality',
+          dependentBarangayController: _incidentBarangayController,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _incidentBarangayController,
+          decoration: const InputDecoration(labelText: 'Barangay'),
+          textCapitalization: TextCapitalization.words,
+          validator: (value) => _required(value, 'Incident Barangay'),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _incidentStreetController,
+          decoration:
+              const InputDecoration(labelText: 'Street / Purok / Landmark'),
+          textCapitalization: TextCapitalization.sentences,
+        ),
+        const SizedBox(height: 12),
+        _mapPicker(),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _descriptionController,
+          decoration:
+              const InputDecoration(labelText: 'Tell us what happened.'),
+          maxLines: 5,
+          textCapitalization: TextCapitalization.sentences,
+          validator: (value) => _required(value, 'Tell us what happened.'),
+        ),
+      ];
+
+  List<Widget> _symptomFields() => [
+        _sectionTitle(
+            'Page 4 - Symptoms and Wound Information', Icons.healing_outlined),
+        const Text('Symptoms after the incident (select all that apply)'),
+        const SizedBox(height: 8),
+        ...const [
+          'Pain at the affected area',
+          'Redness',
+          'Swelling',
+          'Itching',
+          'Fever',
+          'None',
+          'Unsure'
+        ].map((symptom) => CheckboxListTile(
+              value: _symptoms.contains(symptom),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(symptom),
+              onChanged: (checked) => setState(() {
+                if (checked ?? false) {
+                  if (symptom == 'None' || symptom == 'Unsure') {
+                    _symptoms.clear();
+                  } else {
+                    _symptoms.remove('None');
+                    _symptoms.remove('Unsure');
+                  }
+                  _symptoms.add(symptom);
+                } else {
+                  _symptoms.remove(symptom);
+                }
+              }),
+            )),
+        TextFormField(
+          controller: _symptomDetailsController,
+          decoration:
+              const InputDecoration(labelText: 'Other symptoms (optional)'),
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 2,
+        ),
+        const SizedBox(height: 16),
+        _choiceChips(
+          values: const ['Bite', 'Scratch', 'Saliva Contact', 'Other'],
+          selected: _exposureType,
+          onSelected: (value) => _exposureType = value,
+        ),
+        if (_exposureType == 'Other') ...[
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _otherExposureController,
+            decoration: const InputDecoration(labelText: 'Other (Specify)'),
+            validator: (value) => _required(value, 'Exposure type'),
+          ),
+        ],
+        const SizedBox(height: 12),
+        const Text('Type of Wound (select all that apply)',
+            style: TextStyle(fontWeight: FontWeight.w600)),
+        ...const ['Puncture', 'Laceration / cut', 'Abrasion / scratch', 'Other']
+            .map((type) => CheckboxListTile(
+                  value: _woundTypes.contains(type),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(type),
+                  onChanged: (checked) => setState(() {
+                    if (checked ?? false) {
+                      _woundTypes.add(type);
+                    } else {
+                      _woundTypes.remove(type);
+                    }
+                  }),
+                )),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _woundCountController,
+          decoration:
+              const InputDecoration(labelText: 'Number of Bite/Scratch Wounds'),
+          keyboardType: TextInputType.number,
+          validator: (value) =>
+              _numberRequired(value, 'Number of Bite/Scratch Wounds'),
+        ),
+        const SizedBox(height: 12),
+        _radioLine(
+          label: 'Was there bleeding?',
+          groupValue: _bleeding,
+          values: const ['Yes', 'No'],
+          onChanged: (value) => setState(() => _bleeding = value),
+        ),
+        const SizedBox(height: 12),
+        const Text('Site of Bite (select affected areas on the diagram)',
+            style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        _bodyDiagram(),
+        const SizedBox(height: 12),
+        _photoPicker('Upload Photo of Bite Wound (Optional)', _woundPhoto,
+            _EvidenceType.wound),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _woundDescriptionController,
+          decoration: const InputDecoration(
+              labelText: 'Additional wound description (optional)'),
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 3,
+        ),
+        _sectionTitle('First Aid Performed', Icons.medical_services_outlined),
+        _radioLine(
+          label: 'Did you wash the wound with soap and water?',
+          groupValue: _washedWound,
+          values: const ['Yes', 'No'],
+          onChanged: (value) => setState(() => _washedWound = value),
+        ),
+        if (_washedWound == 'Yes') ...[
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _washMinutesController,
+            decoration: const InputDecoration(
+              labelText:
+                  'Approximately how many minutes did you wash the wound?',
+            ),
+            keyboardType: TextInputType.number,
+            validator: (value) => _numberRequired(value, 'Wash minutes'),
+          ),
+        ],
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: _substance,
+          decoration: const InputDecoration(
+            labelText: 'Did you apply any substance to the wound?',
+          ),
+          items: const [
+            DropdownMenuItem(value: 'None', child: Text('None')),
+            DropdownMenuItem(value: 'Alcohol', child: Text('Alcohol')),
+            DropdownMenuItem(value: 'Betadine', child: Text('Betadine')),
+            DropdownMenuItem(
+                value: 'Herbal Remedy', child: Text('Herbal Remedy')),
+            DropdownMenuItem(value: 'Other', child: Text('Other')),
+          ],
+          onChanged: (value) => setState(() => _substance = value ?? 'None'),
+        ),
+        if (_substance == 'Other') ...[
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _otherSubstanceController,
+            decoration: const InputDecoration(labelText: 'Other (Specify)'),
+            validator: (value) => _required(value, 'Substance applied'),
+          ),
+        ],
+      ];
+
+  List<Widget> _medicalHistoryFields() => [
+        _sectionTitle('Page 5 - Relevant Medical History',
+            Icons.health_and_safety_outlined),
+        const Text(
+            'Share what you know. These answers are resident-reported information and do not confirm a diagnosis or treatment.'),
+        const SizedBox(height: 16),
+        _yesNoUnknown(
+          label: 'Patient Rabies Vaccination Status',
+          selected: _patientVaccinated ?? '',
+          onSelected: (value) => setState(() {
+            _patientVaccinated = value;
+            if (value == 'No') _previousVaccinationDetailsController.clear();
+          }),
+          values: const ['Yes', 'No', 'Unsure'],
+        ),
+        if (_patientVaccinated == 'Yes' ||
+            _patientVaccinated == 'Unsure' ||
+            _patientVaccinated == 'Unknown') ...[
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _previousVaccinationDetailsController,
+            decoration: const InputDecoration(
+                labelText: 'Previous vaccination details (if known)'),
+            textCapitalization: TextCapitalization.sentences,
+            maxLines: 2,
+          ),
+        ],
+        const SizedBox(height: 16),
+        _yesNoUnknown(
+          label: 'Known Allergies',
+          selected: _allergiesKnown ?? '',
+          onSelected: (value) => setState(() {
+            _allergiesKnown = value;
+            if (value != 'Yes') _allergyDetailsController.clear();
+          }),
+          values: const ['Yes', 'No', 'Unsure'],
+        ),
+        if (_allergiesKnown == 'Yes') ...[
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _allergyDetailsController,
+            decoration: const InputDecoration(labelText: 'Allergy details'),
+            textCapitalization: TextCapitalization.sentences,
+            maxLines: 2,
+          ),
+        ],
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _medicalProblemsController,
+          decoration: const InputDecoration(
+              labelText: 'Relevant medical problems (optional)'),
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 2,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _currentMedicationsController,
+          decoration: const InputDecoration(
+              labelText: 'Current medications (optional)'),
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 2,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _otherMedicalInfoController,
+          decoration: const InputDecoration(
+              labelText: 'Other relevant medical information (optional)'),
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 3,
+        ),
+      ];
+
+  int _currentPage = 0;
+
+  List<Widget> _currentPageFields() => [
+        _patientFields(),
+        _animalFields(),
+        _incidentFields(),
+        _symptomFields(),
+        _medicalHistoryFields(),
+      ][_currentPage];
+
+  void _goToNextPage() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (_currentPage == 4) {
+      _continueToReview();
+      return;
+    }
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _currentPage++);
+  }
+
+  Widget _buildForm() {
+    final step = _currentPage + 1;
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Step $step of 6',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(value: step / 6),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: _currentPageFields(),
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Row(
+                children: [
+                  if (_currentPage > 0)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          FocusManager.instance.primaryFocus?.unfocus();
+                          setState(() => _currentPage--);
+                        },
+                        child: const Text('Back'),
+                      ),
+                    )
+                  else
+                    const Spacer(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _goToNextPage,
+                      child: Text(_currentPage == 4 ? 'Review' : 'Next'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1547,22 +1914,46 @@ class _ReportingPageState extends State<ReportingPage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _sectionTitle(
-            'Section 6 - Review & Submit', Icons.assignment_turned_in_outlined),
-        Container(
-          decoration: BoxDecoration(
+        const Text('Step 6 of 6',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        const LinearProgressIndicator(value: 1),
+        const SizedBox(height: 8),
+        _sectionTitle('Review & Submit', Icons.assignment_turned_in_outlined),
+        for (final section in _summarySections)
+          Card(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE4E8EC)),
-          ),
-          child: Column(
-            children: [
-              for (var i = 0; i < _summaryItems.length; i++) ...[
-                _SummaryRow(item: _summaryItems[i]),
-                if (i < _summaryItems.length - 1)
-                  const Divider(height: 1, indent: 16, endIndent: 16),
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFFE4E8EC)),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  title: Text(section.title,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  trailing: TextButton.icon(
+                    onPressed: () => setState(() {
+                      _reviewing = false;
+                      _currentPage = section.page;
+                    }),
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: const Text('Edit'),
+                  ),
+                ),
+                for (var i = 0; i < section.items.length; i++) ...[
+                  _SummaryRow(item: section.items[i]),
+                  if (i < section.items.length - 1)
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                ],
               ],
-            ],
+            ),
+          ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            'Your report will be reviewed by the appropriate ABTC. Submitting this report does not confirm a diagnosis or treatment.',
           ),
         ),
         const SizedBox(height: 16),
@@ -1575,19 +1966,18 @@ class _ReportingPageState extends State<ReportingPage> {
           onChanged: (value) => setState(() => _certified = value ?? false),
         ),
         const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed:
-              _claimedByAbtc ? null : () => setState(() => _reviewing = false),
-          icon: const Icon(Icons.edit_outlined),
-          label: Text(_claimedByAbtc
-              ? 'Editing Disabled - Claimed by ABTC'
-              : 'Edit Information'),
+        OutlinedButton(
+          onPressed: () => setState(() {
+            _reviewing = false;
+            _currentPage = 4;
+          }),
+          child: const Text('Back'),
         ),
         const SizedBox(height: 12),
         SizedBox(
           height: 52,
           child: FilledButton.icon(
-            onPressed: _isSubmitting ? null : _submit,
+            onPressed: _isSubmitting ? null : _confirmAndSubmit,
             icon: _isSubmitting
                 ? const SizedBox(
                     width: 18,
@@ -1635,13 +2025,27 @@ class _BodyDiagramPanel extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
           Expanded(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CustomPaint(
-                    size: const Size(220, 320), painter: _BodyPainter()),
-                ..._siteButtons(context),
-              ],
+            child: Center(
+              // Keep the hit regions and markers in the same normalized
+              // coordinate space as the original 700 x 724 diagram.
+              child: AspectRatio(
+                aspectRatio: 700 / 724,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      'assets/images/bodydiagram.webp',
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.medium,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Center(
+                        child: Text('Body diagram could not be loaded.'),
+                      ),
+                    ),
+                    ..._siteButtons(context),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -1720,46 +2124,12 @@ class _BodyDiagramPanel extends StatelessWidget {
   }
 }
 
-class _BodyPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFEAF3F6)
-      ..style = PaintingStyle.fill;
-    final stroke = Paint()
-      ..color = const Color(0xFF9BB7C2)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    final centerX = size.width / 2;
+class _SummarySection {
+  const _SummarySection(this.title, this.page, this.items);
 
-    canvas.drawCircle(Offset(centerX, 30), 24, paint);
-    canvas.drawCircle(Offset(centerX, 30), 24, stroke);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(centerX, 105), width: 70, height: 100),
-        const Radius.circular(28),
-      ),
-      paint,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(centerX, 105), width: 70, height: 100),
-        const Radius.circular(28),
-      ),
-      stroke,
-    );
-    canvas.drawLine(
-        Offset(centerX - 38, 75), Offset(centerX - 78, 165), stroke);
-    canvas.drawLine(
-        Offset(centerX + 38, 75), Offset(centerX + 78, 165), stroke);
-    canvas.drawLine(
-        Offset(centerX - 22, 154), Offset(centerX - 38, 260), stroke);
-    canvas.drawLine(
-        Offset(centerX + 22, 154), Offset(centerX + 38, 260), stroke);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  final String title;
+  final int page;
+  final List<_SummaryItem> items;
 }
 
 class _SummaryItem {

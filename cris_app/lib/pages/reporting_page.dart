@@ -172,7 +172,6 @@ class _ReportingPageState extends State<ReportingPage> {
   final _colorController = TextEditingController();
   final _animalAgeController = TextEditingController();
   final _otherExposureController = TextEditingController();
-  final _woundCountController = TextEditingController();
   final _washMinutesController = TextEditingController();
   final _otherSubstanceController = TextEditingController();
 
@@ -193,9 +192,11 @@ class _ReportingPageState extends State<ReportingPage> {
   String? _washedWound;
   String _substance = 'None';
   bool _multipleSites = false;
+  bool _showFrontBody = true;
   String? _bodyDiagramError;
   bool _certified = false;
   bool _reviewing = false;
+  int _reviewPage = 0;
   bool _isSubmitting = false;
   bool _isLoadingProfile = false;
   bool _reportingForSelf = false;
@@ -248,7 +249,6 @@ class _ReportingPageState extends State<ReportingPage> {
       _colorController,
       _animalAgeController,
       _otherExposureController,
-      _woundCountController,
       _washMinutesController,
       _otherSubstanceController,
     ]) {
@@ -528,49 +528,10 @@ class _ReportingPageState extends State<ReportingPage> {
       _showSnackBar('Please indicate if the wound was washed.');
       return;
     }
-    setState(() => _reviewing = true);
-  }
-
-  Widget _selectedBodyPartItem(int index, String bodyPart) {
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeInOut,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: AppColors.danger,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '${index + 1}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                bodyPart,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            IconButton(
-              onPressed: () => _removeBodySite(bodyPart),
-              icon: const Icon(Icons.close, size: 20),
-              tooltip: 'Remove site',
-            ),
-          ],
-        ),
-      ),
-    );
+    setState(() {
+      _reviewPage = 0;
+      _reviewing = true;
+    });
   }
 
   Future<void> _confirmAndSubmit() async {
@@ -710,7 +671,7 @@ class _ReportingPageState extends State<ReportingPage> {
           'woundDescription': _woundDescriptionController.text.trim(),
           'bodyPartsAffected': _bodySites.toList()..sort(),
           'multipleSites': _multipleSites,
-          'woundCount': int.tryParse(_woundCountController.text.trim()),
+          'woundCount': _multipleSites ? _bodySiteTargetCount : 1,
           'bleeding': _bleeding,
         },
         'firstAid': {
@@ -864,7 +825,7 @@ class _ReportingPageState extends State<ReportingPage> {
 
   Widget _sectionTitle(String title, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 24, 0, 12),
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 6),
       child: Row(
         children: [
           Icon(icon, color: AppColors.primary, size: 20),
@@ -948,6 +909,50 @@ class _ReportingPageState extends State<ReportingPage> {
     );
   }
 
+  Widget _checkboxGrid({
+    required List<String> options,
+    required Set<String> selected,
+    required ValueChanged<String> onChanged,
+  }) {
+    final rows = <Widget>[];
+    for (var i = 0; i < options.length; i += 2) {
+      Widget tile(String option) => InkWell(
+            onTap: () => onChanged(option),
+            child: SizedBox(
+              height: 40,
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: selected.contains(option),
+                    visualDensity: const VisualDensity(vertical: -4),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    onChanged: (_) => onChanged(option),
+                  ),
+                  Expanded(
+                    child: Text(
+                      option,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+      rows.add(Row(children: [
+        Expanded(child: tile(options[i])),
+        const SizedBox(width: 8),
+        Expanded(
+          child: i + 1 < options.length
+              ? tile(options[i + 1])
+              : const SizedBox.shrink(),
+        ),
+      ]));
+    }
+    return Column(children: rows);
+  }
+
   Widget _yesNoUnknown({
     required String label,
     required String selected,
@@ -958,7 +963,7 @@ class _ReportingPageState extends State<ReportingPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         _choiceChips(
           values: values,
           selected: selected,
@@ -980,19 +985,27 @@ class _ReportingPageState extends State<ReportingPage> {
       builder: (field) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-          ...values.map(
-            (value) => RadioListTile<String>(
-              value: value,
-              groupValue: groupValue,
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: Text(value),
-              onChanged: (next) {
-                onChanged(next);
-                field.didChange(next);
-              },
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(label,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(width: 8),
+              SegmentedButton<String>(
+                segments: values
+                    .map((value) =>
+                        ButtonSegment(value: value, label: Text(value)))
+                    .toList(),
+                selected: groupValue == null ? <String>{} : {groupValue},
+                emptySelectionAllowed: true,
+                onSelectionChanged: (next) {
+                  final value = next.first;
+                  onChanged(value);
+                  field.didChange(value);
+                },
+              ),
+            ],
           ),
           if (field.hasError)
             Padding(
@@ -1021,18 +1034,20 @@ class _ReportingPageState extends State<ReportingPage> {
 
   Widget _mapPicker() {
     final marker = _incidentPin;
-    return Column(
+    return KeyedSubtree(
+      key: const ValueKey('incident-map'),
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Tap the map to pin the exact incident location.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         CRISMap(
           center: marker ?? _iloiloCenter,
           zoom: marker == null ? 10 : 15,
-          height: 260,
+          height: 120,
           markers: [
             if (marker != null)
               CRISMapMarker(
@@ -1044,18 +1059,21 @@ class _ReportingPageState extends State<ReportingPage> {
           onTap: (point) => setState(() => _incidentPin = point),
         ),
         if (marker != null) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             'GPS Location: ${marker.latitude.toStringAsFixed(6)}, ${marker.longitude.toStringAsFixed(6)}',
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ],
       ],
+      ),
     );
   }
 
   Widget _bodyDiagram() {
-    return Column(
+    return KeyedSubtree(
+      key: const ValueKey('body-diagram'),
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CheckboxListTile(
@@ -1081,35 +1099,21 @@ class _ReportingPageState extends State<ReportingPage> {
           ),
           const SizedBox(height: 12),
         ],
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth > 560;
-            final front = _BodyDiagramPanel(
-              title: 'Front',
-              sites: _frontBodySites,
-              selectedSites: _bodySites,
-              onTap: _selectBodySite,
-            );
-            final back = _BodyDiagramPanel(
-              title: 'Back',
-              sites: _backBodySites,
-              selectedSites: _bodySites,
-              onTap: _selectBodySite,
-            );
-            if (wide) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: front),
-                  const SizedBox(width: 12),
-                  Expanded(child: back),
-                ],
-              );
-            }
-            return Column(children: [front, const SizedBox(height: 12), back]);
-          },
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(value: true, label: Text('Front')),
+            ButtonSegment(value: false, label: Text('Back')),
+          ],
+          selected: {_showFrontBody},
+          onSelectionChanged: (value) =>
+              setState(() => _showFrontBody = value.first),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
+        _BodyDiagramPanel(
+          sites: _showFrontBody ? _frontBodySites : _backBodySites,
+          onTap: _selectBodySite,
+        ),
+        const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
@@ -1131,39 +1135,23 @@ class _ReportingPageState extends State<ReportingPage> {
             ],
           ],
         ),
-        const SizedBox(height: 16),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          child: Card(
-            elevation: 1,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Selected Body Parts',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_bodySites.isEmpty)
-                    Text(
-                      'No body parts selected yet. Tap a region on the diagram to add a site.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  for (var i = 0; i < _bodySites.length; i++)
-                    _selectedBodyPartItem(i, _bodySites[i]),
-                ],
-              ),
-            ),
+        if (_bodySites.isNotEmpty)
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (final site in _bodySites)
+                InputChip(
+                  label: Text(site),
+                  onDeleted: () => _removeBodySite(site),
+                ),
+            ],
+          )
+        else
+          Text(
+            'Tap a region on the diagram to select a site.',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-        ),
         if (_bodyDiagramError != null) ...[
           const SizedBox(height: 10),
           Text(
@@ -1173,6 +1161,7 @@ class _ReportingPageState extends State<ReportingPage> {
           ),
         ],
       ],
+      ),
     );
   }
 
@@ -1205,7 +1194,7 @@ class _ReportingPageState extends State<ReportingPage> {
           _SummaryItem('Observed Behavior', _behaviors.join(', ')),
           _SummaryItem('Animal Photo', _animalPhoto == null ? '' : 'Selected'),
         ]),
-        _SummarySection('Bite Incident Information', 2, [
+        _SummarySection('Bite Incident Information', 3, [
           _SummaryItem('Date of Exposure', _dateController.text),
           _SummaryItem('Est. Time of Exposure', _timeController.text),
           _SummaryItem('Incident Location', _incidentLocationSummary),
@@ -1216,22 +1205,27 @@ class _ReportingPageState extends State<ReportingPage> {
                   ? ''
                   : '${_incidentPin!.latitude}, ${_incidentPin!.longitude}'),
         ]),
-        _SummarySection('Symptoms and Wound Information', 3, [
+        _SummarySection('Symptoms and Wound Information', 4, [
           _SummaryItem('Symptoms', _symptoms.join(', ')),
           _SummaryItem('Other Symptoms', _symptomDetailsController.text),
           _SummaryItem('Type of Exposure', _selectedExposure),
           _SummaryItem('Type of Wound', _woundTypes.join(', ')),
-          _SummaryItem('Body Parts Affected', _bodySites.join(', ')),
-          _SummaryItem('Number of Wounds', _woundCountController.text),
           _SummaryItem('Bleeding', _bleeding ?? ''),
           _SummaryItem('Wound Photo', _woundPhoto == null ? '' : 'Selected'),
           _SummaryItem(
               'Additional Wound Description', _woundDescriptionController.text),
+        ]),
+        _SummarySection('Site of Bite', 5, [
+          _SummaryItem('Body Parts Affected', _bodySites.join(', ')),
+          _SummaryItem(
+              'Number of Wounds', '${_multipleSites ? _bodySiteTargetCount ?? 0 : 1}'),
+        ]),
+        _SummarySection('First Aid Performed', 6, [
           _SummaryItem('Washed with Soap and Water', _washedWound ?? ''),
           _SummaryItem('Wash Minutes', _washMinutesController.text),
           _SummaryItem('Substance Applied', _selectedSubstance),
         ]),
-        _SummarySection('Relevant Medical History', 4, [
+        _SummarySection('Relevant Medical History', 6, [
           _SummaryItem(
               'Patient Rabies Vaccination Status', _patientVaccinated ?? ''),
           _SummaryItem('Previous Vaccination Details',
@@ -1250,14 +1244,32 @@ class _ReportingPageState extends State<ReportingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Animal Bite Report')),
+      appBar: AppBar(
+        toolbarHeight: 56,
+        title: const Text('Animal Bite Report',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+      ),
       body: SafeArea(
-        child: _reviewing ? _buildReview() : _buildForm(),
+        child: _reviewing
+            ? _buildReview()
+            : Theme(
+                data: Theme.of(context).copyWith(
+                  inputDecorationTheme:
+                      Theme.of(context).inputDecorationTheme.copyWith(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 12,
+                    ),
+                  ),
+                ),
+                child: _buildForm(),
+              ),
       ),
     );
   }
 
-  List<Widget> _patientFields() => [
+  List<Widget> _patientFields() => _withGaps([
         SwitchListTile(
           value: _reportingForSelf,
           onChanged: _isLoadingProfile ? null : _setReportingForSelf,
@@ -1271,180 +1283,225 @@ class _ReportingPageState extends State<ReportingPage> {
                 )
               : const Icon(Icons.person_outline),
           contentPadding: EdgeInsets.zero,
+          dense: true,
+          visualDensity: const VisualDensity(vertical: -2),
         ),
-        _sectionTitle('Page 1 - Patient Information', Icons.person_outline),
-        TextFormField(
-          controller: _lastNameController,
-          readOnly: _patientFieldsReadOnly,
-          decoration: const InputDecoration(labelText: 'Last Name'),
-          textCapitalization: TextCapitalization.words,
-          validator: (value) => _required(value, 'Last Name'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _firstNameController,
-          readOnly: _patientFieldsReadOnly,
-          decoration: const InputDecoration(labelText: 'First Name'),
-          textCapitalization: TextCapitalization.words,
-          validator: (value) => _required(value, 'First Name'),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _middleNameController,
-                readOnly: _patientFieldsReadOnly,
-                decoration: const InputDecoration(labelText: 'Middle Name'),
-                textCapitalization: TextCapitalization.words,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                controller: _suffixController,
-                readOnly: _patientFieldsReadOnly,
-                decoration:
-                    const InputDecoration(labelText: 'Suffix (Optional)'),
-                textCapitalization: TextCapitalization.words,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: _sex,
-          decoration: const InputDecoration(labelText: 'Sex'),
-          items: const [
-            DropdownMenuItem(value: 'Male', child: Text('Male')),
-            DropdownMenuItem(value: 'Female', child: Text('Female')),
-          ],
-          onChanged: _patientFieldsReadOnly
-              ? null
-              : (value) => setState(() => _sex = value),
-          validator: (value) => value == null ? 'Sex is required' : null,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _dobController,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Date of Birth',
-                  suffixIcon: Icon(Icons.calendar_today_outlined),
-                ),
-                onTap: _patientFieldsReadOnly ? null : _pickBirthDate,
-                validator: (value) => _required(value, 'Date of Birth'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                controller: _ageController,
-                readOnly: true,
-                decoration: const InputDecoration(labelText: 'Age'),
-                validator: (value) => _required(value, 'Age'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _civilStatusController,
-          readOnly: _patientFieldsReadOnly,
-          decoration:
-              const InputDecoration(labelText: 'Civil Status (Optional)'),
-          textCapitalization: TextCapitalization.words,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _mobileController,
-          readOnly: _patientFieldsReadOnly,
-          decoration: const InputDecoration(labelText: 'Mobile Number'),
-          keyboardType: TextInputType.phone,
-          validator: (value) => _required(value, 'Mobile Number'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _emailController,
-          readOnly: _patientFieldsReadOnly,
-          decoration:
-              const InputDecoration(labelText: 'Email Address (Optional)'),
-          keyboardType: TextInputType.emailAddress,
-          validator: _optionalEmail,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _provinceController,
-          readOnly: _patientFieldsReadOnly,
-          decoration: const InputDecoration(labelText: 'Province'),
-          validator: (value) => _required(value, 'Province'),
-        ),
-        const SizedBox(height: 12),
-        _municipalityField(
-          controller: _municipalityController,
-          label: 'Municipality/City',
-          enabled: !_patientFieldsReadOnly,
-          dependentBarangayController: _barangayController,
-        ),
-        const SizedBox(height: 12),
+        _sectionTitle('Patient Information', Icons.person_outline),
+        Row(children: [
+          Expanded(child: _patientLastNameField()),
+          const SizedBox(width: 10),
+          Expanded(child: _patientSuffixField()),
+        ]),
+        _patientNameFields(),
+        Row(children: [
+          Expanded(child: _patientSexField()),
+          const SizedBox(width: 10),
+          Expanded(child: _patientCivilStatusField()),
+        ]),
+        Row(children: [
+          Expanded(child: _patientDobField()),
+          const SizedBox(width: 10),
+          Expanded(child: _patientAgeField()),
+        ]),
+        Row(children: [
+          Expanded(child: _patientMobileField()),
+          const SizedBox(width: 10),
+          Expanded(child: _patientEmailField()),
+        ]),
+        Row(children: [
+          Expanded(child: _patientProvinceField()),
+          const SizedBox(width: 10),
+          Expanded(child: _patientMunicipalityField()),
+        ]),
         if (_isMinor) ...[
-          TextFormField(
-            controller: _guardianNameController,
-            decoration:
-                const InputDecoration(labelText: 'Parent / Guardian Name'),
-            textCapitalization: TextCapitalization.words,
-            validator: (value) => _required(value, 'Parent / Guardian Name'),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _guardianContactController,
-            decoration: const InputDecoration(
-                labelText: 'Parent / Guardian Contact Number'),
-            keyboardType: TextInputType.phone,
-            validator: (value) =>
-                _required(value, 'Parent / Guardian Contact Number'),
-          ),
-          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: _guardianNameField()),
+            const SizedBox(width: 10),
+            Expanded(child: _guardianContactField()),
+          ]),
         ],
-        TextFormField(
-          controller: _barangayController,
-          readOnly: _patientFieldsReadOnly,
-          decoration: const InputDecoration(labelText: 'Barangay'),
-          textCapitalization: TextCapitalization.words,
-          validator: (value) => _required(value, 'Barangay'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _streetController,
-          readOnly: _patientFieldsReadOnly,
-          decoration:
-              const InputDecoration(labelText: 'House Number / Street / Purok'),
-          textCapitalization: TextCapitalization.sentences,
-          validator: (value) => _required(value, 'Street Address'),
-        ),
+        Row(children: [
+          Expanded(child: _patientBarangayField()),
+          const SizedBox(width: 10),
+          Expanded(child: _patientStreetField()),
+        ]),
+      ], gap: 10);
+
+  List<Widget> _withGaps(List<Widget> fields, {double gap = 8}) => [
+        for (var i = 0; i < fields.length; i++) ...[
+          if (i > 0) SizedBox(height: gap),
+          fields[i],
+        ],
       ];
 
+  Widget _patientLastNameField() => TextFormField(
+        controller: _lastNameController,
+        readOnly: _patientFieldsReadOnly,
+        decoration: const InputDecoration(labelText: 'Last Name'),
+        textCapitalization: TextCapitalization.words,
+        validator: (value) => _required(value, 'Last Name'),
+      );
+
+  Widget _patientSuffixField() => TextFormField(
+        controller: _suffixController,
+        readOnly: _patientFieldsReadOnly,
+        decoration: const InputDecoration(labelText: 'Suffix (Optional)'),
+        textCapitalization: TextCapitalization.words,
+      );
+
+  Widget _patientSexField() => DropdownButtonFormField<String>(
+        initialValue: _sex,
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'Sex'),
+        items: const [
+          DropdownMenuItem(value: 'Male', child: Text('Male')),
+          DropdownMenuItem(value: 'Female', child: Text('Female')),
+        ],
+        onChanged: _patientFieldsReadOnly
+            ? null
+            : (value) => setState(() => _sex = value),
+        validator: (value) => value == null ? 'Sex is required' : null,
+      );
+
+  Widget _patientCivilStatusField() => TextFormField(
+        controller: _civilStatusController,
+        readOnly: _patientFieldsReadOnly,
+        decoration: const InputDecoration(labelText: 'Civil Status'),
+        textCapitalization: TextCapitalization.words,
+      );
+
+  Widget _patientDobField() => TextFormField(
+        controller: _dobController,
+        readOnly: true,
+        decoration: const InputDecoration(
+          labelText: 'Date of Birth',
+          suffixIcon: Icon(Icons.calendar_today_outlined),
+        ),
+        onTap: _patientFieldsReadOnly ? null : _pickBirthDate,
+        validator: (value) => _required(value, 'Date of Birth'),
+      );
+
+  Widget _patientAgeField() => TextFormField(
+        controller: _ageController,
+        readOnly: true,
+        decoration: const InputDecoration(labelText: 'Age'),
+        validator: (value) => _required(value, 'Age'),
+      );
+
+  Widget _patientMobileField() => TextFormField(
+        controller: _mobileController,
+        readOnly: _patientFieldsReadOnly,
+        decoration: const InputDecoration(labelText: 'Mobile Number'),
+        keyboardType: TextInputType.phone,
+        validator: (value) => _required(value, 'Mobile Number'),
+      );
+
+  Widget _patientEmailField() => TextFormField(
+        controller: _emailController,
+        readOnly: _patientFieldsReadOnly,
+        decoration: const InputDecoration(labelText: 'Email Address'),
+        keyboardType: TextInputType.emailAddress,
+        validator: _optionalEmail,
+      );
+
+  Widget _patientProvinceField() => TextFormField(
+        controller: _provinceController,
+        readOnly: _patientFieldsReadOnly,
+        decoration: const InputDecoration(labelText: 'Province'),
+        validator: (value) => _required(value, 'Province'),
+      );
+
+  Widget _patientMunicipalityField() => _municipalityField(
+        controller: _municipalityController,
+        label: 'Municipality/City',
+        enabled: !_patientFieldsReadOnly,
+        dependentBarangayController: _barangayController,
+      );
+
+  Widget _guardianNameField() => TextFormField(
+        controller: _guardianNameController,
+        decoration: const InputDecoration(labelText: 'Parent / Guardian'),
+        textCapitalization: TextCapitalization.words,
+        validator: (value) => _required(value, 'Parent / Guardian Name'),
+      );
+
+  Widget _guardianContactField() => TextFormField(
+        controller: _guardianContactController,
+        decoration: const InputDecoration(labelText: 'Guardian Contact'),
+        keyboardType: TextInputType.phone,
+        validator: (value) =>
+            _required(value, 'Parent / Guardian Contact Number'),
+      );
+
+  Widget _patientBarangayField() => TextFormField(
+        controller: _barangayController,
+        readOnly: _patientFieldsReadOnly,
+        decoration: const InputDecoration(labelText: 'Barangay'),
+        textCapitalization: TextCapitalization.words,
+        validator: (value) => _required(value, 'Barangay'),
+      );
+
+  Widget _patientStreetField() => TextFormField(
+        controller: _streetController,
+        readOnly: _patientFieldsReadOnly,
+        decoration:
+            const InputDecoration(labelText: 'House Number / Street / Purok'),
+        textCapitalization: TextCapitalization.sentences,
+        validator: (value) => _required(value, 'Street Address'),
+      );
+
+  Widget _patientNameFields() {
+    final firstName = TextFormField(
+      controller: _firstNameController,
+      readOnly: _patientFieldsReadOnly,
+      decoration: const InputDecoration(labelText: 'First Name'),
+      textCapitalization: TextCapitalization.words,
+      validator: (value) => _required(value, 'First Name'),
+    );
+    final middleName = TextFormField(
+      controller: _middleNameController,
+      readOnly: _patientFieldsReadOnly,
+      decoration: const InputDecoration(labelText: 'Middle Name'),
+      textCapitalization: TextCapitalization.words,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 340) {
+          return Column(
+            children: [firstName, const SizedBox(height: 10), middleName],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: firstName),
+            const SizedBox(width: 8),
+            Expanded(child: middleName),
+          ],
+        );
+      },
+    );
+  }
+
   List<Widget> _animalFields() => [
-        _sectionTitle('Page 2 - Animal Information', Icons.pets_outlined),
+        _sectionTitle('Animal Information', Icons.pets_outlined),
         _choiceChips(
           values: const ['Dog', 'Cat', 'Others'],
           selected: _animalType,
           onSelected: (value) => _animalType = value,
         ),
         if (_animalType == 'Others') ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _otherAnimalController,
             decoration: const InputDecoration(labelText: 'Others (Specify)'),
             validator: (value) => _required(value, 'Animal type'),
           ),
         ],
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         DropdownButtonFormField<String>(
           initialValue: _ownership,
+          isExpanded: true,
           decoration: const InputDecoration(labelText: 'Ownership'),
           items: const [
             DropdownMenuItem(
@@ -1457,13 +1514,13 @@ class _ReportingPageState extends State<ReportingPage> {
           ],
           onChanged: (value) => setState(() => _ownership = value ?? 'Stray'),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         _choiceChips(
           values: const ['Male', 'Female', 'Unknown'],
           selected: _animalSex,
           onSelected: (value) => _animalSex = value,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
@@ -1483,37 +1540,39 @@ class _ReportingPageState extends State<ReportingPage> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         TextFormField(
           controller: _animalAgeController,
           decoration:
               const InputDecoration(labelText: 'Approximate Age (Optional)'),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _yesNoUnknown(
           label: 'Is the animal alive?',
           selected: _animalAlive,
           onSelected: (value) => _animalAlive = value,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _yesNoUnknown(
           label: 'Is the animal available for observation?',
           selected: _animalAvailable,
           onSelected: (value) => _animalAvailable = value,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _yesNoUnknown(
           label: 'Animal Rabies Vaccination Status',
           selected: _animalVaccinated ?? '',
           onSelected: (value) => setState(() => _animalVaccinated = value),
         ),
-        const SizedBox(height: 16),
-        const Text('Suspicious Animal Behavior',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+      ];
+
+  List<Widget> _animalBehaviorFields() => [
+        _sectionTitle('Suspicious Animal Behavior', Icons.warning_amber_outlined),
         ..._suspiciousBehaviors.map(
           (behavior) => CheckboxListTile(
             value: _behaviors.contains(behavior),
             dense: true,
+            visualDensity: const VisualDensity(vertical: -1),
             contentPadding: EdgeInsets.zero,
             title: Text(behavior),
             onChanged: (checked) => setState(() {
@@ -1532,14 +1591,13 @@ class _ReportingPageState extends State<ReportingPage> {
             }),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         _photoPicker('Upload Photo of the Animal (Optional)', _animalPhoto,
             _EvidenceType.animal),
       ];
 
   List<Widget> _incidentFields() => [
-        _sectionTitle(
-            'Page 3 - Bite Incident Information', Icons.place_outlined),
+        _sectionTitle('Bite Incident Information', Icons.place_outlined),
         Row(
           children: [
             Expanded(
@@ -1569,277 +1627,319 @@ class _ReportingPageState extends State<ReportingPage> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _incidentProvinceController,
-          decoration: const InputDecoration(labelText: 'Province'),
-          validator: (value) => _required(value, 'Province'),
-        ),
-        const SizedBox(height: 12),
-        _municipalityField(
-          controller: _incidentMunicipalityController,
-          label: 'City / Municipality',
-          dependentBarangayController: _incidentBarangayController,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _incidentBarangayController,
-          decoration: const InputDecoration(labelText: 'Barangay'),
-          textCapitalization: TextCapitalization.words,
-          validator: (value) => _required(value, 'Incident Barangay'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _incidentStreetController,
-          decoration:
-              const InputDecoration(labelText: 'Street / Purok / Landmark'),
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(
+            child: TextFormField(
+              controller: _incidentProvinceController,
+              decoration: const InputDecoration(labelText: 'Province'),
+              validator: (value) => _required(value, 'Province'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _municipalityField(
+              controller: _incidentMunicipalityController,
+              label: 'City / Municipality',
+              dependentBarangayController: _incidentBarangayController,
+            ),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(
+            child: TextFormField(
+              controller: _incidentBarangayController,
+              decoration: const InputDecoration(labelText: 'Barangay'),
+              textCapitalization: TextCapitalization.words,
+              validator: (value) => _required(value, 'Incident Barangay'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextFormField(
+              controller: _incidentStreetController,
+              decoration: const InputDecoration(labelText: 'Street / Purok'),
+              textCapitalization: TextCapitalization.sentences,
+            ),
+          ),
+        ]),
+        const SizedBox(height: 10),
         _mapPicker(),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         TextFormField(
           controller: _descriptionController,
           decoration:
               const InputDecoration(labelText: 'Tell us what happened.'),
-          maxLines: 5,
+          maxLines: 2,
           textCapitalization: TextCapitalization.sentences,
           validator: (value) => _required(value, 'Tell us what happened.'),
         ),
       ];
 
   List<Widget> _symptomFields() => [
-        _sectionTitle(
-            'Page 4 - Symptoms and Wound Information', Icons.healing_outlined),
+        _sectionTitle('Symptoms and Wound Information', Icons.healing_outlined),
         const Text('Symptoms after the incident (select all that apply)'),
-        const SizedBox(height: 8),
-        ...const [
-          'Pain at the affected area',
-          'Redness',
-          'Swelling',
-          'Itching',
-          'Fever',
-          'None',
-          'Unsure'
-        ].map((symptom) => CheckboxListTile(
-              value: _symptoms.contains(symptom),
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: Text(symptom),
-              onChanged: (checked) => setState(() {
-                if (checked ?? false) {
-                  if (symptom == 'None' || symptom == 'Unsure') {
-                    _symptoms.clear();
-                  } else {
-                    _symptoms.remove('None');
-                    _symptoms.remove('Unsure');
-                  }
-                  _symptoms.add(symptom);
-                } else {
-                  _symptoms.remove(symptom);
-                }
-              }),
-            )),
+        _checkboxGrid(
+          options: const [
+            'Pain at the affected area',
+            'Redness',
+            'Swelling',
+            'Itching',
+            'Fever',
+            'None',
+            'Unsure',
+          ],
+          selected: _symptoms,
+          onChanged: (symptom) => setState(() {
+            if (_symptoms.contains(symptom)) {
+              _symptoms.remove(symptom);
+            } else if (symptom == 'None' || symptom == 'Unsure') {
+              _symptoms
+                ..clear()
+                ..add(symptom);
+            } else {
+              _symptoms
+                ..remove('None')
+                ..remove('Unsure')
+                ..add(symptom);
+            }
+          }),
+        ),
         TextFormField(
           controller: _symptomDetailsController,
           decoration:
               const InputDecoration(labelText: 'Other symptoms (optional)'),
           textCapitalization: TextCapitalization.sentences,
-          maxLines: 2,
+          maxLines: 1,
         ),
-        const SizedBox(height: 16),
         _choiceChips(
           values: const ['Bite', 'Scratch', 'Saliva Contact', 'Other'],
           selected: _exposureType,
           onSelected: (value) => _exposureType = value,
         ),
         if (_exposureType == 'Other') ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _otherExposureController,
             decoration: const InputDecoration(labelText: 'Other (Specify)'),
             validator: (value) => _required(value, 'Exposure type'),
           ),
         ],
-        const SizedBox(height: 12),
         const Text('Type of Wound (select all that apply)',
             style: TextStyle(fontWeight: FontWeight.w600)),
-        ...const ['Puncture', 'Laceration / cut', 'Abrasion / scratch', 'Other']
-            .map((type) => CheckboxListTile(
-                  value: _woundTypes.contains(type),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(type),
-                  onChanged: (checked) => setState(() {
-                    if (checked ?? false) {
-                      _woundTypes.add(type);
-                    } else {
-                      _woundTypes.remove(type);
-                    }
-                  }),
-                )),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _woundCountController,
-          decoration:
-              const InputDecoration(labelText: 'Number of Bite/Scratch Wounds'),
-          keyboardType: TextInputType.number,
-          validator: (value) =>
-              _numberRequired(value, 'Number of Bite/Scratch Wounds'),
+        _checkboxGrid(
+          options: const [
+            'Puncture',
+            'Laceration / cut',
+            'Abrasion / scratch',
+            'Other',
+          ],
+          selected: _woundTypes,
+          onChanged: (type) => setState(() {
+            if (_woundTypes.contains(type)) {
+              _woundTypes.remove(type);
+            } else {
+              _woundTypes.add(type);
+            }
+          }),
         ),
-        const SizedBox(height: 12),
+        Row(children: [
+          _photoPicker('Upload Wound Photo', _woundPhoto, _EvidenceType.wound),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextFormField(
+              controller: _woundDescriptionController,
+              decoration:
+                  const InputDecoration(labelText: 'Wound description'),
+              textCapitalization: TextCapitalization.sentences,
+              maxLines: 1,
+            ),
+          ),
+        ]),
         _radioLine(
           label: 'Was there bleeding?',
           groupValue: _bleeding,
           values: const ['Yes', 'No'],
           onChanged: (value) => setState(() => _bleeding = value),
         ),
-        const SizedBox(height: 12),
-        const Text('Site of Bite (select affected areas on the diagram)',
-            style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        _bodyDiagram(),
-        const SizedBox(height: 12),
-        _photoPicker('Upload Photo of Bite Wound (Optional)', _woundPhoto,
-            _EvidenceType.wound),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _woundDescriptionController,
-          decoration: const InputDecoration(
-              labelText: 'Additional wound description (optional)'),
-          textCapitalization: TextCapitalization.sentences,
-          maxLines: 3,
-        ),
-        _sectionTitle('First Aid Performed', Icons.medical_services_outlined),
-        _radioLine(
-          label: 'Did you wash the wound with soap and water?',
-          groupValue: _washedWound,
-          values: const ['Yes', 'No'],
-          onChanged: (value) => setState(() => _washedWound = value),
-        ),
-        if (_washedWound == 'Yes') ...[
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _washMinutesController,
-            decoration: const InputDecoration(
-              labelText:
-                  'Approximately how many minutes did you wash the wound?',
-            ),
-            keyboardType: TextInputType.number,
-            validator: (value) => _numberRequired(value, 'Wash minutes'),
-          ),
-        ],
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: _substance,
-          decoration: const InputDecoration(
-            labelText: 'Did you apply any substance to the wound?',
-          ),
-          items: const [
-            DropdownMenuItem(value: 'None', child: Text('None')),
-            DropdownMenuItem(value: 'Alcohol', child: Text('Alcohol')),
-            DropdownMenuItem(value: 'Betadine', child: Text('Betadine')),
-            DropdownMenuItem(
-                value: 'Herbal Remedy', child: Text('Herbal Remedy')),
-            DropdownMenuItem(value: 'Other', child: Text('Other')),
-          ],
-          onChanged: (value) => setState(() => _substance = value ?? 'None'),
-        ),
-        if (_substance == 'Other') ...[
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _otherSubstanceController,
-            decoration: const InputDecoration(labelText: 'Other (Specify)'),
-            validator: (value) => _required(value, 'Substance applied'),
-          ),
-        ],
       ];
 
+  List<Widget> _siteFields() => [
+        _sectionTitle('Site of Bite', Icons.accessibility_new_outlined),
+        const Text('Select all affected areas on the body diagram.'),
+        _bodyDiagram(),
+      ];
+
+  List<Widget> _firstAidFields() => [
+        _sectionTitle('First Aid Performed', Icons.medical_services_outlined),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: _radioLine(
+              label: 'Was the wound washed?',
+              groupValue: _washedWound,
+              values: const ['Yes', 'No'],
+              onChanged: (value) => setState(() => _washedWound = value),
+            ),
+          ),
+          if (_washedWound == 'Yes') ...[
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextFormField(
+                controller: _washMinutesController,
+                decoration:
+                    const InputDecoration(labelText: 'Wash time (minutes)'),
+                keyboardType: TextInputType.number,
+                validator: (value) => _numberRequired(value, 'Wash minutes'),
+              ),
+            ),
+          ],
+        ]),
+        if (_substance == 'Other')
+          Row(children: [
+            Expanded(child: _substanceField()),
+            const SizedBox(width: 10),
+            Expanded(child: _otherSubstanceField()),
+          ])
+        else
+          _substanceField(),
+      ];
+
+  Widget _substanceField() => DropdownButtonFormField<String>(
+        initialValue: _substance,
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'Substance applied'),
+        items: const [
+          DropdownMenuItem(value: 'None', child: Text('None')),
+          DropdownMenuItem(value: 'Alcohol', child: Text('Alcohol')),
+          DropdownMenuItem(value: 'Betadine', child: Text('Betadine')),
+          DropdownMenuItem(value: 'Herbal Remedy', child: Text('Herbal Remedy')),
+          DropdownMenuItem(value: 'Other', child: Text('Other')),
+        ],
+        onChanged: (value) => setState(() => _substance = value ?? 'None'),
+      );
+
+  Widget _otherSubstanceField() => TextFormField(
+        controller: _otherSubstanceController,
+        decoration: const InputDecoration(labelText: 'Other Specify'),
+        validator: (value) => _required(value, 'Substance applied'),
+      );
+
   List<Widget> _medicalHistoryFields() => [
-        _sectionTitle('Page 5 - Relevant Medical History',
+        _sectionTitle('Relevant Medical History',
             Icons.health_and_safety_outlined),
         const Text(
-            'Share what you know. These answers are resident-reported information and do not confirm a diagnosis or treatment.'),
-        const SizedBox(height: 16),
-        _yesNoUnknown(
-          label: 'Patient Rabies Vaccination Status',
-          selected: _patientVaccinated ?? '',
-          onSelected: (value) => setState(() {
-            _patientVaccinated = value;
-            if (value == 'No') _previousVaccinationDetailsController.clear();
-          }),
-          values: const ['Yes', 'No', 'Unsure'],
-        ),
+            'Resident-reported information; this does not confirm diagnosis or treatment.'),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: _yesNoUnknown(
+              label: 'Patient Rabies Vaccination',
+              selected: _patientVaccinated ?? '',
+              onSelected: (value) => setState(() {
+                _patientVaccinated = value;
+                if (value == 'No') {
+                  _previousVaccinationDetailsController.clear();
+                }
+              }),
+              values: const ['Yes', 'No', 'Unsure'],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _yesNoUnknown(
+              label: 'Known Allergies',
+              selected: _allergiesKnown ?? '',
+              onSelected: (value) => setState(() {
+                _allergiesKnown = value;
+                if (value != 'Yes') _allergyDetailsController.clear();
+              }),
+              values: const ['Yes', 'No', 'Unsure'],
+            ),
+          ),
+        ]),
         if (_patientVaccinated == 'Yes' ||
-            _patientVaccinated == 'Unsure' ||
-            _patientVaccinated == 'Unknown') ...[
-          const SizedBox(height: 12),
-          TextFormField(
+                _patientVaccinated == 'Unsure' ||
+                _patientVaccinated == 'Unknown' ||
+            _allergiesKnown == 'Yes')
+          Row(children: [
+            if (_patientVaccinated == 'Yes' ||
+                _patientVaccinated == 'Unsure' ||
+                _patientVaccinated == 'Unknown')
+              Expanded(
+                child: TextFormField(
             controller: _previousVaccinationDetailsController,
             decoration: const InputDecoration(
-                labelText: 'Previous vaccination details (if known)'),
+                labelText: 'Previous vaccination details'),
             textCapitalization: TextCapitalization.sentences,
-            maxLines: 2,
+            maxLines: 1,
+                ),
+              ),
+            if ((_patientVaccinated == 'Yes' ||
+                    _patientVaccinated == 'Unsure' ||
+                    _patientVaccinated == 'Unknown') &&
+                _allergiesKnown == 'Yes')
+              const SizedBox(width: 10),
+            if (_allergiesKnown == 'Yes')
+              Expanded(
+                child: TextFormField(
+                  controller: _allergyDetailsController,
+                  decoration:
+                      const InputDecoration(labelText: 'Allergy details'),
+                  textCapitalization: TextCapitalization.sentences,
+                  maxLines: 1,
+                ),
+              ),
+          ]),
+        Row(children: [
+          Expanded(
+            child: TextFormField(
+              controller: _medicalProblemsController,
+              decoration: const InputDecoration(labelText: 'Medical problems'),
+              textCapitalization: TextCapitalization.sentences,
+              maxLines: 1,
+            ),
           ),
-        ],
-        const SizedBox(height: 16),
-        _yesNoUnknown(
-          label: 'Known Allergies',
-          selected: _allergiesKnown ?? '',
-          onSelected: (value) => setState(() {
-            _allergiesKnown = value;
-            if (value != 'Yes') _allergyDetailsController.clear();
-          }),
-          values: const ['Yes', 'No', 'Unsure'],
-        ),
-        if (_allergiesKnown == 'Yes') ...[
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _allergyDetailsController,
-            decoration: const InputDecoration(labelText: 'Allergy details'),
-            textCapitalization: TextCapitalization.sentences,
-            maxLines: 2,
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextFormField(
+              controller: _currentMedicationsController,
+              decoration:
+                  const InputDecoration(labelText: 'Current medications'),
+              textCapitalization: TextCapitalization.sentences,
+              maxLines: 1,
+            ),
           ),
-        ],
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _medicalProblemsController,
-          decoration: const InputDecoration(
-              labelText: 'Relevant medical problems (optional)'),
-          textCapitalization: TextCapitalization.sentences,
-          maxLines: 2,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _currentMedicationsController,
-          decoration: const InputDecoration(
-              labelText: 'Current medications (optional)'),
-          textCapitalization: TextCapitalization.sentences,
-          maxLines: 2,
-        ),
-        const SizedBox(height: 12),
+        ]),
         TextFormField(
           controller: _otherMedicalInfoController,
           decoration: const InputDecoration(
-              labelText: 'Other relevant medical information (optional)'),
+              labelText: 'Other relevant medical information'),
           textCapitalization: TextCapitalization.sentences,
-          maxLines: 3,
+          maxLines: 1,
         ),
       ];
 
+  List<Widget> _remainingFields() => _withGaps([
+        _sectionTitle('Remaining Information', Icons.assignment_outlined),
+        ..._firstAidFields(),
+        ..._medicalHistoryFields(),
+      ], gap: 6);
+
   int _currentPage = 0;
 
-  List<Widget> _currentPageFields() => [
-        _patientFields(),
-        _animalFields(),
-        _incidentFields(),
-        _symptomFields(),
-        _medicalHistoryFields(),
-      ][_currentPage];
+  List<_FormPage> get _formPages => [
+        _FormPage('Patient Information', _patientFields()),
+        _FormPage('Animal Information', _animalFields()),
+        _FormPage('Suspicious Animal Behavior', _animalBehaviorFields()),
+        _FormPage('Bite Incident Information', _incidentFields()),
+        _FormPage('Symptoms and Wound Information', _symptomFields()),
+        _FormPage('Site of Bite', _siteFields()),
+        _FormPage('Remaining Information', _remainingFields()),
+      ];
 
   void _goToNextPage() {
     FocusManager.instance.primaryFocus?.unfocus();
-    if (_currentPage == 4) {
+    if (_currentPage == _formPages.length - 1) {
       _continueToReview();
       return;
     }
@@ -1847,8 +1947,20 @@ class _ReportingPageState extends State<ReportingPage> {
     setState(() => _currentPage++);
   }
 
+  int _firstPageForSection(String title) {
+    final sectionTitle = switch (title) {
+      'Relevant Medical History' || 'First Aid Performed' =>
+        'Remaining Information',
+      _ => title,
+    };
+    final pageIndex = _formPages.indexWhere((page) => page.title == sectionTitle);
+    return pageIndex < 0 ? 0 : pageIndex;
+  }
+
   Widget _buildForm() {
+    final pages = _formPages;
     final step = _currentPage + 1;
+    final page = pages[_currentPage];
     return Form(
       key: _formKey,
       child: Column(
@@ -1859,20 +1971,21 @@ class _ReportingPageState extends State<ReportingPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Step $step of 6',
+                  '${page.title} · Page $step of ${pages.length}',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(value: step / 6),
+                const SizedBox(height: 10),
+                LinearProgressIndicator(value: step / pages.length),
               ],
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: _currentPageFields(),
+                children: page.fields,
               ),
             ),
           ),
@@ -1882,25 +1995,34 @@ class _ReportingPageState extends State<ReportingPage> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Row(
                 children: [
-                  if (_currentPage > 0)
-                    Expanded(
-                      child: OutlinedButton(
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _currentPage > 0
+                          ? OutlinedButton(
                         onPressed: () {
                           FocusManager.instance.primaryFocus?.unfocus();
                           setState(() => _currentPage--);
                         },
                         child: const Text('Back'),
-                      ),
-                    )
-                  else
-                    const Spacer(),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _goToNextPage,
-                      child: Text(_currentPage == 4 ? 'Review' : 'Next'),
+                      )
+                          : const SizedBox.shrink(),
                     ),
                   ),
+                  Expanded(
+                    child: Center(
+                      child: SizedBox(
+                        width: 140,
+                        child: FilledButton(
+                          onPressed: _goToNextPage,
+                          child: Text(_currentPage == pages.length - 1
+                              ? 'Submit'
+                              : 'Next'),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Expanded(child: SizedBox.shrink()),
                 ],
               ),
             ),
@@ -1911,144 +2033,177 @@ class _ReportingPageState extends State<ReportingPage> {
   }
 
   Widget _buildReview() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    final pages = _reviewPages;
+    final isCertification = _reviewPage == pages.length;
+    final page = isCertification ? null : pages[_reviewPage];
+    return Column(
       children: [
-        const Text('Step 6 of 6',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        const LinearProgressIndicator(value: 1),
-        const SizedBox(height: 8),
-        _sectionTitle('Review & Submit', Icons.assignment_turned_in_outlined),
-        for (final section in _summarySections)
-          Card(
-            color: Colors.white,
-            margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Color(0xFFE4E8EC)),
-            ),
-            child: Column(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Review and Submit · Page ${_reviewPage + 1} of ${pages.length + 1}',
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+              LinearProgressIndicator(value: (_reviewPage + 1) / (pages.length + 1)),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: isCertification
+                ? _reviewCertification()
+                : Card(
+                    color: Colors.white,
+                    margin: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          title: Text(page!.title,
+                              style: const TextStyle(fontWeight: FontWeight.w700)),
+                          trailing: TextButton.icon(
+                            onPressed: () => setState(() {
+                              _reviewing = false;
+                              _currentPage = _firstPageForSection(page.title);
+                            }),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('Edit'),
+                          ),
+                        ),
+                        for (final item in page.items) _SummaryRow(item: item),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Row(
               children: [
-                ListTile(
-                  title: Text(section.title,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                  trailing: TextButton.icon(
-                    onPressed: () => setState(() {
-                      _reviewing = false;
-                      _currentPage = section.page;
-                    }),
-                    icon: const Icon(Icons.edit_outlined, size: 18),
-                    label: const Text('Edit'),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton(
+                      onPressed: () => setState(() {
+                        if (_reviewPage == 0) {
+                          _reviewing = false;
+                          _currentPage = _formPages.length - 1;
+                        } else {
+                          _reviewPage--;
+                        }
+                      }),
+                      child: const Text('Back'),
+                    ),
                   ),
                 ),
-                for (var i = 0; i < section.items.length; i++) ...[
-                  _SummaryRow(item: section.items[i]),
-                  if (i < section.items.length - 1)
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                ],
+                Expanded(
+                  child: Center(
+                    child: SizedBox(
+                      width: 140,
+                      child: FilledButton(
+                        onPressed: isCertification
+                            ? (_isSubmitting ? null : _confirmAndSubmit)
+                            : () => setState(() => _reviewPage++),
+                        child: Text(isCertification ? 'Submit' : 'Next'),
+                      ),
+                    ),
+                  ),
+                ),
+                const Expanded(child: SizedBox.shrink()),
               ],
             ),
-          ),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Text(
-            'Your report will be reviewed by the appropriate ABTC. Submitting this report does not confirm a diagnosis or treatment.',
-          ),
-        ),
-        const SizedBox(height: 16),
-        CheckboxListTile(
-          value: _certified,
-          contentPadding: EdgeInsets.zero,
-          title: const Text(
-            'I certify that the information provided is true and correct to the best of my knowledge.',
-          ),
-          onChanged: (value) => setState(() => _certified = value ?? false),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton(
-          onPressed: () => setState(() {
-            _reviewing = false;
-            _currentPage = 4;
-          }),
-          child: const Text('Back'),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 52,
-          child: FilledButton.icon(
-            onPressed: _isSubmitting ? null : _confirmAndSubmit,
-            icon: _isSubmitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.send_outlined),
-            label: Text(_isSubmitting ? 'Submitting...' : 'Submit Report'),
           ),
         ),
       ],
     );
   }
+
+  List<_ReviewPage> get _reviewPages => [
+        for (final section in _summarySections)
+          for (var start = 0; start < section.items.length; start += 4)
+            _ReviewPage(
+              section.title,
+              section.items.skip(start).take(4).toList(),
+            ),
+      ];
+
+  Widget _reviewCertification() => Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _sectionTitle('Review complete', Icons.assignment_turned_in_outlined),
+          const Text(
+            'Your report will be reviewed by the appropriate ABTC. Submitting this report does not confirm a diagnosis or treatment.',
+          ),
+          const SizedBox(height: 12),
+          CheckboxListTile(
+            value: _certified,
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              'I certify that the information provided is true and correct to the best of my knowledge.',
+            ),
+            onChanged: (value) => setState(() => _certified = value ?? false),
+          ),
+        ],
+      );
 }
 
 enum _EvidenceType { wound, animal }
 
+class _FormPage {
+  const _FormPage(this.title, this.fields);
+
+  final String title;
+  final List<Widget> fields;
+}
+
+class _ReviewPage {
+  const _ReviewPage(this.title, this.items);
+
+  final String title;
+  final List<_SummaryItem> items;
+}
+
 class _BodyDiagramPanel extends StatelessWidget {
   const _BodyDiagramPanel({
-    required this.title,
     required this.sites,
-    required this.selectedSites,
     required this.onTap,
   });
 
-  final String title;
   final List<_BodySite> sites;
-  final List<String> selectedSites;
   final ValueChanged<String> onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 360,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE4E8EC)),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(title,
-                style: const TextStyle(fontWeight: FontWeight.w700)),
-          ),
-          Expanded(
-            child: Center(
-              // Keep the hit regions and markers in the same normalized
-              // coordinate space as the original 700 x 724 diagram.
-              child: AspectRatio(
-                aspectRatio: 700 / 724,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      'assets/images/bodydiagram.webp',
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.medium,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Center(
-                        child: Text('Body diagram could not be loaded.'),
-                      ),
-                    ),
-                    ..._siteButtons(context),
-                  ],
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return SizedBox(
+      // Keep the active field and bottom navigation reachable when the site
+      // count keyboard is open. The image and its normalized hit areas resize
+      // together when the keyboard is dismissed.
+      height: keyboardOpen ? 96 : 255,
+      child: Center(
+        child: AspectRatio(
+          // Hit areas use the same normalized coordinate space as the image.
+          aspectRatio: 700 / 724,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                'assets/images/bodydiagram.webp',
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.medium,
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Text('Body diagram could not be loaded.'),
                 ),
               ),
-            ),
+              ..._siteButtons(context),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -2060,62 +2215,13 @@ class _BodyDiagramPanel extends StatelessWidget {
           alignment: sites[i].alignment,
           child: Tooltip(
             message: sites[i].name,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(18),
-              onTap: () => onTap(sites[i].name),
-              child: SizedBox(
-                width: 42,
-                height: 42,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: selectedSites.contains(sites[i].name)
-                            ? AppColors.danger
-                            : Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: selectedSites.contains(sites[i].name)
-                              ? AppColors.danger
-                              : AppColors.primary,
-                          width: 2,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x22000000),
-                            blurRadius: 6,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (selectedSites.contains(sites[i].name))
-                      Positioned.fill(
-                        child: Center(
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '${selectedSites.indexOf(sites[i].name) + 1}',
-                              style: const TextStyle(
-                                color: AppColors.danger,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+            child: Semantics(
+              button: true,
+              label: sites[i].name,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () => onTap(sites[i].name),
+                child: const SizedBox(width: 44, height: 44),
               ),
             ),
           ),

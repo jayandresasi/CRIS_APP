@@ -7,7 +7,7 @@ void main() {
     final repository = CsvABTCRepository(
       loadString: (_) async =>
           '''Name,Tel_No,Email,Street,Municipality,Latitude,Longitude,Availability,Done
-Center One,123,one@example.com,"Main, Street",Iloilo,10.7000,122.5000,Open,
+Center One,123,one@example.com,"Main, Street",Iloilo,10.7000,122.5000,Open, 
 Missing coordinates,456,two@example.com,Side Street,Iloilo,,122.6000,Open,
 Invalid coordinates,789,three@example.com,Other Street,Iloilo,n/a,122.7000,Open,
 ''',

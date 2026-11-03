@@ -25,12 +25,13 @@ void main() {
   });
 
   testWidgets('report form validates one page at a time', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const MaterialApp(home: ReportingPage()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Step 1 of 6'), findsOneWidget);
-    expect(find.text('Page 1 - Patient Information'), findsOneWidget);
-    expect(find.text('Page 2 - Animal Information'), findsNothing);
+    _expectFormPage(tester, 'Patient Information', 1);
+    expect(find.text('Animal Information · Page 2 of 7'), findsNothing);
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
@@ -40,8 +41,10 @@ void main() {
     expect(find.text('Tell us what happened. is required'), findsNothing);
   });
 
-  testWidgets('six-step flow preserves data and supports section edits',
+  testWidgets('seven-page flow preserves data and retains review navigation',
       (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const MaterialApp(home: ReportingPage()));
     await tester.pumpAndSettle();
 
@@ -51,59 +54,87 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Male').last);
     await tester.pumpAndSettle();
-    await _pickDate(tester, 'Date of Birth');
+    await _setReadOnlyField(tester, 'Date of Birth', '01/01/2000');
+    await _setReadOnlyField(tester, 'Age', '26');
     await _enterField(tester, 'Mobile Number', '09171234567');
+    await _enterField(tester, 'Province', 'Iloilo');
     await _selectMunicipality(tester, 'Municipality/City', 'Iloilo City');
     await _enterField(tester, 'Barangay', 'Sample Barangay');
     await _enterField(tester, 'House Number / Street / Purok', '1 Main Street');
     await _tapButton(tester, 'Next');
 
-    expect(find.text('Step 2 of 6'), findsOneWidget);
-    expect(find.text('Page 2 - Animal Information'), findsOneWidget);
+    _expectFormPage(tester, 'Animal Information', 2);
     await _tapButton(tester, 'Next');
 
-    expect(find.text('Step 3 of 6'), findsOneWidget);
-    await _pickDate(tester, 'Date of Exposure');
-    await _pickTime(tester);
+    _expectFormPage(tester, 'Suspicious Animal Behavior', 3);
+    expect(find.text('Upload Photo of the Animal (Optional)'), findsOneWidget);
+    expect(
+      tester.getBottomLeft(find.text('Upload Photo of the Animal (Optional)'))
+          .dy,
+      lessThan(tester.getTopLeft(find.widgetWithText(FilledButton, 'Next')).dy),
+    );
+    await _tapButton(tester, 'Next');
+
+    _expectFormPage(tester, 'Bite Incident Information', 4);
+    await _setReadOnlyField(tester, 'Date of Exposure', '11/03/2026');
+    await _setReadOnlyField(tester, 'Est. Time of Exposure', '10:00 AM');
     await _enterField(tester, 'Province', 'Iloilo');
     await _selectMunicipality(tester, 'City / Municipality', 'Iloilo City');
     await _enterField(tester, 'Barangay', 'Incident Barangay');
     await _enterField(tester, 'Tell us what happened.', 'A dog bit my arm.');
     await _tapButton(tester, 'Next');
 
-    expect(find.text('Step 4 of 6'), findsOneWidget);
+    _expectFormPage(tester, 'Symptoms and Wound Information', 5);
     expect(find.text('Symptoms after the incident (select all that apply)'),
         findsOneWidget);
     expect(find.text('Type of Wound (select all that apply)'), findsOneWidget);
+    expect(find.text('Number of Bite/Scratch Wounds'), findsNothing);
+    final bleedingAnswer = find.byType(SegmentedButton<String>);
+    await tester.tap(find.descendant(
+      of: bleedingAnswer,
+      matching: find.text('Yes'),
+    ));
+    await tester.pumpAndSettle();
+    await _tapButton(tester, 'Next');
+
+    _expectFormPage(tester, 'Site of Bite', 6);
     expect(find.byType(Image), findsWidgets);
-    await _enterField(tester, 'Number of Bite/Scratch Wounds', '1');
-    await tester.tap(find.byType(RadioListTile<String>).at(0));
-    await tester.tap(find.byType(RadioListTile<String>).at(3));
     await tester.tap(find.byTooltip('Head / Scalp'));
     await tester.pumpAndSettle();
-    await _tapButton(tester, 'Review');
+    await _tapButton(tester, 'Next');
 
-    expect(find.text('Step 5 of 6'), findsOneWidget);
-    await _enterField(tester, 'Current medications (optional)', 'Vitamin C');
-    await _tapButton(tester, 'Review');
-
-    expect(find.text('Step 6 of 6'), findsOneWidget);
-    expect(find.text('Relevant Medical History'), findsWidgets);
-    expect(find.text('Vitamin C'), findsOneWidget);
-    expect(find.textContaining('does not confirm a diagnosis or treatment'),
-        findsOneWidget);
-
-    await tester.tap(find.widgetWithText(TextButton, 'Edit').last);
+    _expectFormPage(tester, 'Remaining Information', 7);
+    final washAnswer = find.byType(SegmentedButton<String>);
+    await tester.tap(find.descendant(
+      of: washAnswer,
+      matching: find.text('No'),
+    ));
     await tester.pumpAndSettle();
-    expect(find.text('Step 5 of 6'), findsOneWidget);
+    await _enterField(tester, 'Current medications', 'Vitamin C');
+    await _tapButton(tester, 'Submit');
+    expect(find.textContaining('Review and Submit · Page'), findsOneWidget);
+    await tester.tap(find.text('Back').last);
+    await tester.pumpAndSettle();
+    _expectFormPage(tester, 'Remaining Information', 7);
     expect(find.text('Vitamin C'), findsOneWidget);
   });
 }
 
+void _expectFormPage(WidgetTester tester, String title, int page) {
+  expect(find.text('$title · Page $page of 7'), findsOneWidget);
+  expect(find.byType(SingleChildScrollView), findsNothing);
+  expect(find.byType(ListView), findsNothing);
+  final button = page == 7 ? 'Submit' : 'Next';
+  expect(
+    tester.getBottomLeft(find.widgetWithText(FilledButton, button)).dy,
+    greaterThan(760),
+  );
+}
+
 Finder _field(String label) => find.byWidgetPredicate(
       (widget) =>
-          widget is TextFormField && widget.decoration.labelText == label,
-      description: 'TextFormField labeled "$label"',
+          widget is TextField && widget.decoration?.labelText == label,
+      description: 'TextField labeled "$label"',
     );
 
 Future<void> _enterField(
@@ -121,26 +152,13 @@ Future<void> _selectMunicipality(
   await tester.tap(finder);
   await tester.enterText(finder, municipality);
   await tester.pumpAndSettle();
-  await tester.tap(find.text(municipality).last);
-  await tester.pumpAndSettle();
 }
 
-Future<void> _pickDate(WidgetTester tester, String label) async {
-  final finder = _field(label);
-  await tester.ensureVisible(finder);
-  await tester.tap(finder);
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('OK').last);
-  await tester.pumpAndSettle();
-}
-
-Future<void> _pickTime(WidgetTester tester) async {
-  final finder = _field('Est. Time of Exposure');
-  await tester.ensureVisible(finder);
-  await tester.tap(finder);
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('OK').last);
-  await tester.pumpAndSettle();
+Future<void> _setReadOnlyField(
+    WidgetTester tester, String label, String value) async {
+  final field = tester.widget<TextField>(_field(label));
+  field.controller!.text = value;
+  await tester.pump();
 }
 
 Future<void> _tapButton(WidgetTester tester, String label) async {

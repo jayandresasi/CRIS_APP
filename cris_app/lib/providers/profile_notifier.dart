@@ -55,6 +55,24 @@ class ProfileNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Removes cached identity and profile fields when the active session ends.
+  /// Report boxes are kept separately and are intentionally not touched.
+  Future<void> clearForLogout() async {
+    _name = '';
+    _gender = '';
+    _age = '';
+    _dob = '';
+    _phone = '';
+    _email = '';
+    _address = '';
+    _profileImagePath = '';
+    _emergencyName = '';
+    _emergencyRelationship = '';
+    _emergencyPhone = '';
+    await Hive.box(_boxName).clear();
+    notifyListeners();
+  }
+
   Future<void> updateProfile({
     required String name,
     required String gender,

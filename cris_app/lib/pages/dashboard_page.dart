@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/notifications_notifier.dart';
 import '../providers/profile_notifier.dart';
+import 'login_page.dart';
 import '../widgets/vaccine_schedule_card.dart';
 import '../theme.dart';
 import 'locate_centers_page.dart';
@@ -11,8 +13,72 @@ import 'sab_reporting_page.dart';
 import 'history_page.dart';
 import 'user_info_page.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  bool _isLoggingOut = false;
+  bool _isConfirmingLogout = false;
+
+  Future<void> _confirmAndLogout() async {
+    if (_isLoggingOut || _isConfirmingLogout) return;
+    setState(() => _isConfirmingLogout = true);
+    final profileNotifier = context.read<ProfileNotifier>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Log out?'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (confirmed != true) {
+      setState(() => _isConfirmingLogout = false);
+      return;
+    }
+
+    setState(() {
+      _isConfirmingLogout = false;
+      _isLoggingOut = true;
+    });
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoggingOut = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to log out. Please try again.')),
+      );
+      return;
+    }
+
+    // A local cache issue should not keep a user on an authenticated screen
+    // after Firebase has successfully signed them out.
+    try {
+      await profileNotifier.clearForLogout();
+    } catch (error) {
+      debugPrint('Unable to clear cached profile during logout: $error');
+    }
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (_) => false,
+    );
+  }
 
   void _showReportSheet(BuildContext context) {
     showModalBottomSheet(
@@ -194,7 +260,11 @@ class DashboardPage extends StatelessWidget {
           ),
         ],
       ),
-      drawer: _AppDrawer(notifier: notifs),
+      drawer: _AppDrawer(
+        notifier: notifs,
+        isLoggingOut: _isLoggingOut || _isConfirmingLogout,
+        onLogout: _confirmAndLogout,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -363,7 +433,13 @@ class _NotificationsSheet extends StatelessWidget {
 
 class _AppDrawer extends StatelessWidget {
   final NotificationsNotifier notifier;
-  const _AppDrawer({required this.notifier});
+  final bool isLoggingOut;
+  final VoidCallback onLogout;
+  const _AppDrawer({
+    required this.notifier,
+    required this.isLoggingOut,
+    required this.onLogout,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -467,10 +543,7 @@ class _AppDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
+            onTap: isLoggingOut ? null : onLogout,
           ),
         ],
       ),

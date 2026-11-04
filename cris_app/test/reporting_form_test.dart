@@ -99,8 +99,46 @@ void main() {
 
     _expectFormPage(tester, 'Site of Bite', 6);
     expect(find.byType(Image), findsWidgets);
-    await tester.tap(find.byTooltip('Head / Scalp'));
+    await _tapDiagramAt(tester, .25, .09);
+    expect(find.text('Head / Scalp'), findsOneWidget);
+    await _tapDiagramAt(tester, .25, .19);
+    expect(find.text('Neck'), findsOneWidget);
+    await _tapDiagramAt(tester, .32, .50);
+    expect(find.text('Left Hip'), findsOneWidget);
+    await _tapDiagramAt(tester, .18, .50);
+    expect(find.text('Right Hip'), findsOneWidget);
+    await _tapDiagramAt(tester, .40, .38);
+    expect(find.text('Left Elbow'), findsOneWidget);
+    await _tapDiagramAt(tester, .10, .38);
+    expect(find.text('Right Elbow'), findsOneWidget);
+    await _tapDiagramAt(tester, .25, .32);
+    expect(find.text('Chest'), findsOneWidget);
+    await _tapDiagramAt(tester, .25, .44);
+    expect(find.text('Abdomen'), findsOneWidget);
+    await _tapDiagramAt(tester, .30, .64);
+    expect(find.text('Left Thigh'), findsOneWidget);
+    await _tapDiagramAt(tester, .20, .74);
+    expect(find.text('Right Knee'), findsOneWidget);
+    await _tapDiagramAt(tester, .46, .56);
+    expect(find.text('Left Hand'), findsOneWidget);
+    await _tapDiagramAt(tester, .18, .92);
+    expect(find.text('Right Foot'), findsOneWidget);
+    await tester.binding.setSurfaceSize(const Size(250, 844));
     await tester.pumpAndSettle();
+    await _tapDiagramAt(tester, .32, .50);
+    expect(find.text('Left Hip'), findsOneWidget);
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Back').first);
+    await tester.pumpAndSettle();
+    await _tapDiagramAt(tester, .74, .19);
+    expect(find.text('Neck'), findsOneWidget);
+    await _tapDiagramAt(tester, .74, .32);
+    expect(find.text('Upper Back'), findsOneWidget);
+    await _tapDiagramAt(tester, .68, .64);
+    expect(find.text('Left Thigh'), findsOneWidget);
+    await _tapDiagramAt(tester, .89, .38);
+    expect(find.text('Right Elbow'), findsOneWidget);
     await _tapButton(tester, 'Next');
 
     _expectFormPage(tester, 'Remaining Information', 7);
@@ -142,6 +180,22 @@ Future<void> _enterField(
   final finder = _field(label);
   await tester.ensureVisible(finder);
   await tester.enterText(finder, value);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tapDiagramAt(
+  WidgetTester tester,
+  double normalizedX,
+  double normalizedY,
+) async {
+  final rect =
+      tester.getRect(find.byKey(const ValueKey('body-diagram-surface')));
+  await tester.tapAt(
+    Offset(
+      rect.left + rect.width * normalizedX,
+      rect.top + rect.height * normalizedY,
+    ),
+  );
   await tester.pumpAndSettle();
 }
 

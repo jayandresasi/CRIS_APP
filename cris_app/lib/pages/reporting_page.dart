@@ -77,52 +77,88 @@ const List<String> _suspiciousBehaviors = [
 
 class _BodySite {
   final String name;
-  final Alignment alignment;
+  /// Coordinates normalized to the 700x724 source diagram (origin at top-left).
+  final double x;
+  final double y;
 
-  const _BodySite(this.name, this.alignment);
+  const _BodySite(this.name, this.x, this.y);
 }
 
 const List<_BodySite> _frontBodySites = [
-  _BodySite('Head / Scalp', Alignment(0, -0.92)),
-  _BodySite('Face', Alignment(0, -0.70)),
-  _BodySite('Left Ear', Alignment(-0.28, -0.92)),
-  _BodySite('Right Ear', Alignment(0.28, -0.92)),
-  _BodySite('Neck', Alignment(0, -0.56)),
-  _BodySite('Left Shoulder', Alignment(-0.50, -0.28)),
-  _BodySite('Right Shoulder', Alignment(0.50, -0.28)),
-  _BodySite('Chest', Alignment(0, -0.08)),
-  _BodySite('Abdomen', Alignment(0, 0.12)),
-  _BodySite('Pelvic / Groin', Alignment(0, 0.34)),
-  _BodySite('Left Upper Arm', Alignment(-0.70, 0.02)),
-  _BodySite('Right Upper Arm', Alignment(0.70, 0.02)),
-  _BodySite('Left Elbow', Alignment(-0.72, 0.26)),
-  _BodySite('Right Elbow', Alignment(0.72, 0.26)),
-  _BodySite('Left Forearm', Alignment(-0.72, 0.46)),
-  _BodySite('Right Forearm', Alignment(0.72, 0.46)),
-  _BodySite('Left Wrist', Alignment(-0.72, 0.62)),
-  _BodySite('Right Wrist', Alignment(0.72, 0.62)),
-  _BodySite('Left Hand', Alignment(-0.72, 0.74)),
-  _BodySite('Right Hand', Alignment(0.72, 0.74)),
-  _BodySite('Left Fingers', Alignment(-0.72, 0.86)),
-  _BodySite('Right Fingers', Alignment(0.72, 0.86)),
-  _BodySite('Left Thigh', Alignment(-0.32, 0.62)),
-  _BodySite('Right Thigh', Alignment(0.32, 0.62)),
-  _BodySite('Left Knee', Alignment(-0.32, 0.80)),
-  _BodySite('Right Knee', Alignment(0.32, 0.80)),
-  _BodySite('Left Lower Leg', Alignment(-0.25, 0.92)),
-  _BodySite('Right Lower Leg', Alignment(0.25, 0.92)),
-  _BodySite('Left Ankle', Alignment(-0.20, 1.00)),
-  _BodySite('Right Ankle', Alignment(0.20, 1.00)),
-  _BodySite('Left Foot', Alignment(-0.10, 0.92)),
-  _BodySite('Right Foot', Alignment(0.10, 0.92)),
-  _BodySite('Left Toes', Alignment(-0.30, 0.92)),
-  _BodySite('Right Toes', Alignment(0.30, 0.92)),
+  // Front-facing figure is on the left of the image: anatomical left is on
+  // the viewer's right. Values are image fractions, not screen Alignments.
+  _BodySite('Head / Scalp', .25, .09),
+  _BodySite('Face', .25, .13),
+  _BodySite('Left Ear', .28, .12),
+  _BodySite('Right Ear', .22, .12),
+  _BodySite('Neck', .25, .19),
+  _BodySite('Left Shoulder', .34, .25),
+  _BodySite('Right Shoulder', .16, .25),
+  _BodySite('Chest', .25, .32),
+  _BodySite('Abdomen', .25, .44),
+  _BodySite('Pelvic / Groin', .25, .53),
+  _BodySite('Left Hip', .32, .50),
+  _BodySite('Right Hip', .18, .50),
+  _BodySite('Left Upper Arm', .39, .31),
+  _BodySite('Right Upper Arm', .11, .31),
+  _BodySite('Left Elbow', .40, .38),
+  _BodySite('Right Elbow', .10, .38),
+  _BodySite('Left Forearm', .42, .46),
+  _BodySite('Right Forearm', .08, .46),
+  _BodySite('Left Wrist', .44, .52),
+  _BodySite('Right Wrist', .06, .52),
+  _BodySite('Left Hand', .46, .56),
+  _BodySite('Right Hand', .04, .56),
+  _BodySite('Left Fingers', .46, .59),
+  _BodySite('Right Fingers', .04, .59),
+  _BodySite('Left Thigh', .30, .64),
+  _BodySite('Right Thigh', .20, .64),
+  _BodySite('Left Knee', .30, .74),
+  _BodySite('Right Knee', .20, .74),
+  _BodySite('Left Lower Leg', .29, .84),
+  _BodySite('Right Lower Leg', .21, .84),
+  _BodySite('Left Ankle', .29, .90),
+  _BodySite('Right Ankle', .21, .90),
+  _BodySite('Left Foot', .32, .92),
+  _BodySite('Right Foot', .18, .92),
+  _BodySite('Left Toes', .34, .93),
+  _BodySite('Right Toes', .16, .93),
 ];
 
 const List<_BodySite> _backBodySites = [
-  _BodySite('Upper Back', Alignment(0, -0.08)),
-  _BodySite('Lower Back', Alignment(0, 0.18)),
-  _BodySite('Buttocks', Alignment(0, 0.50)),
+  // Back-facing figure is on the right. Anatomical left and right now align
+  // with viewer left and right, respectively.
+  _BodySite('Head / Scalp', .74, .09),
+  _BodySite('Left Ear', .71, .12),
+  _BodySite('Right Ear', .77, .12),
+  _BodySite('Neck', .74, .19),
+  _BodySite('Left Shoulder', .65, .25),
+  _BodySite('Right Shoulder', .83, .25),
+  _BodySite('Upper Back', .74, .32),
+  _BodySite('Left Upper Arm', .60, .31),
+  _BodySite('Right Upper Arm', .88, .31),
+  _BodySite('Left Elbow', .59, .38),
+  _BodySite('Right Elbow', .89, .38),
+  _BodySite('Left Forearm', .57, .46),
+  _BodySite('Right Forearm', .91, .46),
+  _BodySite('Left Wrist', .55, .52),
+  _BodySite('Right Wrist', .93, .52),
+  _BodySite('Left Hand', .53, .56),
+  _BodySite('Right Hand', .95, .56),
+  _BodySite('Lower Back', .74, .47),
+  _BodySite('Left Hip', .68, .50),
+  _BodySite('Right Hip', .80, .50),
+  _BodySite('Buttocks', .74, .53),
+  _BodySite('Left Thigh', .68, .64),
+  _BodySite('Right Thigh', .80, .64),
+  _BodySite('Left Knee', .68, .74),
+  _BodySite('Right Knee', .80, .74),
+  _BodySite('Left Lower Leg', .69, .84),
+  _BodySite('Right Lower Leg', .79, .84),
+  _BodySite('Left Ankle', .70, .90),
+  _BodySite('Right Ankle', .78, .90),
+  _BodySite('Left Foot', .70, .92),
+  _BodySite('Right Foot', .78, .92),
 ];
 
 const LatLng _iloiloCenter = LatLng(10.7202, 122.5621);
@@ -1258,7 +1294,7 @@ class _ReportingPageState extends State<ReportingPage> {
                       Theme.of(context).inputDecorationTheme.copyWith(
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(
-                      vertical: 12,
+                      vertical: 8,
                       horizontal: 12,
                     ),
                   ),
@@ -2187,47 +2223,62 @@ class _BodyDiagramPanel extends StatelessWidget {
       height: keyboardOpen ? 96 : 255,
       child: Center(
         child: AspectRatio(
-          // Hit areas use the same normalized coordinate space as the image.
+          // Match the asset's intrinsic ratio so normalized image coordinates
+          // remain correct at every available width and height.
           aspectRatio: 700 / 724,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.asset(
-                'assets/images/bodydiagram.webp',
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.medium,
-                errorBuilder: (context, error, stackTrace) => const Center(
-                  child: Text('Body diagram could not be loaded.'),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final diagramSize =
+                  Size(constraints.maxWidth, constraints.maxHeight);
+              return GestureDetector(
+                key: const ValueKey('body-diagram-surface'),
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (details) {
+                  final site = _nearestBodySite(
+                    sites,
+                    diagramSize,
+                    details.localPosition,
+                  );
+                  if (site != null) onTap(site.name);
+                },
+                child: Image.asset(
+                  'assets/images/bodydiagram.webp',
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.medium,
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                    child: Text('Body diagram could not be loaded.'),
+                  ),
                 ),
-              ),
-              ..._siteButtons(context),
-            ],
+              );
+            },
           ),
         ),
       ),
     );
   }
 
-  List<Widget> _siteButtons(BuildContext context) {
-    return [
-      for (var i = 0; i < sites.length; i++)
-        Align(
-          alignment: sites[i].alignment,
-          child: Tooltip(
-            message: sites[i].name,
-            child: Semantics(
-              button: true,
-              label: sites[i].name,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: () => onTap(sites[i].name),
-                child: const SizedBox(width: 44, height: 44),
-              ),
-            ),
-          ),
-        ),
-    ];
+}
+
+_BodySite? _nearestBodySite(
+  List<_BodySite> sites,
+  Size diagramSize,
+  Offset tapPosition,
+) {
+  _BodySite? nearest;
+  var nearestDistanceSquared = double.infinity;
+  for (final site in sites) {
+    final dx = tapPosition.dx - site.x * diagramSize.width;
+    final dy = tapPosition.dy - site.y * diagramSize.height;
+    final distanceSquared = dx * dx + dy * dy;
+    if (distanceSquared < nearestDistanceSquared) {
+      nearest = site;
+      nearestDistanceSquared = distanceSquared;
+    }
   }
+
+  // A small radius in logical pixels prevents nearby hotspots from competing
+  // while remaining usable on both compact and large rendered diagrams.
+  return nearestDistanceSquared <= 22 * 22 ? nearest : null;
 }
 
 class _SummarySection {

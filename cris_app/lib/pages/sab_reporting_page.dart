@@ -16,54 +16,6 @@ import '../theme.dart';
 import '../widgets/cris_map.dart';
 import '../widgets/report_form_ui.dart';
 
-/// Official municipalities and cities within the CRIS service area.
-const List<String> iloiloMunicipalities = [
-  'Ajuy',
-  'Alimodian',
-  'Anilao',
-  'Badiangan',
-  'Balasan',
-  'Banate',
-  'Barotac Nuevo',
-  'Barotac Viejo',
-  'Batad',
-  'Bingawan',
-  'Cabatuan',
-  'Calinog',
-  'Carles',
-  'Concepcion',
-  'Dingle',
-  'Dueñas',
-  'Dumangas',
-  'Estancia',
-  'Guimbal',
-  'Igbaras',
-  'Iloilo City',
-  'Janiuay',
-  'Lambunao',
-  'Leganes',
-  'Lemery',
-  'Leon',
-  'Maasin',
-  'Miagao',
-  'Mina',
-  'New Lucena',
-  'Oton',
-  'Passi City',
-  'Pavia',
-  'Pototan',
-  'San Dionisio',
-  'San Enrique',
-  'San Joaquin',
-  'San Miguel',
-  'San Rafael',
-  'Santa Barbara',
-  'Sara',
-  'Tigbauan',
-  'Tubungan',
-  'Zarraga',
-];
-
 const _behaviorOptions = [
   'Unprovoked aggression or unusual attacking behavior',
   'Repeatedly biting people, animals, or objects',
@@ -89,27 +41,15 @@ class SABReportingPage extends StatefulWidget {
 
 class _SABReportingPageState extends State<SABReportingPage> {
   final _formKey = GlobalKey<FormState>();
-  final _municipalityController = TextEditingController();
-  final _barangayController = TextEditingController();
-  final _streetController = TextEditingController();
-  final _landmarkController = TextEditingController();
-  final _animalDescriptionController = TextEditingController();
   final _animalCountController = TextEditingController(text: '1');
   final _otherAnimalController = TextEditingController();
   final _otherBehaviorController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _contactOtherController = TextEditingController();
-  final _contactDescriptionController = TextEditingController();
 
   final Set<String> _behaviors = {};
-  String? _municipality;
   String? _animalType;
   String? _ownership;
   String? _stillPresent;
   String? _immediateDanger;
-  String? _contactStatus;
-  String? _contactType;
-  String? _affectedParty;
   DateTime? _dateObserved;
   TimeOfDay? _timeObserved;
   LatLng? _observationPoint;
@@ -127,17 +67,9 @@ class _SABReportingPageState extends State<SABReportingPage> {
   void initState() {
     super.initState();
     for (final controller in [
-      _municipalityController,
-      _barangayController,
-      _streetController,
-      _landmarkController,
-      _animalDescriptionController,
       _animalCountController,
       _otherAnimalController,
       _otherBehaviorController,
-      _descriptionController,
-      _contactOtherController,
-      _contactDescriptionController,
     ]) {
       controller.addListener(_refresh);
     }
@@ -150,17 +82,9 @@ class _SABReportingPageState extends State<SABReportingPage> {
   @override
   void dispose() {
     for (final controller in [
-      _municipalityController,
-      _barangayController,
-      _streetController,
-      _landmarkController,
-      _animalDescriptionController,
       _animalCountController,
       _otherAnimalController,
       _otherBehaviorController,
-      _descriptionController,
-      _contactOtherController,
-      _contactDescriptionController,
     ]) {
       controller.dispose();
     }
@@ -178,23 +102,11 @@ class _SABReportingPageState extends State<SABReportingPage> {
       _behaviors.isNotEmpty &&
       (!_behaviors.contains('Other (Specify)') ||
           _otherBehaviorController.text.trim().isNotEmpty) &&
-      _municipality != null &&
-      _barangayController.text.trim().isNotEmpty &&
-      _streetController.text.trim().isNotEmpty &&
-      _landmarkController.text.trim().isNotEmpty &&
       _hasLocation &&
       _dateObserved != null &&
       _timeObserved != null &&
       _stillPresent != null &&
       _immediateDanger != null &&
-      _descriptionController.text.trim().isNotEmpty &&
-      _contactStatus != null &&
-      (_contactStatus != 'Yes' ||
-          (_contactType != null &&
-              _affectedParty != null &&
-              (_contactType != 'Other (Specify)' ||
-                  _contactOtherController.text.trim().isNotEmpty) &&
-              _contactDescriptionController.text.trim().isNotEmpty)) &&
       _consentGiven;
 
   Future<void> _pickDate() async {
@@ -317,17 +229,10 @@ class _SABReportingPageState extends State<SABReportingPage> {
           'Animal type': _animalValue(),
           'Number of animals': _animalCountController.text.trim(),
           'Ownership status': _ownership ?? '',
-          'Description': _animalDescriptionController.text.trim().isEmpty
-              ? 'Not provided'
-              : _animalDescriptionController.text.trim(),
         }),
         _ReviewSection(
             'Observed Behavior', {'Selected behaviors': _behaviorValue()}),
         _ReviewSection('Location', {
-          'Municipality/City': _municipality ?? '',
-          'Barangay': _barangayController.text.trim(),
-          'Street or specific location': _streetController.text.trim(),
-          'Nearest landmark': _landmarkController.text.trim(),
           'Location method': _locationMethod == 'current_location'
               ? 'Current location'
               : 'Map pin',
@@ -339,17 +244,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
           'Time or time period': _timeObserved!.format(context),
           'Animal still present': _stillPresent ?? '',
           'Immediate danger': _immediateDanger ?? '',
-          'What happened': _descriptionController.text.trim(),
-        }),
-        _ReviewSection('Possible Contact', {
-          'Contact status': _contactStatus ?? '',
-          if (_contactStatus == 'Yes')
-            'Contact type': _contactType == 'Other (Specify)'
-                ? 'Other: ${_contactOtherController.text.trim()}'
-                : _contactType ?? '',
-          if (_contactStatus == 'Yes') 'Who was affected': _affectedParty ?? '',
-          if (_contactStatus == 'Yes')
-            'Description': _contactDescriptionController.text.trim(),
         }),
         _ReviewSection('Photo Evidence', {
           'Supporting evidence':
@@ -395,8 +289,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
       final imageUrl =
           await _uploadPhoto(user.uid).timeout(const Duration(seconds: 45));
       final point = _observationPoint!;
-      final location =
-          '${_streetController.text.trim()}, ${_barangayController.text.trim()}, ${_municipality!}';
+      final location = '${point.latitude}, ${point.longitude}';
       final report = SABReport(
         lastName: '',
         firstName: '',
@@ -409,7 +302,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
         location: location,
         animalType: _animalValue(),
         behaviorObserved: _behaviorValue(),
-        description: _descriptionController.text.trim(),
+        description: '',
         photoPath: _photo?.path ?? '',
         latitude: point.latitude,
         longitude: point.longitude,
@@ -427,14 +320,9 @@ class _SABReportingPageState extends State<SABReportingPage> {
         'animalType': _animalValue(),
         'numberOfAnimals': int.parse(_animalCountController.text),
         'ownershipStatus': _ownership,
-        'animalDescription': _animalDescriptionController.text.trim(),
         'observedBehaviors': _behaviors.toList(),
         'behaviorObserved': _behaviorValue(),
         'otherBehavior': _otherBehaviorController.text.trim(),
-        'municipality': _municipality,
-        'barangay': _barangayController.text.trim(),
-        'streetOrSpecificLocation': _streetController.text.trim(),
-        'nearestLandmark': _landmarkController.text.trim(),
         'location': location,
         'latitude': point.latitude,
         'longitude': point.longitude,
@@ -443,17 +331,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
         'timeOfObservation': _timeObserved!.format(context),
         'animalStillPresent': _stillPresent,
         'immediateDanger': _immediateDanger,
-        'description': _descriptionController.text.trim(),
-        'contactStatus': _contactStatus,
-        'contactType': _contactStatus == 'Yes'
-            ? (_contactType == 'Other (Specify)'
-                ? _contactOtherController.text.trim()
-                : _contactType)
-            : null,
-        'affectedParty': _contactStatus == 'Yes' ? _affectedParty : null,
-        'contactDescription': _contactStatus == 'Yes'
-            ? _contactDescriptionController.text.trim()
-            : null,
         'imageURL': imageUrl,
         'imagePath': _photo?.path ?? '',
         'consentGiven': true,
@@ -498,8 +375,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
     if (title.contains('Behavior')) return Icons.visibility_outlined;
     if (title.contains('Location')) return Icons.location_on_outlined;
     if (title.contains('Photo')) return Icons.photo_camera_outlined;
-    if (title.contains('Review')) return Icons.fact_check_outlined;
-    if (title.contains('Contact')) return Icons.people_outline;
     return Icons.description_outlined;
   }
 
@@ -513,14 +388,8 @@ class _SABReportingPageState extends State<SABReportingPage> {
     if (title.contains('Observation')) {
       return 'Describe when the behavior happened and what you saw.';
     }
-    if (title.contains('Contact')) {
-      return 'Only basic details are needed if there was direct contact.';
-    }
     if (title.contains('Photo')) {
       return 'A photo can help, but your safety comes first.';
-    }
-    if (title.contains('Review')) {
-      return 'Check your information before submitting the report.';
     }
     return null;
   }
@@ -555,35 +424,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
         }),
       );
 
-  Widget _municipalityField() => Autocomplete<String>(
-        initialValue: TextEditingValue(text: _municipalityController.text),
-        optionsBuilder: (value) => iloiloMunicipalities.where(
-            (city) => city.toLowerCase().contains(value.text.toLowerCase())),
-        onSelected: (city) => setState(() {
-          _municipality = city;
-          _municipalityController.text = city;
-        }),
-        fieldViewBuilder: (_, controller, focusNode, __) {
-          if (controller.text != _municipalityController.text) {
-            controller.text = _municipalityController.text;
-          }
-          return TextFormField(
-              controller: controller,
-              focusNode: focusNode,
-              decoration: const InputDecoration(
-                  labelText: 'Municipality/City *',
-                  suffixIcon: Icon(Icons.search)),
-              textCapitalization: TextCapitalization.words,
-              onChanged: (text) {
-                _municipalityController.text = text;
-                if (text != _municipality) setState(() => _municipality = null);
-              },
-              validator: (_) => _municipality == null
-                  ? 'Select a municipality or city from the official list'
-                  : null);
-        },
-      );
-
   Widget _photoPreview() {
     if (kIsWeb && _webPhoto != null) {
       return Image.memory(_webPhoto!, height: 180, fit: BoxFit.cover);
@@ -606,9 +446,15 @@ class _SABReportingPageState extends State<SABReportingPage> {
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
-                            'Report only what you personally observed. You do not need to diagnose rabies.',
-                            style: TextStyle(color: Colors.black54)),
+                        ReportCheckboxTile(
+                          value: _consentGiven,
+                          onChanged: (value) =>
+                              setState(() => _consentGiven = value ?? false),
+                          title:
+                              'I confirm that this report is based on what I personally observed.',
+                          subtitle:
+                              'I understand that this is not a diagnosis of rabies.',
+                        ),
                         _section('1. Animal Information', [
                           _choice(
                               'Animal type *',
@@ -639,14 +485,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
                               _ownership,
                               (v) => setState(() => _ownership = v),
                               const ['Owned', 'Stray']),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                              controller: _animalDescriptionController,
-                              maxLines: 3,
-                              decoration: const InputDecoration(
-                                  labelText: 'Animal description (optional)',
-                                  hintText:
-                                      'Describe the animal if you can, such as its color, size, breed, or other identifying features.')),
                         ]),
                         _section(
                             '2. Observed Suspicious Behavior',
@@ -682,33 +520,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
                             instruction:
                                 'Select all behaviors you personally observed.'),
                         _section('3. Location of Observation', [
-                          _municipalityField(),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                              controller: _barangayController,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: const InputDecoration(
-                                  labelText: 'Barangay *'),
-                              validator: (v) => _required(v, 'Barangay')),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                              controller: _streetController,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: const InputDecoration(
-                                  labelText: 'Street or Specific Location *',
-                                  hintText: 'e.g., Along Rizal Street'),
-                              validator: (v) =>
-                                  _required(v, 'Street or specific location')),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                              controller: _landmarkController,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: const InputDecoration(
-                                  labelText: 'Nearest Landmark *',
-                                  hintText: 'e.g., Near the public market'),
-                              validator: (v) =>
-                                  _required(v, 'Nearest landmark')),
-                          const SizedBox(height: 16),
                           const Text('Pin the observation location *',
                               style: TextStyle(fontWeight: FontWeight.w600)),
                           const SizedBox(height: 5),
@@ -805,67 +616,8 @@ class _SABReportingPageState extends State<SABReportingPage> {
                               _immediateDanger,
                               (v) => setState(() => _immediateDanger = v),
                               const ['Yes', 'No', 'Unsure']),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                              controller: _descriptionController,
-                              maxLines: 4,
-                              textCapitalization: TextCapitalization.sentences,
-                              decoration: const InputDecoration(
-                                  labelText: 'Description of what happened *',
-                                  hintText:
-                                      'Tell us what the animal was doing and what made its behavior seem unusual.'),
-                              validator: (v) =>
-                                  _required(v, 'Description of what happened')),
                         ]),
-                        _section('5. Possible Contact or Exposure', [
-                          _choice(
-                              'Did the animal bite, scratch, or have direct contact with a person or animal? *',
-                              _contactStatus,
-                              (v) => setState(() => _contactStatus = v),
-                              const ['Yes', 'No', 'Unsure']),
-                          if (_contactStatus == 'Yes') ...[
-                            const SizedBox(height: 14),
-                            _choice('Type of contact *', _contactType,
-                                (v) => setState(() => _contactType = v), const [
-                              'Bite',
-                              'Scratch',
-                              'Saliva Contact',
-                              'Other (Specify)'
-                            ]),
-                            if (_contactType == 'Other (Specify)') ...[
-                              const SizedBox(height: 10),
-                              TextFormField(
-                                  controller: _contactOtherController,
-                                  decoration: const InputDecoration(
-                                      labelText: 'Specify contact type *'),
-                                  validator: (_) =>
-                                      _contactType == 'Other (Specify)'
-                                          ? _required(
-                                              _contactOtherController.text,
-                                              'Contact type')
-                                          : null)
-                            ],
-                            const SizedBox(height: 14),
-                            _choice(
-                                'Who was affected? *',
-                                _affectedParty,
-                                (v) => setState(() => _affectedParty = v),
-                                const ['Person', 'Animal', 'Both', 'Unknown']),
-                            const SizedBox(height: 12),
-                            TextFormField(
-                                controller: _contactDescriptionController,
-                                maxLines: 3,
-                                decoration: const InputDecoration(
-                                    labelText:
-                                        'Brief description of contact *'),
-                                validator: (_) => _contactStatus == 'Yes'
-                                    ? _required(
-                                        _contactDescriptionController.text,
-                                        'Contact description')
-                                    : null),
-                          ],
-                        ]),
-                        _section('6. Photo Evidence', [
+                        _section('5. Photo Evidence', [
                           const Text('Supporting Evidence (Optional)',
                               style: TextStyle(fontWeight: FontWeight.w600)),
                           const SizedBox(height: 6),
@@ -896,24 +648,14 @@ class _SABReportingPageState extends State<SABReportingPage> {
                                     label: const Text('Upload photo')))
                           ]),
                         ]),
-                        _section('7. Review and Submit', [
-                          ReportCheckboxTile(
-                            value: _consentGiven,
-                            onChanged: (value) =>
-                                setState(() => _consentGiven = value ?? false),
-                            title:
-                                'I confirm that this report is based on what I personally observed.',
-                            subtitle:
-                                'I understand that this is not a diagnosis of rabies.',
-                          ),
-                          if (_submitStatus != null)
-                            Padding(
+                        if (_submitStatus != null)
+                          Padding(
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: Text(_submitStatus!,
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                         color: AppColors.primary))),
-                          SizedBox(
+                        SizedBox(
                               height: 52,
                               child: FilledButton.icon(
                                   onPressed: _readyToReview && !_submitting
@@ -929,15 +671,14 @@ class _SABReportingPageState extends State<SABReportingPage> {
                                   label: Text(_submitting
                                       ? 'Submitting...'
                                       : 'Review report'))),
-                          if (!_readyToReview)
-                            const Padding(
+                        if (!_readyToReview)
+                          const Padding(
                                 padding: EdgeInsets.only(top: 8),
                                 child: Text(
                                     'Complete all required fields, provide a location, and confirm consent to review your report.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                        fontSize: 12, color: Colors.black54))),
-                        ]),
+                                      fontSize: 12, color: Colors.black54))),
                         const SizedBox(height: 24),
                       ]),
                 ))),

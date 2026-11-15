@@ -59,6 +59,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
   bool _consentGiven = false;
   bool _gettingLocation = false;
   bool _submitting = false;
+  bool _showStepErrors = false;
   int _currentStep = 0;
   String? _locationError;
   String? _submitStatus;
@@ -202,7 +203,10 @@ class _SABReportingPageState extends State<SABReportingPage> {
   }
 
   void _changeStep(int step) {
-    setState(() => _currentStep = step);
+    setState(() {
+      _currentStep = step;
+      _showStepErrors = false;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(0,
@@ -212,6 +216,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
   }
 
   void _nextStep() {
+    setState(() => _showStepErrors = true);
     if (!_formKey.currentState!.validate()) return;
     if (_currentStep == 0) {
       if (!_consentGiven) {
@@ -404,16 +409,19 @@ class _SABReportingPageState extends State<SABReportingPage> {
     ValueChanged<String?> onChanged,
     List<String> values, {
     String? helper,
+    FormFieldValidator<String>? validator,
   }) =>
       ReportChoiceGroup(
         label: label,
         value: value,
         options: values,
         helper: helper,
+        validator: validator,
         onChanged: onChanged,
       );
 
-  Widget _behaviorTile(String item) => ReportCheckboxTile(
+  Widget _behaviorTile(String item, FormFieldState<Set<String>> field) =>
+      ReportCheckboxTile(
         title: item,
         value: _behaviors.contains(item),
         onChanged: (selected) => setState(() {
@@ -425,6 +433,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
             _behaviors.remove('Unsure');
             selected == true ? _behaviors.add(item) : _behaviors.remove(item);
           }
+          field.didChange(_behaviors);
         }),
       );
 
@@ -445,32 +454,74 @@ class _SABReportingPageState extends State<SABReportingPage> {
         body: SafeArea(
             child: SingleChildScrollView(
                 controller: _scrollController,
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  16 + MediaQuery.viewInsetsOf(context).bottom,
+                ),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: _showStepErrors
+                      ? AutovalidateMode.onUserInteraction
+                      : AutovalidateMode.disabled,
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text('Step ${_currentStep + 1} of 5',
-                            style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w600)),
+                        ReportFormProgressHeader(
+                          pageTitle: const [
+                            'Animal Information',
+                            'Observed Suspicious Behavior',
+                            'Location of Observation',
+                            'Observation Details',
+                            'Photo Evidence',
+                          ][_currentStep],
+                          currentPage: _currentStep + 1,
+                          totalPages: 5,
+                        ),
                         if (_currentStep == 0) ...[
-                        ReportCheckboxTile(
-                          value: _consentGiven,
-                          onChanged: (value) =>
-                              setState(() => _consentGiven = value ?? false),
-                          title:
-                              'I confirm that this report is based on what I personally observed.',
-                          subtitle:
-                              'I understand that this is not a diagnosis of rabies.',
+                        FormField<bool>(
+                          initialValue: _consentGiven,
+                          validator: (value) => value == true
+                              ? null
+                              : 'Please confirm that this report is based on what you personally observed.',
+                          builder: (field) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ReportCheckboxTile(
+                                value: _consentGiven,
+                                hasError: field.hasError,
+                                onChanged: (value) {
+                                  setState(
+                                      () => _consentGiven = value ?? false);
+                                  field.didChange(_consentGiven);
+                                },
+                                title:
+                                    'I confirm that this report is based on what I personally observed.',
+                                subtitle:
+                                    'I understand that this is not a diagnosis of rabies.',
+                              ),
+                              if (field.hasError)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 10, top: 6),
+                                  child: Text(field.errorText!,
+                                      style: const TextStyle(
+                                          color: AppColors.danger,
+                                          fontSize: 12)),
+                                ),
+                            ],
+                          ),
                         ),
                         _section('1. Animal Information', [
                           _choice(
                               'Animal type *',
                               _animalType,
                               (v) => setState(() => _animalType = v),
-                              const ['Dog', 'Cat', 'Other']),
+                              const ['Dog', 'Cat', 'Other'],
+                              validator: (value) => value == null
+                                  ? 'Animal type is required'
+                                  : null),
                           if (_animalType == 'Other') ...[
                             const SizedBox(height: 12),
                             TextFormField(
@@ -494,14 +545,52 @@ class _SABReportingPageState extends State<SABReportingPage> {
                               'Ownership status *',
                               _ownership,
                               (v) => setState(() => _ownership = v),
-                              const ['Owned', 'Stray']),
+                              const ['Owned', 'Stray'],
+                              validator: (value) => value == null
+                                  ? 'Ownership status is required'
+                                  : null),
                         ]),
                         ],
                         if (_currentStep == 1)
                         _section(
                             '2. Observed Suspicious Behavior',
                             [
-                              ..._behaviorOptions.map(_behaviorTile),
+                              FormField<Set<String>>(
+                                  initialValue: _behaviors,
+                                  validator: (_) => _behaviors.isEmpty
+                                      ? 'Select at least one observed behavior'
+                                      : null,
+                                  builder: (state) => Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: state.hasError
+                                                  ? Border.all(
+                                                      color: AppColors.danger)
+                                                  : null,
+                                            ),
+                                            child: Column(
+                                              children: _behaviorOptions
+                                                  .map((item) =>
+                                                      _behaviorTile(item, state))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          if (state.hasError)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  top: 6),
+                                              child: Text(state.errorText!,
+                                                  style: const TextStyle(
+                                                      color: AppColors.danger,
+                                                      fontSize: 12)),
+                                            ),
+                                        ],
+                                      )),
                               if (_behaviors.contains('Other (Specify)'))
                                 TextFormField(
                                     controller: _otherBehaviorController,
@@ -515,19 +604,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
                                                 _otherBehaviorController.text,
                                                 'Other behavior')
                                             : null),
-                              FormField<Set<String>>(
-                                  initialValue: _behaviors,
-                                  validator: (_) => _behaviors.isEmpty
-                                      ? 'Select at least one observed behavior'
-                                      : null,
-                                  builder: (state) => state.hasError
-                                      ? Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 8),
-                                          child: Text(state.errorText!,
-                                              style: const TextStyle(
-                                                  color: AppColors.danger)))
-                                      : const SizedBox.shrink()),
                             ],
                             instruction:
                                 'Select all behaviors you personally observed.'),
@@ -541,19 +617,27 @@ class _SABReportingPageState extends State<SABReportingPage> {
                               style: TextStyle(
                                   color: Colors.black54, fontSize: 12)),
                           const SizedBox(height: 10),
-                          CRISMap(
-                              center: _observationPoint ??
-                                  const LatLng(10.7202, 122.5621),
-                              zoom: _observationPoint == null ? 10 : 16,
-                              onTap: _pinLocation,
-                              markers: _observationPoint == null
-                                  ? const []
-                                  : [
-                                      CRISMapMarker(
-                                          label: 'Observed animal',
-                                          position: _observationPoint!,
-                                          color: AppColors.danger)
-                                    ]),
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: _locationError == null
+                                  ? null
+                                  : Border.all(color: AppColors.danger),
+                            ),
+                            child: CRISMap(
+                                center: _observationPoint ??
+                                    const LatLng(10.7202, 122.5621),
+                                zoom: _observationPoint == null ? 10 : 16,
+                                onTap: _pinLocation,
+                                markers: _observationPoint == null
+                                    ? const []
+                                    : [
+                                        CRISMapMarker(
+                                            label: 'Observed animal',
+                                            position: _observationPoint!,
+                                            color: AppColors.danger)
+                                      ]),
+                          ),
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
                               onPressed:
@@ -573,21 +657,13 @@ class _SABReportingPageState extends State<SABReportingPage> {
                                     'Location provided: ${_locationMethod == 'current_location' ? 'Current location' : 'Map pin'} (${_observationPoint!.latitude.toStringAsFixed(5)}, ${_observationPoint!.longitude.toStringAsFixed(5)})',
                                     style: const TextStyle(
                                         color: Colors.black54, fontSize: 12))),
-                          if (_observationPoint == null &&
-                              _locationError == null)
-                            const Padding(
-                                padding: EdgeInsets.only(top: 8),
-                                child: Text(
-                                    'Please provide the location where the animal was observed by either placing a pin on the map or using your current location.',
-                                    style: TextStyle(
-                                        color: AppColors.danger,
-                                        fontSize: 12))),
                           if (_locationError != null)
                             Padding(
-                                padding: const EdgeInsets.only(top: 8),
+                                padding: const EdgeInsets.only(top: 6),
                                 child: Text(_locationError!,
                                     style: const TextStyle(
-                                        color: AppColors.danger))),
+                                        color: AppColors.danger,
+                                        fontSize: 12))),
                         ]),
                         if (_currentStep == 3)
                         _section('4. Observation Details', [

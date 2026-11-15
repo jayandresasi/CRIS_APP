@@ -3,6 +3,32 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 
 /// Shared visual building blocks for the two community reporting flows.
+class ReportFormProgressHeader extends StatelessWidget {
+  const ReportFormProgressHeader({
+    super.key,
+    required this.pageTitle,
+    required this.currentPage,
+    required this.totalPages,
+  });
+
+  final String pageTitle;
+  final int currentPage;
+  final int totalPages;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '$pageTitle · Page $currentPage of $totalPages',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(value: currentPage / totalPages),
+        ],
+      );
+}
+
 class ReportFormSection extends StatelessWidget {
   const ReportFormSection({
     super.key,
@@ -139,7 +165,9 @@ class ReportChoiceGroup extends StatelessWidget {
                   selectedColor: AppColors.cream,
                   backgroundColor: const Color(0xFFF7F7F7),
                   side: BorderSide(
-                    color: selected
+                    color: state.hasError
+                        ? AppColors.danger
+                        : selected
                         ? AppColors.primary
                         : const Color(0xFFD6DCE3),
                   ),
@@ -172,12 +200,14 @@ class ReportCheckboxTile extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.subtitle,
+    this.hasError = false,
   });
 
   final String title;
   final bool value;
   final ValueChanged<bool?> onChanged;
   final String? subtitle;
+  final bool hasError;
 
   @override
   Widget build(BuildContext context) => CheckboxListTile(
@@ -189,7 +219,11 @@ class ReportCheckboxTile extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
           side: BorderSide(
-            color: value ? AppColors.primary : const Color(0xFFE0E5EA),
+            color: hasError
+                ? AppColors.danger
+                : value
+                    ? AppColors.primary
+                    : const Color(0xFFE0E5EA),
           ),
         ),
         controlAffinity: ListTileControlAffinity.leading,

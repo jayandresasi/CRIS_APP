@@ -4,14 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:latlong2/latlong.dart';
 
 import '../models/report.dart';
 import '../theme.dart';
-import '../widgets/cris_map.dart';
+import '../widgets/report_form_ui.dart';
 import 'login_page.dart';
 
 const List<String> iloiloMunicipalities = [
@@ -75,94 +73,6 @@ const List<String> _suspiciousBehaviors = [
   'Unknown',
 ];
 
-class _BodySite {
-  final String name;
-  /// Coordinates normalized to the 700x724 source diagram (origin at top-left).
-  final double x;
-  final double y;
-
-  const _BodySite(this.name, this.x, this.y);
-}
-
-const List<_BodySite> _frontBodySites = [
-  // Front-facing figure is on the left of the image: anatomical left is on
-  // the viewer's right. Values are image fractions, not screen Alignments.
-  _BodySite('Head / Scalp', .25, .09),
-  _BodySite('Face', .25, .13),
-  _BodySite('Left Ear', .28, .12),
-  _BodySite('Right Ear', .22, .12),
-  _BodySite('Neck', .25, .19),
-  _BodySite('Left Shoulder', .34, .25),
-  _BodySite('Right Shoulder', .16, .25),
-  _BodySite('Chest', .25, .32),
-  _BodySite('Abdomen', .25, .44),
-  _BodySite('Pelvic / Groin', .25, .53),
-  _BodySite('Left Hip', .32, .50),
-  _BodySite('Right Hip', .18, .50),
-  _BodySite('Left Upper Arm', .39, .31),
-  _BodySite('Right Upper Arm', .11, .31),
-  _BodySite('Left Elbow', .40, .38),
-  _BodySite('Right Elbow', .10, .38),
-  _BodySite('Left Forearm', .42, .46),
-  _BodySite('Right Forearm', .08, .46),
-  _BodySite('Left Wrist', .44, .52),
-  _BodySite('Right Wrist', .06, .52),
-  _BodySite('Left Hand', .46, .56),
-  _BodySite('Right Hand', .04, .56),
-  _BodySite('Left Fingers', .46, .59),
-  _BodySite('Right Fingers', .04, .59),
-  _BodySite('Left Thigh', .30, .64),
-  _BodySite('Right Thigh', .20, .64),
-  _BodySite('Left Knee', .30, .74),
-  _BodySite('Right Knee', .20, .74),
-  _BodySite('Left Lower Leg', .29, .84),
-  _BodySite('Right Lower Leg', .21, .84),
-  _BodySite('Left Ankle', .29, .90),
-  _BodySite('Right Ankle', .21, .90),
-  _BodySite('Left Foot', .32, .92),
-  _BodySite('Right Foot', .18, .92),
-  _BodySite('Left Toes', .34, .93),
-  _BodySite('Right Toes', .16, .93),
-];
-
-const List<_BodySite> _backBodySites = [
-  // Back-facing figure is on the right. Anatomical left and right now align
-  // with viewer left and right, respectively.
-  _BodySite('Head / Scalp', .74, .09),
-  _BodySite('Left Ear', .71, .12),
-  _BodySite('Right Ear', .77, .12),
-  _BodySite('Neck', .74, .19),
-  _BodySite('Left Shoulder', .65, .25),
-  _BodySite('Right Shoulder', .83, .25),
-  _BodySite('Upper Back', .74, .32),
-  _BodySite('Left Upper Arm', .60, .31),
-  _BodySite('Right Upper Arm', .88, .31),
-  _BodySite('Left Elbow', .59, .38),
-  _BodySite('Right Elbow', .89, .38),
-  _BodySite('Left Forearm', .57, .46),
-  _BodySite('Right Forearm', .91, .46),
-  _BodySite('Left Wrist', .55, .52),
-  _BodySite('Right Wrist', .93, .52),
-  _BodySite('Left Hand', .53, .56),
-  _BodySite('Right Hand', .95, .56),
-  _BodySite('Lower Back', .74, .47),
-  _BodySite('Left Hip', .68, .50),
-  _BodySite('Right Hip', .80, .50),
-  _BodySite('Buttocks', .74, .53),
-  _BodySite('Left Thigh', .68, .64),
-  _BodySite('Right Thigh', .80, .64),
-  _BodySite('Left Knee', .68, .74),
-  _BodySite('Right Knee', .80, .74),
-  _BodySite('Left Lower Leg', .69, .84),
-  _BodySite('Right Lower Leg', .79, .84),
-  _BodySite('Left Ankle', .70, .90),
-  _BodySite('Right Ankle', .78, .90),
-  _BodySite('Left Foot', .70, .92),
-  _BodySite('Right Foot', .78, .92),
-];
-
-const LatLng _iloiloCenter = LatLng(10.7202, 122.5621);
-
 class ReportingPage extends StatefulWidget {
   const ReportingPage({super.key});
 
@@ -172,6 +82,7 @@ class ReportingPage extends StatefulWidget {
 
 class _ReportingPageState extends State<ReportingPage> {
   final _formKey = GlobalKey<FormState>();
+  final _formScrollController = ScrollController();
   final _picker = ImagePicker();
 
   final _lastNameController = TextEditingController();
@@ -189,31 +100,19 @@ class _ReportingPageState extends State<ReportingPage> {
   final _municipalityController = TextEditingController();
   final _barangayController = TextEditingController();
   final _streetController = TextEditingController();
-  final _dateController = TextEditingController();
-  final _timeController = TextEditingController();
-  final _incidentMunicipalityController = TextEditingController();
-  final _incidentBarangayController = TextEditingController();
-  final _incidentProvinceController = TextEditingController(text: 'Iloilo');
-  final _incidentStreetController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _symptomDetailsController = TextEditingController();
   final _allergyDetailsController = TextEditingController();
   final _medicalProblemsController = TextEditingController();
   final _currentMedicationsController = TextEditingController();
   final _otherMedicalInfoController = TextEditingController();
   final _previousVaccinationDetailsController = TextEditingController();
-  final _woundDescriptionController = TextEditingController();
   final _otherAnimalController = TextEditingController();
   final _breedController = TextEditingController();
   final _colorController = TextEditingController();
   final _animalAgeController = TextEditingController();
-  final _otherExposureController = TextEditingController();
   final _washMinutesController = TextEditingController();
   final _otherSubstanceController = TextEditingController();
 
   DateTime? _dateOfBirth;
-  DateTime? _dateOfBite;
-  TimeOfDay? _timeOfBite;
   String? _sex;
   String? _patientVaccinated;
   String? _allergiesKnown;
@@ -223,27 +122,17 @@ class _ReportingPageState extends State<ReportingPage> {
   String _animalAlive = 'Unknown';
   String _animalAvailable = 'Unknown';
   String? _animalVaccinated;
-  String _exposureType = 'Bite';
-  String? _bleeding;
   String? _washedWound;
   String _substance = 'None';
-  bool _multipleSites = false;
-  bool _showFrontBody = true;
-  String? _bodyDiagramError;
   bool _certified = false;
   bool _reviewing = false;
   int _reviewPage = 0;
   bool _isSubmitting = false;
+  bool _showPageErrors = false;
   bool _isLoadingProfile = false;
   bool _reportingForSelf = false;
-  LatLng? _incidentPin;
-  File? _woundPhoto;
   File? _animalPhoto;
   final Set<String> _behaviors = {};
-  final Set<String> _symptoms = {};
-  final Set<String> _woundTypes = {};
-  final List<String> _bodySites = [];
-  final _bodySiteCountController = TextEditingController();
 
   bool get _patientFieldsReadOnly => _reportingForSelf || _isLoadingProfile;
   bool get _isMinor => (int.tryParse(_ageController.text.trim()) ?? 18) < 18;
@@ -266,30 +155,21 @@ class _ReportingPageState extends State<ReportingPage> {
       _municipalityController,
       _barangayController,
       _streetController,
-      _dateController,
-      _timeController,
-      _incidentMunicipalityController,
-      _incidentBarangayController,
-      _incidentProvinceController,
-      _incidentStreetController,
-      _descriptionController,
-      _symptomDetailsController,
       _allergyDetailsController,
       _medicalProblemsController,
       _currentMedicationsController,
       _otherMedicalInfoController,
       _previousVaccinationDetailsController,
-      _woundDescriptionController,
       _otherAnimalController,
       _breedController,
       _colorController,
       _animalAgeController,
-      _otherExposureController,
       _washMinutesController,
       _otherSubstanceController,
     ]) {
       controller.dispose();
     }
+    _formScrollController.dispose();
     super.dispose();
   }
 
@@ -402,164 +282,19 @@ class _ReportingPageState extends State<ReportingPage> {
     });
   }
 
-  Future<void> _pickBiteDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _dateOfBite ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (picked == null) return;
-    setState(() {
-      _dateOfBite = picked;
-      _dateController.text = _formatDate(picked);
-    });
-  }
-
-  Future<void> _pickBiteTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _timeOfBite ?? TimeOfDay.now(),
-    );
-    if (picked == null) return;
-    setState(() {
-      _timeOfBite = picked;
-      _timeController.text = picked.format(context);
-    });
-  }
-
-  Future<void> _pickPhoto(_EvidenceType type) async {
+  Future<void> _pickPhoto() async {
     final picked = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 80,
       maxWidth: 1600,
     );
     if (picked == null) return;
-    setState(() {
-      if (type == _EvidenceType.wound) {
-        _woundPhoto = File(picked.path);
-      } else {
-        _animalPhoto = File(picked.path);
-      }
-    });
-  }
-
-  int? get _bodySiteTargetCount =>
-      int.tryParse(_bodySiteCountController.text.trim());
-
-  void _toggleMultipleSites(bool? value) {
-    setState(() {
-      _multipleSites = value ?? false;
-      if (_multipleSites && _bodySiteCountController.text.trim().isEmpty) {
-        _bodySiteCountController.text = '2';
-      }
-      if (!_multipleSites && _bodySites.length > 1) {
-        final first = _bodySites.first;
-        _bodySites
-          ..clear()
-          ..add(first);
-      }
-      _bodyDiagramError = null;
-    });
-  }
-
-  void _selectBodySite(String site) {
-    setState(() {
-      if (_multipleSites) {
-        if (_bodySites.contains(site)) {
-          _bodySites.remove(site);
-        } else {
-          final maxSites = _bodySiteTargetCount;
-          if (maxSites != null && _bodySites.length >= maxSites) {
-            _showSnackBar(
-                'You have already selected the maximum number of bite sites.');
-            return;
-          }
-          _bodySites.add(site);
-        }
-      } else {
-        if (_bodySites.isEmpty || _bodySites.first != site) {
-          _bodySites
-            ..clear()
-            ..add(site);
-        }
-      }
-      _bodyDiagramError = null;
-    });
-  }
-
-  void _undoBodySelection() {
-    if (_bodySites.isEmpty) return;
-    setState(() {
-      _bodySites.removeLast();
-      _bodyDiagramError = null;
-    });
-  }
-
-  void _removeBodySite(String site) {
-    setState(() {
-      _bodySites.remove(site);
-      _bodyDiagramError = null;
-    });
-  }
-
-  void _updateBodySiteCount(String value) {
-    final count = int.tryParse(value);
-    if (count == null || count < 2) return;
-    if (count > 20) {
-      _bodySiteCountController.text = '20';
-      _bodySiteCountController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _bodySiteCountController.text.length),
-      );
-    }
-    if (_bodySites.length > count) {
-      setState(() {
-        _bodySites.removeRange(count, _bodySites.length);
-      });
-    }
-    _bodyDiagramError = null;
-  }
-
-  String? _validateSiteCount(String? value) {
-    if (!_multipleSites) return null;
-    if (value == null || value.trim().isEmpty) {
-      return 'Enter the number of bite/scratch sites.';
-    }
-    final count = int.tryParse(value.trim());
-    if (count == null) {
-      return 'Enter a valid number between 2 and 20.';
-    }
-    if (count < 2 || count > 20) {
-      return 'Value must be between 2 and 20.';
-    }
-    return null;
+    setState(() => _animalPhoto = File(picked.path));
   }
 
   void _continueToReview() {
+    setState(() => _showPageErrors = true);
     if (!_formKey.currentState!.validate()) return;
-    if (_bodySites.isEmpty) {
-      _showSnackBar('Select at least one affected body part.');
-      return;
-    }
-    if (_multipleSites) {
-      final maxSites = _bodySiteTargetCount;
-      if (maxSites == null) {
-        _showSnackBar('Enter the number of bite/scratch sites.');
-        return;
-      }
-      if (_bodySites.length != maxSites) {
-        _showSnackBar('Please select exactly $maxSites body sites.');
-        setState(() {
-          _bodyDiagramError =
-              'You must select exactly $maxSites sites before continuing.';
-        });
-        return;
-      }
-    }
-    if (_bleeding == null) {
-      _showSnackBar('Please indicate if there was bleeding.');
-      return;
-    }
     if (_washedWound == null) {
       _showSnackBar('Please indicate if the wound was washed.');
       return;
@@ -631,14 +366,14 @@ class _ReportingPageState extends State<ReportingPage> {
         gender: _sex ?? '',
         contactNumber: _mobileController.text.trim(),
         address: _addressSummary,
-        dateOfIncident: _dateController.text.trim(),
-        timeOfIncident: _timeController.text.trim(),
-        locationOfIncident: _incidentLocationSummary,
-        exposureType: _selectedExposure,
+        dateOfIncident: '',
+        timeOfIncident: '',
+        locationOfIncident: '',
+        exposureType: '',
         animalSpecies: _selectedAnimalType,
         animalOwnership: _ownership,
         animalVaccinationStatus: _animalVaccinated ?? '',
-        incidentDescription: _descriptionController.text.trim(),
+        incidentDescription: '',
         firstAidGiven: _firstAidSummary,
         patientVaccinationStatus: _patientVaccinated ?? '',
         reportedAt: submittedAt,
@@ -674,18 +409,6 @@ class _ReportingPageState extends State<ReportingPage> {
           'guardianName': _guardianNameController.text.trim(),
           'guardianContactNumber': _guardianContactController.text.trim(),
         },
-        'incident': {
-          'date': _dateController.text.trim(),
-          'time': _timeController.text.trim(),
-          'province': _incidentProvinceController.text.trim(),
-          'municipality': _incidentMunicipalityController.text.trim(),
-          'barangay': _incidentBarangayController.text.trim(),
-          'streetPurokLandmark': _incidentStreetController.text.trim(),
-          'description': _descriptionController.text.trim(),
-          'latitude': _incidentPin?.latitude,
-          'longitude': _incidentPin?.longitude,
-          'location': _incidentLocationSummary,
-        },
         'animal': {
           'type': _selectedAnimalType,
           'species': _selectedAnimalType,
@@ -698,17 +421,6 @@ class _ReportingPageState extends State<ReportingPage> {
           'availableForObservation': _animalAvailable,
           'vaccinatedAgainstRabies': _animalVaccinated,
           'suspiciousBehaviors': _behaviors.toList()..sort(),
-        },
-        'exposure': {
-          'type': _selectedExposure,
-          'symptoms': _symptoms.toList()..sort(),
-          'symptomDetails': _symptomDetailsController.text.trim(),
-          'woundTypes': _woundTypes.toList()..sort(),
-          'woundDescription': _woundDescriptionController.text.trim(),
-          'bodyPartsAffected': _bodySites.toList()..sort(),
-          'multipleSites': _multipleSites,
-          'woundCount': _multipleSites ? _bodySiteTargetCount : 1,
-          'bleeding': _bleeding,
         },
         'firstAid': {
           'washedWithSoapAndWater': _washedWound,
@@ -757,11 +469,6 @@ class _ReportingPageState extends State<ReportingPage> {
     final evidence = <String, String>{};
     final storage =
         FirebaseStorage.instance.ref('bite_reports/$userId/$caseId');
-    if (_woundPhoto != null) {
-      final ref = storage.child('bite_wound.jpg');
-      await ref.putFile(_woundPhoto!);
-      evidence['woundPhotoUrl'] = await ref.getDownloadURL();
-    }
     if (_animalPhoto != null) {
       final ref = storage.child('animal.jpg');
       await ref.putFile(_animalPhoto!);
@@ -784,22 +491,9 @@ class _ReportingPageState extends State<ReportingPage> {
         _provinceController.text.trim(),
       ].where((value) => value.isNotEmpty).join(', ');
 
-  String get _incidentLocationSummary => [
-        _incidentStreetController.text.trim(),
-        _incidentBarangayController.text.trim(),
-        _incidentMunicipalityController.text.trim(),
-        _incidentProvinceController.text.trim(),
-        if (_incidentPin != null)
-          '${_incidentPin!.latitude.toStringAsFixed(6)}, ${_incidentPin!.longitude.toStringAsFixed(6)}',
-      ].where((value) => value.isNotEmpty).join(', ');
-
   String get _selectedAnimalType => _animalType == 'Others'
       ? _otherAnimalController.text.trim()
       : _animalType;
-
-  String get _selectedExposure => _exposureType == 'Other'
-      ? _otherExposureController.text.trim()
-      : _exposureType;
 
   String get _selectedSubstance => _substance == 'Other'
       ? _otherSubstanceController.text.trim()
@@ -945,50 +639,6 @@ class _ReportingPageState extends State<ReportingPage> {
     );
   }
 
-  Widget _checkboxGrid({
-    required List<String> options,
-    required Set<String> selected,
-    required ValueChanged<String> onChanged,
-  }) {
-    final rows = <Widget>[];
-    for (var i = 0; i < options.length; i += 2) {
-      Widget tile(String option) => InkWell(
-            onTap: () => onChanged(option),
-            child: SizedBox(
-              height: 40,
-              child: Row(
-                children: [
-                  Checkbox(
-                    value: selected.contains(option),
-                    visualDensity: const VisualDensity(vertical: -4),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    onChanged: (_) => onChanged(option),
-                  ),
-                  Expanded(
-                    child: Text(
-                      option,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-      rows.add(Row(children: [
-        Expanded(child: tile(options[i])),
-        const SizedBox(width: 8),
-        Expanded(
-          child: i + 1 < options.length
-              ? tile(options[i + 1])
-              : const SizedBox.shrink(),
-        ),
-      ]));
-    }
-    return Column(children: rows);
-  }
-
   Widget _yesNoUnknown({
     required String label,
     required String selected,
@@ -1028,24 +678,32 @@ class _ReportingPageState extends State<ReportingPage> {
                     style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
               const SizedBox(width: 8),
-              SegmentedButton<String>(
-                segments: values
-                    .map((value) =>
-                        ButtonSegment(value: value, label: Text(value)))
-                    .toList(),
-                selected: groupValue == null ? <String>{} : {groupValue},
-                emptySelectionAllowed: true,
-                onSelectionChanged: (next) {
-                  final value = next.first;
-                  onChanged(value);
-                  field.didChange(value);
-                },
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: field.hasError
+                      ? Border.all(color: AppColors.danger)
+                      : null,
+                ),
+                child: SegmentedButton<String>(
+                  segments: values
+                      .map((value) =>
+                          ButtonSegment(value: value, label: Text(value)))
+                      .toList(),
+                  selected: groupValue == null ? <String>{} : {groupValue},
+                  emptySelectionAllowed: true,
+                  onSelectionChanged: (next) {
+                    final value = next.first;
+                    onChanged(value);
+                    field.didChange(value);
+                  },
+                ),
               ),
             ],
           ),
           if (field.hasError)
             Padding(
-              padding: const EdgeInsets.only(left: 12),
+              padding: const EdgeInsets.only(top: 6),
               child: Text(
                 field.errorText!,
                 style: TextStyle(
@@ -1059,145 +717,12 @@ class _ReportingPageState extends State<ReportingPage> {
     );
   }
 
-  Widget _photoPicker(String label, File? file, _EvidenceType type) {
+  Widget _photoPicker(String label, File? file) {
     return OutlinedButton.icon(
-      onPressed: () => _pickPhoto(type),
+      onPressed: _pickPhoto,
       icon:
           Icon(file == null ? Icons.add_photo_alternate_outlined : Icons.check),
       label: Text(file == null ? label : '$label selected'),
-    );
-  }
-
-  Widget _mapPicker() {
-    final marker = _incidentPin;
-    return KeyedSubtree(
-      key: const ValueKey('incident-map'),
-      child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Tap the map to pin the exact incident location.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 10),
-        CRISMap(
-          center: marker ?? _iloiloCenter,
-          zoom: marker == null ? 10 : 15,
-          height: 120,
-          markers: [
-            if (marker != null)
-              CRISMapMarker(
-                label: 'Bite incident location',
-                position: marker,
-                color: AppColors.danger,
-              ),
-          ],
-          onTap: (point) => setState(() => _incidentPin = point),
-        ),
-        if (marker != null) ...[
-          const SizedBox(height: 10),
-          Text(
-            'GPS Location: ${marker.latitude.toStringAsFixed(6)}, ${marker.longitude.toStringAsFixed(6)}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ],
-      ],
-      ),
-    );
-  }
-
-  Widget _bodyDiagram() {
-    return KeyedSubtree(
-      key: const ValueKey('body-diagram'),
-      child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CheckboxListTile(
-          value: _multipleSites,
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Multiple Sites'),
-          onChanged: _toggleMultipleSites,
-        ),
-        if (_multipleSites) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: TextFormField(
-              controller: _bodySiteCountController,
-              decoration: const InputDecoration(
-                labelText: 'Number of Bite/Scratch Sites',
-                helperText: 'Enter a value between 2 and 20',
-              ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              onChanged: _updateBodySiteCount,
-              validator: _validateSiteCount,
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-        SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(value: true, label: Text('Front')),
-            ButtonSegment(value: false, label: Text('Back')),
-          ],
-          selected: {_showFrontBody},
-          onSelectionChanged: (value) =>
-              setState(() => _showFrontBody = value.first),
-        ),
-        const SizedBox(height: 10),
-        _BodyDiagramPanel(
-          sites: _showFrontBody ? _frontBodySites : _backBodySites,
-          onTap: _selectBodySite,
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: _bodySites.isNotEmpty ? _undoBodySelection : null,
-                icon: const Icon(Icons.undo_outlined),
-                label: const Text('Undo'),
-              ),
-            ),
-            if (_bodySites.isNotEmpty) ...[
-              const SizedBox(width: 12),
-              Text(
-                '${_bodySites.length} selected',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ],
-        ),
-        if (_bodySites.isNotEmpty)
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              for (final site in _bodySites)
-                InputChip(
-                  label: Text(site),
-                  onDeleted: () => _removeBodySite(site),
-                ),
-            ],
-          )
-        else
-          Text(
-            'Tap a region on the diagram to select a site.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        if (_bodyDiagramError != null) ...[
-          const SizedBox(height: 10),
-          Text(
-            _bodyDiagramError!,
-            style: TextStyle(
-                color: Theme.of(context).colorScheme.error, fontSize: 12),
-          ),
-        ],
-      ],
-      ),
     );
   }
 
@@ -1230,38 +755,12 @@ class _ReportingPageState extends State<ReportingPage> {
           _SummaryItem('Observed Behavior', _behaviors.join(', ')),
           _SummaryItem('Animal Photo', _animalPhoto == null ? '' : 'Selected'),
         ]),
-        _SummarySection('Bite Incident Information', 3, [
-          _SummaryItem('Date of Exposure', _dateController.text),
-          _SummaryItem('Est. Time of Exposure', _timeController.text),
-          _SummaryItem('Incident Location', _incidentLocationSummary),
-          _SummaryItem('What Happened', _descriptionController.text),
-          _SummaryItem(
-              'GPS Pin',
-              _incidentPin == null
-                  ? ''
-                  : '${_incidentPin!.latitude}, ${_incidentPin!.longitude}'),
-        ]),
-        _SummarySection('Symptoms and Wound Information', 4, [
-          _SummaryItem('Symptoms', _symptoms.join(', ')),
-          _SummaryItem('Other Symptoms', _symptomDetailsController.text),
-          _SummaryItem('Type of Exposure', _selectedExposure),
-          _SummaryItem('Type of Wound', _woundTypes.join(', ')),
-          _SummaryItem('Bleeding', _bleeding ?? ''),
-          _SummaryItem('Wound Photo', _woundPhoto == null ? '' : 'Selected'),
-          _SummaryItem(
-              'Additional Wound Description', _woundDescriptionController.text),
-        ]),
-        _SummarySection('Site of Bite', 5, [
-          _SummaryItem('Body Parts Affected', _bodySites.join(', ')),
-          _SummaryItem(
-              'Number of Wounds', '${_multipleSites ? _bodySiteTargetCount ?? 0 : 1}'),
-        ]),
-        _SummarySection('First Aid Performed', 6, [
+        _SummarySection('First Aid Performed', 3, [
           _SummaryItem('Washed with Soap and Water', _washedWound ?? ''),
           _SummaryItem('Wash Minutes', _washMinutesController.text),
           _SummaryItem('Substance Applied', _selectedSubstance),
         ]),
-        _SummarySection('Relevant Medical History', 6, [
+        _SummarySection('Relevant Medical History', 3, [
           _SummaryItem(
               'Patient Rabies Vaccination Status', _patientVaccinated ?? ''),
           _SummaryItem('Previous Vaccination Details',
@@ -1628,183 +1127,7 @@ class _ReportingPageState extends State<ReportingPage> {
           ),
         ),
         const SizedBox(height: 10),
-        _photoPicker('Upload Photo of the Animal (Optional)', _animalPhoto,
-            _EvidenceType.animal),
-      ];
-
-  List<Widget> _incidentFields() => [
-        _sectionTitle('Bite Incident Information', Icons.place_outlined),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _dateController,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Date of Exposure',
-                  suffixIcon: Icon(Icons.calendar_today_outlined),
-                ),
-                onTap: _pickBiteDate,
-                validator: (value) => _required(value, 'Date of Exposure'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                controller: _timeController,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Est. Time of Exposure',
-                  suffixIcon: Icon(Icons.access_time_outlined),
-                ),
-                onTap: _pickBiteTime,
-                validator: (value) => _required(value, 'Est. Time of Exposure'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(children: [
-          Expanded(
-            child: TextFormField(
-              controller: _incidentProvinceController,
-              decoration: const InputDecoration(labelText: 'Province'),
-              validator: (value) => _required(value, 'Province'),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _municipalityField(
-              controller: _incidentMunicipalityController,
-              label: 'City / Municipality',
-              dependentBarangayController: _incidentBarangayController,
-            ),
-          ),
-        ]),
-        const SizedBox(height: 10),
-        Row(children: [
-          Expanded(
-            child: TextFormField(
-              controller: _incidentBarangayController,
-              decoration: const InputDecoration(labelText: 'Barangay'),
-              textCapitalization: TextCapitalization.words,
-              validator: (value) => _required(value, 'Incident Barangay'),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextFormField(
-              controller: _incidentStreetController,
-              decoration: const InputDecoration(labelText: 'Street / Purok'),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-          ),
-        ]),
-        const SizedBox(height: 10),
-        _mapPicker(),
-        const SizedBox(height: 10),
-        TextFormField(
-          controller: _descriptionController,
-          decoration:
-              const InputDecoration(labelText: 'Tell us what happened.'),
-          maxLines: 2,
-          textCapitalization: TextCapitalization.sentences,
-          validator: (value) => _required(value, 'Tell us what happened.'),
-        ),
-      ];
-
-  List<Widget> _symptomFields() => [
-        _sectionTitle('Symptoms and Wound Information', Icons.healing_outlined),
-        const Text('Symptoms after the incident (select all that apply)'),
-        _checkboxGrid(
-          options: const [
-            'Pain at the affected area',
-            'Redness',
-            'Swelling',
-            'Itching',
-            'Fever',
-            'None',
-            'Unsure',
-          ],
-          selected: _symptoms,
-          onChanged: (symptom) => setState(() {
-            if (_symptoms.contains(symptom)) {
-              _symptoms.remove(symptom);
-            } else if (symptom == 'None' || symptom == 'Unsure') {
-              _symptoms
-                ..clear()
-                ..add(symptom);
-            } else {
-              _symptoms
-                ..remove('None')
-                ..remove('Unsure')
-                ..add(symptom);
-            }
-          }),
-        ),
-        TextFormField(
-          controller: _symptomDetailsController,
-          decoration:
-              const InputDecoration(labelText: 'Other symptoms (optional)'),
-          textCapitalization: TextCapitalization.sentences,
-          maxLines: 1,
-        ),
-        _choiceChips(
-          values: const ['Bite', 'Scratch', 'Saliva Contact', 'Other'],
-          selected: _exposureType,
-          onSelected: (value) => _exposureType = value,
-        ),
-        if (_exposureType == 'Other') ...[
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: _otherExposureController,
-            decoration: const InputDecoration(labelText: 'Other (Specify)'),
-            validator: (value) => _required(value, 'Exposure type'),
-          ),
-        ],
-        const Text('Type of Wound (select all that apply)',
-            style: TextStyle(fontWeight: FontWeight.w600)),
-        _checkboxGrid(
-          options: const [
-            'Puncture',
-            'Laceration / cut',
-            'Abrasion / scratch',
-            'Other',
-          ],
-          selected: _woundTypes,
-          onChanged: (type) => setState(() {
-            if (_woundTypes.contains(type)) {
-              _woundTypes.remove(type);
-            } else {
-              _woundTypes.add(type);
-            }
-          }),
-        ),
-        Row(children: [
-          _photoPicker('Upload Wound Photo', _woundPhoto, _EvidenceType.wound),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextFormField(
-              controller: _woundDescriptionController,
-              decoration:
-                  const InputDecoration(labelText: 'Wound description'),
-              textCapitalization: TextCapitalization.sentences,
-              maxLines: 1,
-            ),
-          ),
-        ]),
-        _radioLine(
-          label: 'Was there bleeding?',
-          groupValue: _bleeding,
-          values: const ['Yes', 'No'],
-          onChanged: (value) => setState(() => _bleeding = value),
-        ),
-      ];
-
-  List<Widget> _siteFields() => [
-        _sectionTitle('Site of Bite', Icons.accessibility_new_outlined),
-        const Text('Select all affected areas on the body diagram.'),
-        _bodyDiagram(),
+        _photoPicker('Upload Photo of the Animal (Optional)', _animalPhoto),
       ];
 
   List<Widget> _firstAidFields() => [
@@ -1967,9 +1290,6 @@ class _ReportingPageState extends State<ReportingPage> {
         _FormPage('Patient Information', _patientFields()),
         _FormPage('Animal Information', _animalFields()),
         _FormPage('Suspicious Animal Behavior', _animalBehaviorFields()),
-        _FormPage('Bite Incident Information', _incidentFields()),
-        _FormPage('Symptoms and Wound Information', _symptomFields()),
-        _FormPage('Site of Bite', _siteFields()),
         _FormPage('Remaining Information', _remainingFields()),
       ];
 
@@ -1979,8 +1299,13 @@ class _ReportingPageState extends State<ReportingPage> {
       _continueToReview();
       return;
     }
+    setState(() => _showPageErrors = true);
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _currentPage++);
+    setState(() {
+      _currentPage++;
+      _showPageErrors = false;
+    });
+    _formScrollController.jumpTo(0);
   }
 
   int _firstPageForSection(String title) {
@@ -1999,6 +1324,9 @@ class _ReportingPageState extends State<ReportingPage> {
     final page = pages[_currentPage];
     return Form(
       key: _formKey,
+      autovalidateMode: _showPageErrors
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
       child: Column(
         children: [
           Padding(
@@ -2006,59 +1334,64 @@ class _ReportingPageState extends State<ReportingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  '${page.title} · Page $step of ${pages.length}',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ReportFormProgressHeader(
+                  pageTitle: page.title,
+                  currentPage: step,
+                  totalPages: pages.length,
                 ),
-                const SizedBox(height: 10),
-                LinearProgressIndicator(value: step / pages.length),
               ],
             ),
           ),
           Expanded(
-            child: Padding(
+            child: SingleChildScrollView(
+              controller: _formScrollController,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: page.fields,
-              ),
-            ),
-          ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Row(
                 children: [
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: _currentPage > 0
-                          ? OutlinedButton(
-                        onPressed: () {
-                          FocusManager.instance.primaryFocus?.unfocus();
-                          setState(() => _currentPage--);
-                        },
-                        child: const Text('Back'),
-                      )
-                          : const SizedBox.shrink(),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: SizedBox(
-                        width: 140,
-                        child: FilledButton(
-                          onPressed: _goToNextPage,
-                          child: Text(_currentPage == pages.length - 1
-                              ? 'Submit'
-                              : 'Next'),
-                        ),
+                  ...page.fields,
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
+                      child: Row(
+                        children: [
+                          if (_currentPage > 0) ...[
+                            Expanded(
+                              child: SizedBox(
+                                height: 52,
+                                child: OutlinedButton(
+                                  onPressed: () {
+                                    FocusManager.instance.primaryFocus
+                                        ?.unfocus();
+                                    setState(() => _currentPage--);
+                                    _formScrollController.jumpTo(0);
+                                  },
+                                  child: const Text('Back'),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          Expanded(
+                            child: SizedBox(
+                              height: 52,
+                              child: FilledButton.icon(
+                                onPressed: _goToNextPage,
+                                icon: Icon(_currentPage == pages.length - 1
+                                    ? Icons.fact_check_outlined
+                                    : Icons.arrow_forward),
+                                label: Text(_currentPage == pages.length - 1
+                                    ? 'Submit'
+                                    : 'Next'),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const Expanded(child: SizedBox.shrink()),
                 ],
               ),
             ),
@@ -2188,8 +1521,6 @@ class _ReportingPageState extends State<ReportingPage> {
       );
 }
 
-enum _EvidenceType { wound, animal }
-
 class _FormPage {
   const _FormPage(this.title, this.fields);
 
@@ -2202,83 +1533,6 @@ class _ReviewPage {
 
   final String title;
   final List<_SummaryItem> items;
-}
-
-class _BodyDiagramPanel extends StatelessWidget {
-  const _BodyDiagramPanel({
-    required this.sites,
-    required this.onTap,
-  });
-
-  final List<_BodySite> sites;
-  final ValueChanged<String> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    return SizedBox(
-      // Keep the active field and bottom navigation reachable when the site
-      // count keyboard is open. The image and its normalized hit areas resize
-      // together when the keyboard is dismissed.
-      height: keyboardOpen ? 96 : 255,
-      child: Center(
-        child: AspectRatio(
-          // Match the asset's intrinsic ratio so normalized image coordinates
-          // remain correct at every available width and height.
-          aspectRatio: 700 / 724,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final diagramSize =
-                  Size(constraints.maxWidth, constraints.maxHeight);
-              return GestureDetector(
-                key: const ValueKey('body-diagram-surface'),
-                behavior: HitTestBehavior.opaque,
-                onTapDown: (details) {
-                  final site = _nearestBodySite(
-                    sites,
-                    diagramSize,
-                    details.localPosition,
-                  );
-                  if (site != null) onTap(site.name);
-                },
-                child: Image.asset(
-                  'assets/images/bodydiagram.webp',
-                  fit: BoxFit.fill,
-                  filterQuality: FilterQuality.medium,
-                  errorBuilder: (context, error, stackTrace) => const Center(
-                    child: Text('Body diagram could not be loaded.'),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-}
-
-_BodySite? _nearestBodySite(
-  List<_BodySite> sites,
-  Size diagramSize,
-  Offset tapPosition,
-) {
-  _BodySite? nearest;
-  var nearestDistanceSquared = double.infinity;
-  for (final site in sites) {
-    final dx = tapPosition.dx - site.x * diagramSize.width;
-    final dy = tapPosition.dy - site.y * diagramSize.height;
-    final distanceSquared = dx * dx + dy * dy;
-    if (distanceSquared < nearestDistanceSquared) {
-      nearest = site;
-      nearestDistanceSquared = distanceSquared;
-    }
-  }
-
-  // A small radius in logical pixels prevents nearby hotspots from competing
-  // while remaining usable on both compact and large rendered diagrams.
-  return nearestDistanceSquared <= 22 * 22 ? nearest : null;
 }
 
 class _SummarySection {

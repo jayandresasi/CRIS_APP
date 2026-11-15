@@ -41,6 +41,7 @@ class SABReportingPage extends StatefulWidget {
 
 class _SABReportingPageState extends State<SABReportingPage> {
   final _formKey = GlobalKey<FormState>();
+  final _scrollController = ScrollController();
   final _animalCountController = TextEditingController(text: '1');
   final _otherAnimalController = TextEditingController();
   final _otherBehaviorController = TextEditingController();
@@ -48,8 +49,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
   final Set<String> _behaviors = {};
   String? _animalType;
   String? _ownership;
-  String? _stillPresent;
-  String? _immediateDanger;
   DateTime? _dateObserved;
   TimeOfDay? _timeObserved;
   LatLng? _observationPoint;
@@ -60,12 +59,16 @@ class _SABReportingPageState extends State<SABReportingPage> {
   bool _consentGiven = false;
   bool _gettingLocation = false;
   bool _submitting = false;
+  int _currentStep = 0;
   String? _locationError;
   String? _submitStatus;
 
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _dateObserved = now;
+    _timeObserved = TimeOfDay.fromDateTime(now);
     for (final controller in [
       _animalCountController,
       _otherAnimalController,
@@ -88,6 +91,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
     ]) {
       controller.dispose();
     }
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -105,8 +109,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
       _hasLocation &&
       _dateObserved != null &&
       _timeObserved != null &&
-      _stillPresent != null &&
-      _immediateDanger != null &&
       _consentGiven;
 
   Future<void> _pickDate() async {
@@ -199,57 +201,42 @@ class _SABReportingPageState extends State<SABReportingPage> {
     return number == null || number < 1 ? 'Enter at least one animal' : null;
   }
 
-  Future<void> _review() async {
+  void _changeStep(int step) {
+    setState(() => _currentStep = step);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(0,
+            duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+      }
+    });
+  }
+
+  void _nextStep() {
     if (!_formKey.currentState!.validate()) return;
-    if (!_hasLocation) {
+    if (_currentStep == 0) {
+      if (!_consentGiven) {
+        _snack('Please confirm your consent before submitting.');
+        return;
+      }
+      if (_animalType == null ||
+          (_animalType == 'Other' &&
+              _otherAnimalController.text.trim().isEmpty) ||
+          int.tryParse(_animalCountController.text) == null ||
+          int.tryParse(_animalCountController.text)! < 1 ||
+          _ownership == null) {
+        _snack(
+          'Complete all required fields, provide the observation location, and confirm consent before submitting.',
+        );
+        return;
+      }
+    }
+    if (_currentStep == 2 && !_hasLocation) {
       setState(() => _locationError =
           'Please provide the location where the animal was observed by either placing a pin on the map or using your current location.');
       return;
     }
-    if (!_consentGiven) {
-      _snack('Please confirm your consent before submitting.');
-      return;
-    }
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _ReviewSheet(
-        sections: _reviewSections(),
-        onEdit: () => Navigator.pop(context),
-        onSubmit: () async {
-          Navigator.pop(context);
-          await _submit();
-        },
-      ),
-    );
+    _changeStep(_currentStep + 1);
   }
-
-  List<_ReviewSection> _reviewSections() => [
-        _ReviewSection('Animal Information', {
-          'Animal type': _animalValue(),
-          'Number of animals': _animalCountController.text.trim(),
-          'Ownership status': _ownership ?? '',
-        }),
-        _ReviewSection(
-            'Observed Behavior', {'Selected behaviors': _behaviorValue()}),
-        _ReviewSection('Location', {
-          'Location method': _locationMethod == 'current_location'
-              ? 'Current location'
-              : 'Map pin',
-          'Map location':
-              '${_observationPoint!.latitude.toStringAsFixed(6)}, ${_observationPoint!.longitude.toStringAsFixed(6)}',
-        }),
-        _ReviewSection('Observation Details', {
-          'Date observed': _formatDate(_dateObserved!),
-          'Time or time period': _timeObserved!.format(context),
-          'Animal still present': _stillPresent ?? '',
-          'Immediate danger': _immediateDanger ?? '',
-        }),
-        _ReviewSection('Photo Evidence', {
-          'Supporting evidence':
-              _photo == null ? 'None provided' : 'Photo attached',
-        }),
-      ];
 
   Future<String?> _uploadPhoto(String uid) async {
     if (_photo == null) return null;
@@ -268,9 +255,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
   }
 
   Future<void> _submit() async {
-    // The review sheet is only opened for complete reports, but retain this
-    // guard so a report can never be submitted without the required location
-    // and consent if this method is invoked another way in the future.
     if (!_readyToReview) {
       _snack(
         'Complete all required fields, provide the observation location, and confirm consent before submitting.',
@@ -329,8 +313,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
         'locationSource': _locationMethod,
         'dateOfObservation': _formatDate(_dateObserved!),
         'timeOfObservation': _timeObserved!.format(context),
-        'animalStillPresent': _stillPresent,
-        'immediateDanger': _immediateDanger,
         'imageURL': imageUrl,
         'imagePath': _photo?.path ?? '',
         'consentGiven': true,
@@ -340,7 +322,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
       }).timeout(const Duration(seconds: 30));
       if (!mounted) return;
       _snack('SAB report submitted successfully.');
-      Navigator.pop(context);
+      _resetForm();
     } on TimeoutException {
       _snack(
           'Submission is taking too long. Please check your connection and try again.');
@@ -356,6 +338,28 @@ class _SABReportingPageState extends State<SABReportingPage> {
         });
       }
     }
+  }
+
+  void _resetForm() {
+    final now = DateTime.now();
+    _animalCountController.text = '1';
+    _otherAnimalController.clear();
+    _otherBehaviorController.clear();
+    setState(() {
+      _behaviors.clear();
+      _animalType = null;
+      _ownership = null;
+      _dateObserved = now;
+      _timeObserved = TimeOfDay.fromDateTime(now);
+      _observationPoint = null;
+      _locationMethod = null;
+      _photo = null;
+      _webPhoto = null;
+      _devicePhoto = null;
+      _consentGiven = false;
+      _locationError = null;
+    });
+    _changeStep(0);
   }
 
   void _snack(String message) => ScaffoldMessenger.of(context)
@@ -440,12 +444,18 @@ class _SABReportingPageState extends State<SABReportingPage> {
         appBar: AppBar(title: const Text('Report Suspicious Animal Behavior')),
         body: SafeArea(
             child: SingleChildScrollView(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 child: Form(
                   key: _formKey,
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        Text('Step ${_currentStep + 1} of 5',
+                            style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600)),
+                        if (_currentStep == 0) ...[
                         ReportCheckboxTile(
                           value: _consentGiven,
                           onChanged: (value) =>
@@ -486,6 +496,8 @@ class _SABReportingPageState extends State<SABReportingPage> {
                               (v) => setState(() => _ownership = v),
                               const ['Owned', 'Stray']),
                         ]),
+                        ],
+                        if (_currentStep == 1)
                         _section(
                             '2. Observed Suspicious Behavior',
                             [
@@ -519,6 +531,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                             ],
                             instruction:
                                 'Select all behaviors you personally observed.'),
+                        if (_currentStep == 2)
                         _section('3. Location of Observation', [
                           const Text('Pin the observation location *',
                               style: TextStyle(fontWeight: FontWeight.w600)),
@@ -576,6 +589,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
                                     style: const TextStyle(
                                         color: AppColors.danger))),
                         ]),
+                        if (_currentStep == 3)
                         _section('4. Observation Details', [
                           TextFormField(
                               readOnly: true,
@@ -604,19 +618,8 @@ class _SABReportingPageState extends State<SABReportingPage> {
                               validator: (_) => _timeObserved == null
                                   ? 'Time or time period is required'
                                   : null),
-                          const SizedBox(height: 12),
-                          _choice(
-                              'Is the animal still in the reported location? *',
-                              _stillPresent,
-                              (v) => setState(() => _stillPresent = v),
-                              const ['Yes', 'No', 'Unknown']),
-                          const SizedBox(height: 12),
-                          _choice(
-                              'Is the animal currently posing an immediate danger to people or animals? *',
-                              _immediateDanger,
-                              (v) => setState(() => _immediateDanger = v),
-                              const ['Yes', 'No', 'Unsure']),
                         ]),
+                        if (_currentStep == 4)
                         _section('5. Photo Evidence', [
                           const Text('Supporting Evidence (Optional)',
                               style: TextStyle(fontWeight: FontWeight.w600)),
@@ -648,34 +651,55 @@ class _SABReportingPageState extends State<SABReportingPage> {
                                     label: const Text('Upload photo')))
                           ]),
                         ]),
-                        if (_submitStatus != null)
+                        if (_currentStep == 4 && _submitStatus != null)
                           Padding(
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: Text(_submitStatus!,
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                         color: AppColors.primary))),
-                        SizedBox(
-                              height: 52,
-                              child: FilledButton.icon(
-                                  onPressed: _readyToReview && !_submitting
-                                      ? _review
-                                      : null,
-                                  icon: _submitting
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2))
-                                      : const Icon(Icons.fact_check_outlined),
-                                  label: Text(_submitting
-                                      ? 'Submitting...'
-                                      : 'Review report'))),
-                        if (!_readyToReview)
+                        const SizedBox(height: 20),
+                        Row(children: [
+                          if (_currentStep > 0) ...[
+                            Expanded(
+                                child: SizedBox(
+                                    height: 52,
+                                    child: OutlinedButton(
+                                        onPressed: () =>
+                                            _changeStep(_currentStep - 1),
+                                        child: const Text('Back')))),
+                            const SizedBox(width: 12),
+                          ],
+                          Expanded(
+                              child: SizedBox(
+                                  height: 52,
+                                  child: _currentStep < 4
+                                      ? FilledButton.icon(
+                                          onPressed: _nextStep,
+                                          icon: const Icon(Icons.arrow_forward),
+                                          label: const Text('Next'))
+                                      : FilledButton.icon(
+                                          onPressed:
+                                              _readyToReview && !_submitting
+                                                  ? _submit
+                                                  : null,
+                                          icon: _submitting
+                                              ? const SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child: CircularProgressIndicator(
+                                                      strokeWidth: 2))
+                                              : const Icon(
+                                                  Icons.fact_check_outlined),
+                                          label: Text(_submitting
+                                              ? 'Submitting...'
+                                              : 'Submit Report')))),
+                        ]),
+                        if (_currentStep == 4 && !_readyToReview)
                           const Padding(
                                 padding: EdgeInsets.only(top: 8),
                                 child: Text(
-                                    'Complete all required fields, provide a location, and confirm consent to review your report.',
+                                    'Complete all required fields, provide a location, and confirm consent to submit your report.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 12, color: Colors.black54))),
@@ -683,58 +707,4 @@ class _SABReportingPageState extends State<SABReportingPage> {
                       ]),
                 ))),
       );
-}
-
-class _ReviewSection {
-  const _ReviewSection(this.title, this.values);
-  final String title;
-  final Map<String, String> values;
-}
-
-class _ReviewSheet extends StatelessWidget {
-  const _ReviewSheet(
-      {required this.sections, required this.onEdit, required this.onSubmit});
-  final List<_ReviewSection> sections;
-  final VoidCallback onEdit;
-  final Future<void> Function() onSubmit;
-
-  @override
-  Widget build(BuildContext context) => SafeArea(
-          child: DraggableScrollableSheet(
-        initialChildSize: .88,
-        minChildSize: .55,
-        maxChildSize: .95,
-        builder: (_, controller) => Column(children: [
-          const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Review your report',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
-          Expanded(
-            child: ListView(
-              controller: controller,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: sections
-                  .map(
-                    (section) => ReportReviewCard(
-                      title: section.title,
-                      values: section.values,
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-          Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(children: [
-                Expanded(
-                    child: OutlinedButton(
-                        onPressed: onEdit, child: const Text('Edit'))),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: FilledButton(
-                        onPressed: onSubmit,
-                        child: const Text('Submit report')))
-              ])),
-        ]),
-      ));
 }

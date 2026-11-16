@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -212,6 +212,7 @@ class _ReportingPageState extends State<ReportingPage> {
       final parts = fullName.trim().split(RegExp(r'\s+'));
       final dob = (data['dob'] ?? data['birthDate'] ?? '') as String;
       final parsedDob = DateTime.tryParse(dob);
+      final civilStatus = data['civilStatus'];
       setState(() {
         _firstNameController.text = parts.isNotEmpty ? parts.first : '';
         _lastNameController.text =
@@ -220,6 +221,9 @@ class _ReportingPageState extends State<ReportingPage> {
         _dobController.text = parsedDob == null ? '' : _formatDate(parsedDob);
         _ageController.text = _calculateAge(parsedDob)?.toString() ?? '';
         _sex = _normalizedSex((data['sex'] ?? data['gender'] ?? '') as String);
+        _civilStatusController.text = civilStatus is String
+            ? _normalizedCivilStatus(civilStatus) ?? ''
+            : '';
         _mobileController.text =
             (data['contactNumber'] ?? data['contact_number'] ?? '') as String;
         _streetController.text = (data['address'] ?? '') as String;
@@ -550,6 +554,13 @@ class _ReportingPageState extends State<ReportingPage> {
 
   String? _normalizedSex(String value) {
     if (value == 'Male' || value == 'Female') return value;
+    return null;
+  }
+
+  String? _normalizedCivilStatus(String value) {
+    if (value == 'Single' || value == 'Married' || value == 'Divorced') {
+      return value;
+    }
     return null;
   }
 
@@ -898,11 +909,20 @@ class _ReportingPageState extends State<ReportingPage> {
         validator: (value) => value == null ? 'Sex is required' : null,
       );
 
-  Widget _patientCivilStatusField() => TextFormField(
-        controller: _civilStatusController,
-        readOnly: _patientFieldsReadOnly,
+  Widget _patientCivilStatusField() => DropdownButtonFormField<String>(
+        initialValue: _normalizedCivilStatus(_civilStatusController.text),
+        isExpanded: true,
         decoration: const InputDecoration(labelText: 'Civil Status'),
-        textCapitalization: TextCapitalization.words,
+        items: const [
+          DropdownMenuItem(value: 'Single', child: Text('Single')),
+          DropdownMenuItem(value: 'Married', child: Text('Married')),
+          DropdownMenuItem(value: 'Divorced', child: Text('Divorced')),
+        ],
+        onChanged: _patientFieldsReadOnly
+            ? null
+            : (value) => setState(
+                  () => _civilStatusController.text = value ?? '',
+                ),
       );
 
   Widget _patientDobField() => TextFormField(

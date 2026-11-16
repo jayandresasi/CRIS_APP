@@ -1,6 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 
@@ -121,6 +121,11 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'CRIS App',
         theme: AppTheme.lightTheme(),
+        builder: (context, child) {
+          // Required while dependencies still use Flutter's legacy Material API.
+          // ignore: deprecated_member_use
+          return MaterialUiCompatibilityBridge(child: child!);
+        },
         home: const LoginPage(),
         routes: {'/dashboard': (context) => const DashboardPage()},
       ),

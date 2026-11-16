@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../theme.dart';
 
@@ -24,6 +24,11 @@ class LocalDataRecoveryApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'CRIS App',
       theme: AppTheme.lightTheme(),
+      builder: (context, child) {
+        // Required while dependencies still use Flutter's legacy Material API.
+        // ignore: deprecated_member_use
+        return MaterialUiCompatibilityBridge(child: child!);
+      },
       home: LocalDataRecoveryPage(
         failedBoxName: failedBoxName,
         canBackUpReports: canBackUpReports,

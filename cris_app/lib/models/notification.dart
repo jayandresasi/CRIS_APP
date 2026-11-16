@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Represents a notification in the app.
 /// Named AppNotification to avoid shadowing Flutter's built-in Notification class.

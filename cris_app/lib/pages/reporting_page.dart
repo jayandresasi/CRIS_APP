@@ -790,27 +790,35 @@ class _ReportingPageState extends State<ReportingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         toolbarHeight: 56,
         title: const Text('Animal Bite Report',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
       ),
       body: SafeArea(
-        child: _reviewing
-            ? _buildReview()
-            : Theme(
-                data: Theme.of(context).copyWith(
-                  inputDecorationTheme:
-                      Theme.of(context).inputDecorationTheme.copyWith(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 12,
+        child: Column(
+          children: [
+            Expanded(
+              child: _reviewing
+                  ? _buildReview()
+                  : Theme(
+                      data: Theme.of(context).copyWith(
+                        inputDecorationTheme:
+                            Theme.of(context).inputDecorationTheme.copyWith(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 12,
+                          ),
+                        ),
+                      ),
+                      child: _buildForm(),
                     ),
-                  ),
-                ),
-                child: _buildForm(),
-              ),
+            ),
+            _reviewing ? _buildReviewNavigation() : _buildFormNavigation(),
+          ],
+        ),
       ),
     );
   }
@@ -1365,53 +1373,12 @@ class _ReportingPageState extends State<ReportingPage> {
           Expanded(
             child: SingleChildScrollView(
               controller: _formScrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ...page.fields,
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
-                      child: Row(
-                        children: [
-                          if (_currentPage > 0) ...[
-                            Expanded(
-                              child: SizedBox(
-                                height: 52,
-                                child: OutlinedButton(
-                                  onPressed: () {
-                                    FocusManager.instance.primaryFocus
-                                        ?.unfocus();
-                                    setState(() => _currentPage--);
-                                    _formScrollController.jumpTo(0);
-                                  },
-                                  child: const Text('Back'),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                          ],
-                          Expanded(
-                            child: SizedBox(
-                              height: 52,
-                              child: FilledButton.icon(
-                                onPressed: _goToNextPage,
-                                icon: Icon(_currentPage == pages.length - 1
-                                    ? Icons.fact_check_outlined
-                                    : Icons.arrow_forward),
-                                label: Text(_currentPage == pages.length - 1
-                                    ? 'Submit'
-                                    : 'Next'),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -1420,6 +1387,21 @@ class _ReportingPageState extends State<ReportingPage> {
       ),
     );
   }
+
+  Widget _buildFormNavigation() => ReportFormNavigation(
+        onBack: _currentPage > 0
+            ? () {
+                FocusManager.instance.primaryFocus?.unfocus();
+                setState(() => _currentPage--);
+                _formScrollController.jumpTo(0);
+              }
+            : null,
+        onNext: _goToNextPage,
+        nextLabel: _currentPage == _formPages.length - 1 ? 'Submit' : 'Next',
+        nextIcon: _currentPage == _formPages.length - 1
+            ? Icons.fact_check_outlined
+            : Icons.arrow_forward,
+      );
 
   Widget _buildReview() {
     final pages = _reviewPages;
@@ -1467,47 +1449,27 @@ class _ReportingPageState extends State<ReportingPage> {
                   ),
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton(
-                      onPressed: () => setState(() {
-                        if (_reviewPage == 0) {
-                          _reviewing = false;
-                          _currentPage = _formPages.length - 1;
-                        } else {
-                          _reviewPage--;
-                        }
-                      }),
-                      child: const Text('Back'),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Center(
-                    child: SizedBox(
-                      width: 140,
-                      child: FilledButton(
-                        onPressed: isCertification
-                            ? (_isSubmitting ? null : _confirmAndSubmit)
-                            : () => setState(() => _reviewPage++),
-                        child: Text(isCertification ? 'Submit' : 'Next'),
-                      ),
-                    ),
-                  ),
-                ),
-                const Expanded(child: SizedBox.shrink()),
-              ],
-            ),
-          ),
-        ),
       ],
+    );
+  }
+
+  Widget _buildReviewNavigation() {
+    final isCertification = _reviewPage == _reviewPages.length;
+    return ReportFormNavigation(
+      onBack: () => setState(() {
+        if (_reviewPage == 0) {
+          _reviewing = false;
+          _currentPage = _formPages.length - 1;
+        } else {
+          _reviewPage--;
+        }
+      }),
+      onNext: isCertification ? _confirmAndSubmit : () => setState(() => _reviewPage++),
+      nextLabel: isCertification ? 'Submit' : 'Next',
+      nextIcon: isCertification
+          ? Icons.fact_check_outlined
+          : Icons.arrow_forward,
+      nextEnabled: !isCertification || !_isSubmitting,
     );
   }
 

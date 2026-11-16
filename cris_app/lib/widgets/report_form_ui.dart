@@ -29,6 +29,71 @@ class ReportFormProgressHeader extends StatelessWidget {
       );
 }
 
+/// Consistent bottom navigation for the multi-page reporting forms.
+class ReportFormNavigation extends StatelessWidget {
+  const ReportFormNavigation({
+    super.key,
+    required this.onNext,
+    required this.nextLabel,
+    required this.nextIcon,
+    this.onBack,
+    this.nextEnabled = true,
+    this.nextIconWidget,
+  });
+
+  final VoidCallback? onBack;
+  final VoidCallback onNext;
+  final String nextLabel;
+  final IconData nextIcon;
+  final bool nextEnabled;
+  final Widget? nextIconWidget;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Row(
+            children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: onBack == null
+                        ? const SizedBox.shrink()
+                        : OutlinedButton(
+                            onPressed: onBack,
+                            style: const ButtonStyle(
+                              padding: WidgetStatePropertyAll(
+                                EdgeInsets.symmetric(horizontal: 12),
+                              ),
+                            ),
+                            child: const Text('Back'),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: nextEnabled ? onNext : null,
+                      style: const ButtonStyle(
+                        padding: WidgetStatePropertyAll(
+                          EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                      ),
+                      icon: nextIconWidget ?? Icon(nextIcon),
+                      label: Text(nextLabel),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+
+}
+
 class ReportFormSection extends StatelessWidget {
   const ReportFormSection({
     super.key,

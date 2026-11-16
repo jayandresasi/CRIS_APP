@@ -450,17 +450,13 @@ class _SABReportingPageState extends State<SABReportingPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: AppColors.background,
+        resizeToAvoidBottomInset: true,
         appBar: AppBar(title: const Text('Report Suspicious Animal Behavior')),
         body: SafeArea(
-            child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  16,
-                  16,
-                  16 + MediaQuery.viewInsetsOf(context).bottom,
-                ),
-                child: Form(
+            child: Column(
+              children: [
+                Expanded(
+                  child: Form(
                   key: _formKey,
                   autovalidateMode: _showStepErrors
                       ? AutovalidateMode.onUserInteraction
@@ -468,6 +464,13 @@ class _SABReportingPageState extends State<SABReportingPage> {
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
                         ReportFormProgressHeader(
                           pageTitle: const [
                             'Animal Information',
@@ -734,43 +737,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                         color: AppColors.primary))),
-                        const SizedBox(height: 20),
-                        Row(children: [
-                          if (_currentStep > 0) ...[
-                            Expanded(
-                                child: SizedBox(
-                                    height: 52,
-                                    child: OutlinedButton(
-                                        onPressed: () =>
-                                            _changeStep(_currentStep - 1),
-                                        child: const Text('Back')))),
-                            const SizedBox(width: 12),
-                          ],
-                          Expanded(
-                              child: SizedBox(
-                                  height: 52,
-                                  child: _currentStep < 4
-                                      ? FilledButton.icon(
-                                          onPressed: _nextStep,
-                                          icon: const Icon(Icons.arrow_forward),
-                                          label: const Text('Next'))
-                                      : FilledButton.icon(
-                                          onPressed:
-                                              _readyToReview && !_submitting
-                                                  ? _submit
-                                                  : null,
-                                          icon: _submitting
-                                              ? const SizedBox(
-                                                  width: 18,
-                                                  height: 18,
-                                                  child: CircularProgressIndicator(
-                                                      strokeWidth: 2))
-                                              : const Icon(
-                                                  Icons.fact_check_outlined),
-                                          label: Text(_submitting
-                                              ? 'Submitting...'
-                                              : 'Submit Report')))),
-                        ]),
                         if (_currentStep == 4 && !_readyToReview)
                           const Padding(
                                 padding: EdgeInsets.only(top: 8),
@@ -780,7 +746,36 @@ class _SABReportingPageState extends State<SABReportingPage> {
                                     style: TextStyle(
                                       fontSize: 12, color: Colors.black54))),
                         const SizedBox(height: 24),
+                              ],
+                            ),
+                          ),
+                        ),
                       ]),
-                ))),
+                )),
+                _buildNavigation(),
+              ],
+            ),
+          ),
+      );
+
+  Widget _buildNavigation() => ReportFormNavigation(
+        onBack: _currentStep > 0
+            ? () => _changeStep(_currentStep - 1)
+            : null,
+        onNext: _currentStep < 4 ? _nextStep : _submit,
+        nextLabel: _currentStep < 4
+            ? 'Next'
+            : (_submitting ? 'Submitting...' : 'Submit Report'),
+        nextIcon: _currentStep < 4
+            ? Icons.arrow_forward
+            : Icons.fact_check_outlined,
+        nextEnabled: _currentStep < 4 || (_readyToReview && !_submitting),
+        nextIconWidget: _currentStep == 4 && _submitting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : null,
       );
 }

@@ -7,7 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'src/csv_picker_stub.dart'
     if (dart.library.html) 'src/csv_picker_web.dart' as csv_picker;
@@ -118,7 +118,9 @@ class _AbtcImporterPageState extends State<_AbtcImporterPage> {
       );
       if (mounted) setState(() {});
     } on FirebaseAuthException catch (error) {
-      if (mounted) setState(() => _error = 'Sign in failed: ${error.message ?? error.code}');
+      if (mounted)
+        setState(
+            () => _error = 'Sign in failed: ${error.message ?? error.code}');
     } finally {
       if (mounted) setState(() => _signingIn = false);
     }
@@ -154,7 +156,8 @@ class _AbtcImporterPageState extends State<_AbtcImporterPage> {
       });
       final existing = await Future.wait(
         parsed.records.map(
-          (record) => _firestore.collection('abtcs').doc(record.documentId).get(),
+          (record) =>
+              _firestore.collection('abtcs').doc(record.documentId).get(),
         ),
       );
       if (!mounted) return;
@@ -163,7 +166,8 @@ class _AbtcImporterPageState extends State<_AbtcImporterPage> {
           totalRows: parsed.totalRows,
           validRows: parsed.records.length,
           invalidRows: parsed.invalidRows.length,
-          existingDocuments: existing.where((document) => document.exists).length,
+          existingDocuments:
+              existing.where((document) => document.exists).length,
         );
       });
     } on FormatException catch (error) {
@@ -214,7 +218,8 @@ class _AbtcImporterPageState extends State<_AbtcImporterPage> {
       // Firestore batches support up to 500 operations. This also keeps the
       // utility safe if a later CSV contains more real records.
       for (var start = 0; start < _records.length; start += 450) {
-        final end = start + 450 > _records.length ? _records.length : start + 450;
+        final end =
+            start + 450 > _records.length ? _records.length : start + 450;
         final batch = _firestore.batch();
         for (final record in _records.sublist(start, end)) {
           batch.set(
@@ -227,7 +232,8 @@ class _AbtcImporterPageState extends State<_AbtcImporterPage> {
       }
       if (!mounted) return;
       setState(() {
-        _success = 'Import complete: ${_records.length} valid CSV rows were written '
+        _success =
+            'Import complete: ${_records.length} valid CSV rows were written '
             'to `abtcs`. ${_invalidRows.length} invalid row(s) were skipped.';
       });
     } catch (error) {
@@ -268,7 +274,8 @@ class _AbtcImporterPageState extends State<_AbtcImporterPage> {
                   child: Text(_signingIn ? 'Signing in...' : 'Sign in'),
                 ),
               ] else ...[
-                Text('Signed in as ${FirebaseAuth.instance.currentUser!.email ?? 'authorized user'}'),
+                Text(
+                    'Signed in as ${FirebaseAuth.instance.currentUser!.email ?? 'authorized user'}'),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton(
@@ -279,47 +286,53 @@ class _AbtcImporterPageState extends State<_AbtcImporterPage> {
                     child: const Text('Sign out'),
                   ),
                 ),
-              const Text(
-                'Choose the real ABTC/ABC CSV. Nothing is uploaded until you review '
-                'the Firestore summary and confirm the import.',
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _preparing || _uploading ? null : _chooseCsv,
-                icon: const Icon(Icons.upload_file_outlined),
-                label: Text(_preparing ? 'Preparing summary...' : 'Choose CSV file'),
-              ),
-              if (_fileName != null) ...[
-                const SizedBox(height: 16),
-                Text('Selected file: $_fileName'),
-              ],
-              if (_summary != null) ...[
-                const SizedBox(height: 20),
-                _SummaryCard(summary: _summary!),
+                const Text(
+                  'Choose the real ABTC/ABC CSV. Nothing is uploaded until you review '
+                  'the Firestore summary and confirm the import.',
+                ),
                 const SizedBox(height: 16),
                 FilledButton.icon(
-                  onPressed: _uploading ? null : _confirmAndUpload,
-                  icon: const Icon(Icons.cloud_upload_outlined),
-                  label: Text(_uploading ? 'Uploading...' : 'Review and confirm upload'),
+                  onPressed: _preparing || _uploading ? null : _chooseCsv,
+                  icon: const Icon(Icons.upload_file_outlined),
+                  label: Text(
+                      _preparing ? 'Preparing summary...' : 'Choose CSV file'),
                 ),
-              ],
-              if (_invalidRows.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Text('Skipped invalid rows', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                ..._invalidRows.map((message) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(message),
-                    )),
-              ],
-              if (_success != null) ...[
-                const SizedBox(height: 20),
-                Text(_success!, style: const TextStyle(color: Colors.green)),
-              ],
+                if (_fileName != null) ...[
+                  const SizedBox(height: 16),
+                  Text('Selected file: $_fileName'),
+                ],
+                if (_summary != null) ...[
+                  const SizedBox(height: 20),
+                  _SummaryCard(summary: _summary!),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: _uploading ? null : _confirmAndUpload,
+                    icon: const Icon(Icons.cloud_upload_outlined),
+                    label: Text(_uploading
+                        ? 'Uploading...'
+                        : 'Review and confirm upload'),
+                  ),
+                ],
+                if (_invalidRows.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text('Skipped invalid rows',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  ..._invalidRows.map((message) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(message),
+                      )),
+                ],
+                if (_success != null) ...[
+                  const SizedBox(height: 20),
+                  Text(_success!, style: const TextStyle(color: Colors.green)),
+                ],
               ],
               if (_error != null) ...[
                 const SizedBox(height: 20),
-                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                Text(_error!,
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error)),
               ],
             ],
           ),
@@ -339,7 +352,8 @@ class _SummaryCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Import summary', style: Theme.of(context).textTheme.titleMedium),
+              Text('Import summary',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               _line('Total CSV rows', summary.totalRows),
               _line('Valid rows', summary.validRows),
@@ -443,9 +457,11 @@ _ParsedImport _parseImport(String source) {
 
   final headers = rows.first;
   if (headers.isNotEmpty) headers[0] = headers.first.replaceFirst('\uFEFF', '');
-  final missing = _requiredColumns.where((column) => !headers.contains(column)).toList();
+  final missing =
+      _requiredColumns.where((column) => !headers.contains(column)).toList();
   if (missing.isNotEmpty) {
-    throw FormatException('CSV is missing required column(s): ${missing.join(', ')}.');
+    throw FormatException(
+        'CSV is missing required column(s): ${missing.join(', ')}.');
   }
   final index = {for (var i = 0; i < headers.length; i++) headers[i]: i};
   String value(List<String> row, String column) {
@@ -499,7 +515,8 @@ _ParsedImport _parseImport(String source) {
   for (final candidate in candidates) {
     final baseId = _slug(candidate.name);
     if (baseId.isEmpty) {
-      invalidRows.add('CSV row ${candidate.csvRow}: Name cannot form a document ID.');
+      invalidRows
+          .add('CSV row ${candidate.csvRow}: Name cannot form a document ID.');
       continue;
     }
     final documentId = nameCounts[baseId] == 1
@@ -543,10 +560,8 @@ String _slug(String value) {
   return buffer.toString().replaceFirst(RegExp(r'-$'), '');
 }
 
-String _coordinateToken(double value) => value
-    .toString()
-    .replaceAll('-', 'negative-')
-    .replaceAll('.', 'point-');
+String _coordinateToken(double value) =>
+    value.toString().replaceAll('-', 'negative-').replaceAll('.', 'point-');
 
 List<List<String>> _parseCsv(String source) {
   final rows = <List<String>>[];
@@ -579,6 +594,7 @@ List<List<String>> _parseCsv(String source) {
     row.add(field.toString());
     rows.add(row);
   }
-  if (quoted) throw const FormatException('CSV contains an unclosed quoted value.');
+  if (quoted)
+    throw const FormatException('CSV contains an unclosed quoted value.');
   return rows;
 }

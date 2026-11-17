@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import '../providers/notifications_notifier.dart';
 import '../providers/profile_notifier.dart';
@@ -9,6 +11,7 @@ import '../theme.dart';
 import 'locate_centers_page.dart';
 import 'safety_info_page.dart';
 import 'reporting_page.dart';
+import 'qr_scanner_page.dart';
 import 'sab_reporting_page.dart';
 import 'history_page.dart';
 import 'user_info_page.dart';
@@ -23,6 +26,108 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   bool _isLoggingOut = false;
   bool _isConfirmingLogout = false;
+
+  String _scanFlagKey(String uid) => 'pre_abtc_qr_scanned_$uid';
+
+  Future<void> _openPreAbtcFlow() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final settings = Hive.box('settings');
+    final hasScanned =
+        user != null && settings.get(_scanFlagKey(user.uid), defaultValue: false) == true;
+
+    if (!hasScanned) {
+      final scanned = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const QrScannerPage()),
+      );
+      if (scanned != true || !mounted) return;
+
+      final scannedUser = FirebaseAuth.instance.currentUser;
+      if (scannedUser != null) {
+        await settings.put(_scanFlagKey(scannedUser.uid), true);
+      }
+    }
+
+    if (!mounted) return;
+    _showReportChoiceDialog();
+  }
+
+  Future<void> _showReportChoiceDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: IntrinsicWidth(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ReportChoice(
+                  icon: Icons.person_outline,
+                  label: 'Report for Self',
+                  onTap: () => _openSelfReport(dialogContext),
+                ),
+                const SizedBox(height: 4),
+                _ReportChoice(
+                  icon: Icons.note_add_outlined,
+                  label: 'New Report',
+                  onTap: () {
+                    Navigator.of(dialogContext).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ReportingPage()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSelfReport(BuildContext dialogContext) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showNoAccountSavedMessage();
+      return;
+    }
+
+    try {
+      final profile = await FirebaseFirestore.instance
+          .collection('user-info')
+          .doc(user.uid)
+          .get();
+      if (!profile.exists) {
+        _showNoAccountSavedMessage();
+        return;
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('Unable to check the saved account. Please try again.'),
+        ));
+      return;
+    }
+
+    if (!mounted) return;
+    Navigator.of(dialogContext).pop();
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ReportingPage(reportingForSelf: true)),
+    );
+  }
+
+  void _showNoAccountSavedMessage() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text('No account saved\nUse New Report instead.'),
+      ));
+  }
 
   Future<void> _confirmAndLogout() async {
     if (_isLoggingOut || _isConfirmingLogout) return;
@@ -77,101 +182,6 @@ class _DashboardPageState extends State<DashboardPage> {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginPage()),
       (_) => false,
-    );
-  }
-
-  void _showReportSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Report Incident',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF5350),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ReportingPage()),
-                );
-              },
-              icon: const Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.white,
-                size: 22,
-              ),
-              label: const Text(
-                'Bite Incident',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFA726),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SABReportingPage()),
-                );
-              },
-              icon: const Icon(
-                Icons.shield_outlined,
-                color: Colors.white,
-                size: 22,
-              ),
-              label: const Text(
-                'Suspicious Animal Behavior',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: AppColors.primary, fontSize: 15),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -305,26 +315,106 @@ class _DashboardPageState extends State<DashboardPage> {
             const SizedBox(height: 16),
             SizedBox(
               height: 56,
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFEF5350),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                onPressed: () => _showReportSheet(context),
-                child: const Text(
-                  'Report Incident',
+                onPressed: _openPreAbtcFlow,
+                icon: const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                label: const Text(
+                  'Pre - ABTC Form',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 56,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFA726),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SABReportingPage()),
+                ),
+                icon: const Icon(
+                  Icons.shield_outlined,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                label: const Text(
+                  'Suspicious Animal Behavior',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             const VaccineScheduleCard(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReportChoice extends StatelessWidget {
+  const _ReportChoice({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: AppColors.cream,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),

@@ -74,7 +74,9 @@ const List<String> _suspiciousBehaviors = [
 ];
 
 class ReportingPage extends StatefulWidget {
-  const ReportingPage({super.key});
+  const ReportingPage({super.key, this.reportingForSelf = false});
+
+  final bool reportingForSelf;
 
   @override
   State<ReportingPage> createState() => _ReportingPageState();
@@ -136,6 +138,17 @@ class _ReportingPageState extends State<ReportingPage> {
 
   bool get _patientFieldsReadOnly => _reportingForSelf || _isLoadingProfile;
   bool get _isMinor => (int.tryParse(_ageController.text.trim()) ?? 18) < 18;
+
+  @override
+  void initState() {
+    super.initState();
+    _reportingForSelf = widget.reportingForSelf;
+    if (_reportingForSelf) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadCurrentUserProfile();
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -226,6 +239,8 @@ class _ReportingPageState extends State<ReportingPage> {
             : '';
         _mobileController.text =
             (data['contactNumber'] ?? data['contact_number'] ?? '') as String;
+        _emailController.text =
+            (data['email'] ?? user.email ?? '') as String;
         _streetController.text = (data['address'] ?? '') as String;
         _barangayController.text =
             (data['barangay'] ?? data['brgy'] ?? '') as String;

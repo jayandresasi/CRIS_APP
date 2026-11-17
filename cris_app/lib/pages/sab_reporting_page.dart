@@ -171,14 +171,18 @@ class _SABReportingPageState extends State<SABReportingPage> {
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
-    final image = await ImagePicker().pickImage(source: source);
-    if (image == null) return;
-    final bytes = await image.readAsBytes();
-    setState(() {
-      _photo = image;
-      _webPhoto = kIsWeb ? bytes : null;
-      _devicePhoto = kIsWeb ? null : File(image.path);
-    });
+    try {
+      final image = await ImagePicker().pickImage(source: source);
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      setState(() {
+        _photo = image;
+        _webPhoto = kIsWeb ? bytes : null;
+        _devicePhoto = kIsWeb ? null : File(image.path);
+      });
+    } catch (_) {
+      if (mounted) _snack('Unable to access the selected photo source.');
+    }
   }
 
   String _formatDate(DateTime date) =>

@@ -230,9 +230,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 icon: const Icon(Icons.notifications_outlined,
                     color: Colors.white),
                 onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (_) => _NotificationsSheet(notifier: notifs),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => _NotificationsSheet(notifier: notifs),
+                    ),
                   );
                 },
               ),
@@ -386,52 +387,63 @@ class _NotificationsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            'Notifications',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Notifications',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
         ),
-        const Divider(height: 1),
-        if (notifier.notifications.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(24),
-            child: Text('No notifications'),
-          )
-        else
-          ListView.separated(
-            shrinkWrap: true,
-            itemCount: notifier.notifications.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, i) {
-              final n = notifier.notifications[i];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: n.color.withValues(alpha: 0.15),
-                  child: Text(n.emoji),
-                ),
-                title: Text(
-                  n.message,
-                  style: TextStyle(
-                    fontWeight: n.isRead ? FontWeight.normal : FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-                trailing: n.isRead
-                    ? null
-                    : TextButton(
-                        onPressed: () => notifier.markAsRead(n.id),
-                        child: const Text('Mark read'),
+      ),
+      body: Column(
+        children: [
+          if (notifier.notifications.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('No notifications'),
+            )
+          else
+            Expanded(
+              child: ListView.separated(
+                itemCount: notifier.notifications.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, i) {
+                  final n = notifier.notifications[i];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: n.color.withValues(alpha: 0.15),
+                      child: Text(n.emoji),
+                    ),
+                    title: Text(
+                      n.message,
+                      style: TextStyle(
+                        fontWeight:
+                            n.isRead ? FontWeight.normal : FontWeight.bold,
+                        fontSize: 13,
                       ),
-              );
-            },
-          ),
-        const SizedBox(height: 16),
-      ],
+                    ),
+                    trailing: n.isRead
+                        ? null
+                        : TextButton(
+                            onPressed: () => notifier.markAsRead(n.id),
+                            child: const Text('Mark read'),
+                          ),
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 }

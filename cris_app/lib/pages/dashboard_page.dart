@@ -235,8 +235,18 @@ class _DashboardPageState extends State<DashboardPage> {
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined,
-                    color: Colors.white),
+                icon: Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ),
                 onPressed: () {
                   notifs.markVaccineRemindersAsRead();
                   Navigator.of(context).push(

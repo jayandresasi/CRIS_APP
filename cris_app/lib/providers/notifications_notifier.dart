@@ -1,25 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 import '../models/notification.dart';
-import '../theme.dart';
 
 /// State management for application notifications
 class NotificationsNotifier extends ChangeNotifier {
-  final List<AppNotification> _notifications = [
-    AppNotification(
-      id: '1',
-      message: '⚠️ Confirmed rabies case detected 4 km from your address.',
-      emoji: '⚠️',
-      color: AppColors.primary,
-      isRead: false,
-    ),
-    AppNotification(
-      id: '2',
-      message: '💉 Your 3rd vaccine dose is due tomorrow.',
-      emoji: '💉',
-      color: AppColors.secondary,
-      isRead: false,
-    ),
-  ];
+  final List<AppNotification> _notifications = [];
 
   List<AppNotification> get notifications => _notifications;
 

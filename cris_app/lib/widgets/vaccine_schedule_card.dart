@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
@@ -14,32 +16,53 @@ class VaccineScheduleCard extends StatefulWidget {
 class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
   DateTime _visibleMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selectedDate = _dateOnly(DateTime.now());
-  Future<DocumentSnapshot<Map<String, dynamic>>>? _trackerFuture;
-
-  DocumentReference<Map<String, dynamic>>? get _trackerRef {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return null;
-    return FirebaseFirestore.instance
-        .collection('user-info')
-        .doc(user.uid)
-        .collection('treatment_trackers')
-        .doc('current');
-  }
+  List<_DoseVisit> _visits = const [];
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _patientsSubscription;
+  StreamSubscription<User?>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
-    _trackerFuture = _trackerRef?.get();
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen(
+      _listenForPatientSchedules,
+    );
   }
 
-  List<_DoseVisit> _doseVisitsFromPlan(Map<String, dynamic>? plan) {
-    final rawDoses = plan?['doses'];
-    if (rawDoses is! List) return const [];
-    return rawDoses
-        .whereType<Map>()
-        .map((raw) => _DoseVisit.fromMap(Map<String, dynamic>.from(raw)))
-        .whereType<_DoseVisit>()
-        .toList();
+  void _listenForPatientSchedules(User? user) {
+    _patientsSubscription?.cancel();
+    if (user == null) {
+      if (mounted) setState(() => _visits = const []);
+      return;
+    }
+    final userId = user.uid;
+    _patientsSubscription = FirebaseFirestore.instance
+        .collection('patients')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .listen(
+      (snapshot) {
+        if (FirebaseAuth.instance.currentUser?.uid != userId) return;
+        final visits = snapshot.docs
+            .expand(
+              (document) => _DoseVisit.fromPatient(
+                document.data(),
+                document.id,
+              ),
+            )
+            .toList();
+        if (mounted) setState(() => _visits = visits);
+      },
+      onError: (_) {
+        if (mounted) setState(() => _visits = const []);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _patientsSubscription?.cancel();
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   static DateTime _dateOnly(DateTime value) {
@@ -50,19 +73,16 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
     switch (status) {
       case _DoseStatus.completed:
         return Colors.green;
-      case _DoseStatus.today:
+      case _DoseStatus.scheduled:
         return AppColors.accent;
-      case _DoseStatus.upcoming:
-        return Colors.orange;
+      case _DoseStatus.overdue:
+        return Colors.red;
     }
   }
 
-  _DoseVisit? _doseOn(List<_DoseVisit> visits, DateTime day) {
+  List<_DoseVisit> _dosesOn(List<_DoseVisit> visits, DateTime day) {
     final date = _dateOnly(day);
-    for (final dose in visits) {
-      if (_dateOnly(dose.date) == date) return dose;
-    }
-    return null;
+    return visits.where((dose) => _dateOnly(dose.date) == date).toList();
   }
 
   void _changeMonth(int delta) {
@@ -73,39 +93,19 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
 
   @override
   Widget build(BuildContext context) {
-    final ref = _trackerRef;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: ref == null
-            ? _TreatmentTrackerBody(
-                selectedDate: _selectedDate,
-                visibleMonth: _visibleMonth,
-                onDateSelected: (date) => setState(() => _selectedDate = date),
-                onMonthChanged: _changeMonth,
-                doseOn: (day) => null,
-                statusColor: _statusColor,
-              )
-            : FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                future: _trackerFuture,
-                builder: (context, snapshot) {
-                  final plan =
-                      snapshot.data?.exists == true ? snapshot.data!.data() : null;
-                  final visits = _doseVisitsFromPlan(plan);
-                  return _TreatmentTrackerBody(
-                    selectedDate: _selectedDate,
-                    visibleMonth: _visibleMonth,
-                    onDateSelected: (date) {
-                      setState(() => _selectedDate = date);
-                    },
-                    onMonthChanged: _changeMonth,
-                    doseOn: (day) => _doseOn(visits, day),
-                    statusColor: _statusColor,
-                  );
-                },
-              ),
+        child: _TreatmentTrackerBody(
+          selectedDate: _selectedDate,
+          visibleMonth: _visibleMonth,
+          onDateSelected: (date) => setState(() => _selectedDate = date),
+          onMonthChanged: _changeMonth,
+          dosesOn: (day) => _dosesOn(_visits, day),
+          statusColor: _statusColor,
+        ),
       ),
     );
   }
@@ -117,7 +117,7 @@ class _TreatmentTrackerBody extends StatelessWidget {
     required this.visibleMonth,
     required this.onDateSelected,
     required this.onMonthChanged,
-    required this.doseOn,
+    required this.dosesOn,
     required this.statusColor,
   });
 
@@ -125,7 +125,7 @@ class _TreatmentTrackerBody extends StatelessWidget {
   final DateTime visibleMonth;
   final ValueChanged<DateTime> onDateSelected;
   final ValueChanged<int> onMonthChanged;
-  final _DoseVisit? Function(DateTime date) doseOn;
+  final List<_DoseVisit> Function(DateTime date) dosesOn;
   final Color Function(_DoseStatus status) statusColor;
 
   @override
@@ -145,7 +145,7 @@ class _TreatmentTrackerBody extends StatelessWidget {
         _LockedCalendarGrid(
           visibleMonth: visibleMonth,
           selectedDate: selectedDate,
-          doseOn: doseOn,
+          dosesOn: dosesOn,
           statusColor: statusColor,
           onMonthChanged: onMonthChanged,
           onDateSelected: onDateSelected,
@@ -157,49 +157,106 @@ class _TreatmentTrackerBody extends StatelessWidget {
 
 class _DoseVisit {
   const _DoseVisit({
-    required this.daysFromStart,
+    required this.doseNumber,
     required this.date,
+    required this.patientName,
+    required this.isCompleted,
   });
 
-  final int daysFromStart;
+  final int doseNumber;
   final DateTime date;
+  final String patientName;
+  final bool isCompleted;
 
-  String get day => 'Day $daysFromStart';
+  String get day => 'Day $doseNumber';
 
-  static _DoseVisit? fromMap(Map<String, dynamic> map) {
-    final rawDate = map['date'];
-    final DateTime? date;
-    if (rawDate is Timestamp) {
-      date = rawDate.toDate();
-    } else if (rawDate is DateTime) {
-      date = rawDate;
-    } else {
-      date = DateTime.tryParse(rawDate as String? ?? '');
+  static List<_DoseVisit> fromPatient(
+    Map<String, dynamic> patient,
+    String documentId,
+  ) {
+    final rawSchedule = patient['pepScheduleDates'];
+    if (rawSchedule is! Map) return const [];
+    final scheduledDates = <int, DateTime>{};
+    for (final entry in rawSchedule.entries) {
+      final doseNumber = _doseNumber(entry.key);
+      final date = _date(entry.value);
+      if (doseNumber != null && date != null) scheduledDates[doseNumber] = date;
     }
-    if (date == null) return null;
-    return _DoseVisit(
-      daysFromStart:
-          map['daysFromStart'] as int? ?? map['offset'] as int? ?? 0,
-      date: date,
-    );
+    if (scheduledDates.isEmpty) return const [];
+
+    final completedDoses = <int>{};
+    final rawCompleted = patient['completedDoses'];
+    if (rawCompleted is List) {
+      for (final value in rawCompleted) {
+        final doseNumber = _doseNumber(value);
+        if (doseNumber != null && scheduledDates.containsKey(doseNumber)) {
+          completedDoses.add(doseNumber);
+        }
+      }
+    }
+
+    final rawPatient = patient['patient'];
+    final patientMap = rawPatient is Map
+        ? Map<String, dynamic>.from(rawPatient)
+        : const <String, dynamic>{};
+    final patientName = (patientMap['fullName'] ??
+            patient['fullName'] ??
+            patient['name'] ??
+            documentId)
+        .toString();
+    final visits = scheduledDates.entries
+        .map(
+          (entry) => _DoseVisit(
+            doseNumber: entry.key,
+            date: entry.value,
+            patientName: patientName,
+            isCompleted: completedDoses.contains(entry.key),
+          ),
+        )
+        .toList()
+      ..sort((first, second) => first.doseNumber.compareTo(second.doseNumber));
+    return visits;
+  }
+
+  static int? _doseNumber(Object? value) {
+    if (value is! String) return null;
+    final normalized = value.toLowerCase().replaceAll(
+          RegExp(r'[^a-z0-9]'),
+          '',
+        );
+    final match = RegExp(r'^day(\d+)$').firstMatch(normalized);
+    return match == null ? null : int.tryParse(match.group(1)!);
+  }
+
+  static DateTime? _date(Object? value) {
+    if (value is! String ||
+        !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
+      return null;
+    }
+    final parts = value.split('-').map(int.tryParse).toList();
+    if (parts.any((part) => part == null)) return null;
+    final date = DateTime(parts[0]!, parts[1]!, parts[2]!);
+    return date.year == parts[0] && date.month == parts[1] && date.day == parts[2]
+        ? date
+        : null;
   }
 
   _DoseStatus get status {
     final today = _VaccineScheduleCardState._dateOnly(DateTime.now());
     final visitDate = _VaccineScheduleCardState._dateOnly(date);
-    if (visitDate.isBefore(today)) return _DoseStatus.completed;
-    if (visitDate == today) return _DoseStatus.today;
-    return _DoseStatus.upcoming;
+    if (isCompleted) return _DoseStatus.completed;
+    if (visitDate.isBefore(today)) return _DoseStatus.overdue;
+    return _DoseStatus.scheduled;
   }
 }
 
-enum _DoseStatus { completed, today, upcoming }
+enum _DoseStatus { completed, scheduled, overdue }
 
 class _LockedCalendarGrid extends StatelessWidget {
   const _LockedCalendarGrid({
     required this.visibleMonth,
     required this.selectedDate,
-    required this.doseOn,
+    required this.dosesOn,
     required this.statusColor,
     required this.onMonthChanged,
     required this.onDateSelected,
@@ -207,7 +264,7 @@ class _LockedCalendarGrid extends StatelessWidget {
 
   final DateTime visibleMonth;
   final DateTime selectedDate;
-  final _DoseVisit? Function(DateTime date) doseOn;
+  final List<_DoseVisit> Function(DateTime date) dosesOn;
   final Color Function(_DoseStatus status) statusColor;
   final ValueChanged<int> onMonthChanged;
   final ValueChanged<DateTime> onDateSelected;
@@ -288,10 +345,11 @@ class _LockedCalendarGrid extends StatelessWidget {
               visibleMonth.month,
               dayNumber,
             );
-            final dose = doseOn(day);
+            final doses = dosesOn(day);
             final isSelected =
                 _VaccineScheduleCardState._dateOnly(day) == selectedDate;
-            final color = dose == null ? null : statusColor(dose.status);
+            final colors = doses.map((dose) => statusColor(dose.status)).toSet();
+            final color = colors.isEmpty ? null : colors.first;
 
             return Padding(
               padding: const EdgeInsets.all(3),
@@ -320,23 +378,32 @@ class _LockedCalendarGrid extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight:
-                              dose == null ? FontWeight.w500 : FontWeight.w800,
-                          color: dose == null ? Colors.black87 : color,
+                              doses.isEmpty ? FontWeight.w500 : FontWeight.w800,
+                          color: doses.isEmpty ? Colors.black87 : color,
                         ),
                       ),
-                      if (dose != null)
+                      if (doses.isNotEmpty)
                         Positioned(
                           bottom: 5,
-                          child: Tooltip(
-                            message: '${dose.day} - locked clinic visit',
-                            child: Container(
-                              width: 7,
-                              height: 7,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: colors
+                                .map(
+                                  (markerColor) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 1,
+                                    ),
+                                    child: Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: markerColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                           ),
                         ),
                     ],
@@ -351,11 +418,12 @@ class _LockedCalendarGrid extends StatelessWidget {
           children: [
             _LegendDot(color: Colors.green, label: 'Completed'),
             SizedBox(width: 12),
-            _LegendDot(color: Colors.orange, label: 'Upcoming'),
+            _LegendDot(color: AppColors.accent, label: 'Scheduled'),
             SizedBox(width: 12),
-            _LegendDot(color: AppColors.accent, label: 'Today'),
+            _LegendDot(color: Colors.red, label: 'Overdue'),
           ],
         ),
+        _DoseDetails(doses: dosesOn(selectedDate)),
       ],
     );
   }
@@ -376,6 +444,42 @@ class _LockedCalendarGrid extends StatelessWidget {
       'December',
     ];
     return names[month - 1];
+  }
+}
+
+class _DoseDetails extends StatelessWidget {
+  const _DoseDetails({required this.doses});
+
+  final List<_DoseVisit> doses;
+
+  @override
+  Widget build(BuildContext context) {
+    if (doses.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: doses
+            .map(
+              (dose) => Text(
+                '${dose.patientName} - ${dose.day} (${_label(dose.status)})',
+                style: const TextStyle(fontSize: 11, color: Colors.black54),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  String _label(_DoseStatus status) {
+    switch (status) {
+      case _DoseStatus.completed:
+        return 'Completed';
+      case _DoseStatus.scheduled:
+        return 'Scheduled';
+      case _DoseStatus.overdue:
+        return 'Overdue';
+    }
   }
 }
 

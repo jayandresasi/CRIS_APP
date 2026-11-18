@@ -49,10 +49,10 @@ class _DashboardPageState extends State<DashboardPage> {
       final scannedUser = FirebaseAuth.instance.currentUser;
       if (scannedUser != null) {
         await settings.put(_scanFlagKey(scannedUser.uid), true);
-        await settings.put(_scanFacilityIdKey(scannedUser.uid), scanned.id);
+        await settings.put(_scanFacilityIdKey(scannedUser.uid), scanned.facilityId);
         await settings.put(_scanFacilityNameKey(scannedUser.uid), scanned.name);
         // FIX: the facility code was never saved on the first scan.
-        await settings.put(_scanFacilityCodeKey(scannedUser.uid), scanned.code);
+        await settings.put(_scanFacilityCodeKey(scannedUser.uid), scanned.facilityAcronym);
       }
     } else {
       final facilityId = settings.get(_scanFacilityIdKey(user.uid)) as String?;
@@ -64,14 +64,16 @@ class _DashboardPageState extends State<DashboardPage> {
         );
         if (scanned == null || !mounted) return;
         facility = scanned;
-        await settings.put(_scanFacilityIdKey(user.uid), scanned.id);
+        await settings.put(_scanFacilityIdKey(user.uid), scanned.facilityId);
         await settings.put(_scanFacilityNameKey(user.uid), scanned.name);
-        await settings.put(_scanFacilityCodeKey(user.uid), scanned.code);
+        await settings.put(_scanFacilityCodeKey(user.uid), scanned.facilityAcronym);
       } else {
         final facilityCode =
             settings.get(_scanFacilityCodeKey(user.uid)) as String?;
         facility = ScannedFacility(
-            id: facilityId, name: facilityName, code: facilityCode ?? '');
+            facilityId: facilityId,
+            name: facilityName,
+            facilityAcronym: facilityCode ?? '');
       }
     }
 
@@ -106,9 +108,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => ReportingPage(
-                          facilityId: facility.id,
+                          facilityId: facility.facilityId,
                           facilityName: facility.name,
-                          facilityCode: facility.code,
+                          facilityAcronym: facility.facilityAcronym,
                         ),
                       ),
                     );
@@ -156,9 +158,9 @@ class _DashboardPageState extends State<DashboardPage> {
       MaterialPageRoute(
         builder: (_) => ReportingPage(
           reportingForSelf: true,
-          facilityId: facility.id,
+          facilityId: facility.facilityId,
           facilityName: facility.name,
-          facilityCode: facility.code,
+          facilityAcronym: facility.facilityAcronym,
         ),
       ),
     );

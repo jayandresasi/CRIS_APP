@@ -25,13 +25,13 @@ class ReportingPage extends StatefulWidget {
     this.reportingForSelf = false,
     this.facilityId,
     this.facilityName,
-    this.facilityCode,
+    this.facilityAcronym,
   });
 
   final bool reportingForSelf;
   final String? facilityId;
   final String? facilityName;
-  final String? facilityCode;
+  final String? facilityAcronym;
 
   @override
   State<ReportingPage> createState() => _ReportingPageState();
@@ -354,7 +354,9 @@ class _ReportingPageState extends State<ReportingPage> {
       ));
       await FirebaseFirestore.instance.collection('patients').doc(caseId).set({
         'caseId': caseId, 'userId': user.uid, 'reportingForSelf': _reportingForSelf, 'submittedBy': user.uid,
-        'facility': {'id': widget.facilityId, 'name': widget.facilityName, 'code': widget.facilityCode},
+        'facilityAcronym': widget.facilityAcronym,
+        'facilityId': widget.facilityId,
+        'facility': {'id': widget.facilityId, 'name': widget.facilityName},
         'patient': {
           'lastName': _lastNameController.text.trim(), 'firstName': _firstNameController.text.trim(), 'middleName': _middleNameController.text.trim(), 'suffix': _suffixController.text.trim(), 'sex': _sex, 'dateOfBirth': _dobController.text.trim(), 'age': int.tryParse(_ageController.text.trim()), 'civilStatus': _civilStatusController.text.trim(), 'religion': _religionController.text.trim(), 'contactNumber': _mobileController.text.trim(), 'husbandOrWife': _spouseController.text.trim(), 'fatherOrMotherName': _parentNameController.text.trim(), 'province': _provinceController.text.trim(), 'municipality': _municipalityController.text.trim(), 'barangay': _barangayController.text.trim(), 'streetAddress': _streetController.text.trim(), 'fullName': _patientName,
         },

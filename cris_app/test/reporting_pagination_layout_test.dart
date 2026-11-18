@@ -11,7 +11,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(
       home: ReportingPage(
         facilityId: 'test-facility',
-        facilityCode: 'TEST-001',
+        facilityAcronym: 'TEST-001',
         facilityName: 'Test Facility',
       ),
     ));

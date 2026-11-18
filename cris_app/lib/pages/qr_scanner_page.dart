@@ -11,13 +11,13 @@ import '../theme.dart';
 
 class ScannedFacility {
   const ScannedFacility({
-    required this.id,
-    required this.code,
+    required this.facilityId,
+    required this.facilityAcronym,
     required this.name,
   });
 
-  final String id;
-  final String code;
+  final String facilityId;
+  final String facilityAcronym;
   final String name;
 }
 
@@ -125,8 +125,8 @@ class _QrScannerPageState extends State<QrScannerPage> {
       if (!mounted) return;
       Navigator.of(context).pop(
         ScannedFacility(
-          id: matchedFacilityId,
-          code: facilityCode,
+          facilityId: matchedFacilityId,
+          facilityAcronym: facilityCode,
           name: facilityName,
         ),
       );

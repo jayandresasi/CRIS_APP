@@ -7,6 +7,8 @@ class AppNotification {
   final String message;
   final String emoji;
   final Color color;
+  final String? dateText;
+  final bool isVaccineReminder;
   bool isRead;
 
   AppNotification({
@@ -14,6 +16,8 @@ class AppNotification {
     required this.message,
     required this.emoji,
     required this.color,
+    this.dateText,
+    this.isVaccineReminder = false,
     this.isRead = false,
   });
 }

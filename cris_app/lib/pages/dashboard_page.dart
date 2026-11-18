@@ -238,6 +238,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 icon: const Icon(Icons.notifications_outlined,
                     color: Colors.white),
                 onPressed: () {
+                  notifs.markVaccineRemindersAsRead();
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => _NotificationsSheet(notifier: notifs),
@@ -519,6 +520,10 @@ class _NotificationsSheet extends StatelessWidget {
                         fontSize: 13,
                       ),
                     ),
+                    subtitle: n.dateText == null
+                        ? null
+                        : Text(n.dateText!, style: const TextStyle(fontSize: 12)),
+                    onTap: () => notifier.markAsRead(n.id),
                     trailing: n.isRead
                         ? null
                         : TextButton(

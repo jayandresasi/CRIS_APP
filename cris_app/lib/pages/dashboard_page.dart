@@ -62,6 +62,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         builder: (_) => ReportingPage(
                           facilityId: facility.facilityId,
                           facilityAcronym: facility.facilityAcronym,
+                          facilityName: facility.name,
                         ),
                       ),
                     );
@@ -111,6 +112,7 @@ class _DashboardPageState extends State<DashboardPage> {
           reportingForSelf: true,
           facilityId: facility.facilityId,
           facilityAcronym: facility.facilityAcronym,
+          facilityName: facility.name,
         ),
       ),
     );

@@ -25,11 +25,13 @@ class ReportingPage extends StatefulWidget {
     this.reportingForSelf = false,
     this.facilityId,
     this.facilityAcronym,
+    this.facilityName,
   });
 
   final bool reportingForSelf;
   final String? facilityId;
   final String? facilityAcronym;
+  final String? facilityName;
 
   @override
   State<ReportingPage> createState() => _ReportingPageState();
@@ -168,10 +170,19 @@ class _ReportingPageState extends State<ReportingPage> {
   String? _required(String? value, String label) =>
       value == null || value.trim().isEmpty ? '$label is required' : null;
 
-  String get _patientName => [
-        _lastNameController.text.trim(), _firstNameController.text.trim(),
-        _middleNameController.text.trim(), _suffixController.text.trim(),
-      ].where((value) => value.isNotEmpty).join(', ');
+  String get _patientName {
+    final lastName = _lastNameController.text.trim();
+    final givenNames = [
+      _firstNameController.text.trim(),
+      _middleNameController.text.trim(),
+      _suffixController.text.trim(),
+    ].where((value) => value.isNotEmpty).join(' ');
+    return lastName.isEmpty
+        ? givenNames
+        : givenNames.isEmpty
+            ? lastName
+            : '$lastName, $givenNames';
+  }
   String get _addressSummary => [
         _streetController.text.trim(), _barangayController.text.trim(),
         _municipalityController.text.trim(), _provinceController.text.trim(),
@@ -354,8 +365,30 @@ class _ReportingPageState extends State<ReportingPage> {
         'caseId': caseId, 'userId': user.uid, 'reportingForSelf': _reportingForSelf, 'submittedBy': user.uid,
         'facilityAcronym': widget.facilityAcronym,
         'facilityId': widget.facilityId,
+        'facility': {'id': widget.facilityId, 'name': widget.facilityName},
         'patient': {
           'lastName': _lastNameController.text.trim(), 'firstName': _firstNameController.text.trim(), 'middleName': _middleNameController.text.trim(), 'suffix': _suffixController.text.trim(), 'sex': _sex, 'dateOfBirth': _dobController.text.trim(), 'age': int.tryParse(_ageController.text.trim()), 'civilStatus': _civilStatusController.text.trim(), 'religion': _religionController.text.trim(), 'contactNumber': _mobileController.text.trim(), 'husbandOrWife': _spouseController.text.trim(), 'fatherOrMotherName': _parentNameController.text.trim(), 'province': _provinceController.text.trim(), 'municipality': _municipalityController.text.trim(), 'barangay': _barangayController.text.trim(), 'streetAddress': _streetController.text.trim(), 'fullName': _patientName,
+        },
+        'lastName': _lastNameController.text.trim(),
+        'firstName': _firstNameController.text.trim(),
+        'middleName': _middleNameController.text.trim(),
+        'suffix': _suffixController.text.trim(),
+        'fullName': _patientName,
+        'name': _patientName,
+        'birthday': _dobController.text.trim(),
+        'age': int.tryParse(_ageController.text.trim()),
+        'sex': _sex ?? '',
+        'civilStatus': _civilStatusController.text.trim(),
+        'religion': _religionController.text.trim(),
+        'contactNo': _mobileController.text.trim(),
+        'spouseName': _spouseController.text.trim(),
+        'parentName': _parentNameController.text.trim(),
+        'address': {
+          'houseStreet': _streetController.text.trim(),
+          'barangay': _barangayController.text.trim(),
+          'cityMunicipality': _municipalityController.text.trim(),
+          'province': _provinceController.text.trim(),
+          'fullAddress': _addressSummary,
         },
         'philHealthMembership': {
           'selections': _philHealthMemberships.toList()..sort(),

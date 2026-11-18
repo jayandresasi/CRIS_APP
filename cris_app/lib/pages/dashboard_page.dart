@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -27,31 +27,60 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _isLoggingOut = false;
   bool _isConfirmingLogout = false;
 
-  String _scanFlagKey(String uid) => 'pre_abtc_qr_scanned_$uid';
+  String _scanFlagKey(String uid) => 'abtc_qr_scanned_$uid';
+  String _scanFacilityIdKey(String uid) => 'abtc_facility_id_$uid';
+  String _scanFacilityNameKey(String uid) => 'abtc_facility_name_$uid';
+  String _scanFacilityCodeKey(String uid) => 'abtc_facility_code_$uid';
 
   Future<void> _openPreAbtcFlow() async {
     final user = FirebaseAuth.instance.currentUser;
     final settings = Hive.box('settings');
-    final hasScanned =
-        user != null && settings.get(_scanFlagKey(user.uid), defaultValue: false) == true;
+    final hasScanned = user != null &&
+        settings.get(_scanFlagKey(user.uid), defaultValue: false) == true;
+    ScannedFacility? facility;
 
-    if (!hasScanned) {
-      final scanned = await Navigator.of(context).push<bool>(
+    if (!hasScanned || user == null) {
+      final scanned = await Navigator.of(context).push<ScannedFacility>(
         MaterialPageRoute(builder: (_) => const QrScannerPage()),
       );
-      if (scanned != true || !mounted) return;
+      if (scanned == null || !mounted) return;
+      facility = scanned;
 
       final scannedUser = FirebaseAuth.instance.currentUser;
       if (scannedUser != null) {
         await settings.put(_scanFlagKey(scannedUser.uid), true);
+        await settings.put(_scanFacilityIdKey(scannedUser.uid), scanned.id);
+        await settings.put(_scanFacilityNameKey(scannedUser.uid), scanned.name);
+        // FIX: the facility code was never saved on the first scan.
+        await settings.put(_scanFacilityCodeKey(scannedUser.uid), scanned.code);
+      }
+    } else {
+      final facilityId = settings.get(_scanFacilityIdKey(user.uid)) as String?;
+      final facilityName =
+          settings.get(_scanFacilityNameKey(user.uid)) as String?;
+      if (facilityId == null || facilityName == null) {
+        final scanned = await Navigator.of(context).push<ScannedFacility>(
+          MaterialPageRoute(builder: (_) => const QrScannerPage()),
+        );
+        if (scanned == null || !mounted) return;
+        facility = scanned;
+        await settings.put(_scanFacilityIdKey(user.uid), scanned.id);
+        await settings.put(_scanFacilityNameKey(user.uid), scanned.name);
+        await settings.put(_scanFacilityCodeKey(user.uid), scanned.code);
+      } else {
+        final facilityCode =
+            settings.get(_scanFacilityCodeKey(user.uid)) as String?;
+        facility = ScannedFacility(
+            id: facilityId, name: facilityName, code: facilityCode ?? '');
       }
     }
 
-    if (!mounted) return;
-    _showReportChoiceDialog();
+    // FIX: null-check instead of using the `!` operator.
+    if (!mounted || facility == null) return;
+    _showReportChoiceDialog(facility);
   }
 
-  Future<void> _showReportChoiceDialog() async {
+  Future<void> _showReportChoiceDialog(ScannedFacility facility) async {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => Dialog(
@@ -66,7 +95,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 _ReportChoice(
                   icon: Icons.person_outline,
                   label: 'Report for Self',
-                  onTap: () => _openSelfReport(dialogContext),
+                  onTap: () => _openSelfReport(dialogContext, facility),
                 ),
                 const SizedBox(height: 4),
                 _ReportChoice(
@@ -75,7 +104,13 @@ class _DashboardPageState extends State<DashboardPage> {
                   onTap: () {
                     Navigator.of(dialogContext).pop();
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ReportingPage()),
+                      MaterialPageRoute(
+                        builder: (_) => ReportingPage(
+                          facilityId: facility.id,
+                          facilityName: facility.name,
+                          facilityCode: facility.code,
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -87,7 +122,8 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Future<void> _openSelfReport(BuildContext dialogContext) async {
+  Future<void> _openSelfReport(
+      BuildContext dialogContext, ScannedFacility facility) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showNoAccountSavedMessage();
@@ -113,10 +149,18 @@ class _DashboardPageState extends State<DashboardPage> {
       return;
     }
 
-    if (!mounted) return;
+    // FIX: also make sure the dialog's own context is still valid.
+    if (!mounted || !dialogContext.mounted) return;
     Navigator.of(dialogContext).pop();
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ReportingPage(reportingForSelf: true)),
+      MaterialPageRoute(
+        builder: (_) => ReportingPage(
+          reportingForSelf: true,
+          facilityId: facility.id,
+          facilityName: facility.name,
+          facilityCode: facility.code,
+        ),
+      ),
     );
   }
 

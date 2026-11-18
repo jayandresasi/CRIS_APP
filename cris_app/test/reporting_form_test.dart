@@ -27,7 +27,13 @@ void main() {
   testWidgets('report form validates one page at a time', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(const MaterialApp(home: ReportingPage()));
+    await tester.pumpWidget(const MaterialApp(
+      home: ReportingPage(
+        facilityId: 'test-facility',
+        facilityCode: 'TEST-001',
+        facilityName: 'Test Facility',
+      ),
+    ));
     await tester.pumpAndSettle();
 
     _expectFormPage(tester, 'Patient Information', 1);
@@ -45,7 +51,13 @@ void main() {
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(const MaterialApp(home: ReportingPage()));
+    await tester.pumpWidget(const MaterialApp(
+      home: ReportingPage(
+        facilityId: 'test-facility',
+        facilityCode: 'TEST-001',
+        facilityName: 'Test Facility',
+      ),
+    ));
     await tester.pumpAndSettle();
 
     await _enterField(tester, 'Last Name', 'Test');

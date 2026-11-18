@@ -118,9 +118,10 @@ class _AbtcImporterPageState extends State<_AbtcImporterPage> {
       );
       if (mounted) setState(() {});
     } on FirebaseAuthException catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(
             () => _error = 'Sign in failed: ${error.message ?? error.code}');
+      }
     } finally {
       if (mounted) setState(() => _signingIn = false);
     }
@@ -594,7 +595,8 @@ List<List<String>> _parseCsv(String source) {
     row.add(field.toString());
     rows.add(row);
   }
-  if (quoted)
+  if (quoted) {
     throw const FormatException('CSV contains an unclosed quoted value.');
+  }
   return rows;
 }

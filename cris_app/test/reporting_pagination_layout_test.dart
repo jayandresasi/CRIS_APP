@@ -8,7 +8,13 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(const MaterialApp(home: ReportingPage()));
+    await tester.pumpWidget(const MaterialApp(
+      home: ReportingPage(
+        facilityId: 'test-facility',
+        facilityCode: 'TEST-001',
+        facilityName: 'Test Facility',
+      ),
+    ));
     await tester.pumpAndSettle();
 
     expect(find.byType(SingleChildScrollView), findsNothing);

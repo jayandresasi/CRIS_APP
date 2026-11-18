@@ -1,9 +1,8 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:material_ui/material_ui.dart';
 
 import '../services/location_service.dart';
 import '../theme.dart';
@@ -20,46 +19,19 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
   final _locationService = LocationService();
 
   StreamSubscription<Position>? _locationSubscription;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
-      _facilitiesSubscription;
   Position? _userPosition;
-  List<_FacilityLocation> _facilities = const [];
   String? _locationMessage;
 
   @override
   void initState() {
     super.initState();
-    _listenToFacilities();
     _findUserLocation();
   }
 
   @override
   void dispose() {
     _locationSubscription?.cancel();
-    _facilitiesSubscription?.cancel();
     super.dispose();
-  }
-
-  void _listenToFacilities() {
-    _facilitiesSubscription = FirebaseFirestore.instance
-        .collection('facilities')
-        .snapshots()
-        .listen(
-      (snapshot) {
-        final facilities = snapshot.docs
-            .map(_FacilityLocation.fromFirestore)
-            .whereType<_FacilityLocation>()
-            .toList();
-        if (mounted) setState(() => _facilities = facilities);
-      },
-      onError: (_) {
-        if (mounted) {
-          setState(() {
-            _locationMessage = 'Could not load facility locations.';
-          });
-        }
-      },
-    );
   }
 
   Future<void> _findUserLocation() async {
@@ -96,42 +68,6 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
     });
   }
 
-  List<CRISMapMarker> _buildMarkers() {
-    final markers = <CRISMapMarker>[];
-    final position = _userPosition;
-
-    if (position != null) {
-      markers.add(
-        CRISMapMarker(
-          label: 'Your location',
-          position: LatLng(position.latitude, position.longitude),
-          color: Colors.blue,
-          child: const Icon(
-            Icons.person_pin_circle,
-            color: Colors.blue,
-            size: 42,
-          ),
-        ),
-      );
-    }
-
-    for (final facility in _facilities) {
-      markers.add(
-        CRISMapMarker(
-          label: facility.name,
-          position: LatLng(facility.latitude, facility.longitude),
-          color: AppColors.primary,
-          child: const Icon(
-            Icons.local_hospital,
-            color: AppColors.primary,
-            size: 34,
-          ),
-        ),
-      );
-    }
-    return markers;
-  }
-
   @override
   Widget build(BuildContext context) {
     final position = _userPosition;
@@ -148,7 +84,20 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
               center: mapCenter,
               zoom: position == null ? 6 : 15,
               height: MediaQuery.sizeOf(context).height,
-              markers: _buildMarkers(),
+              markers: position == null
+                  ? const []
+                  : [
+                      CRISMapMarker(
+                        label: 'Your location',
+                        position: mapCenter,
+                        color: Colors.blue,
+                        child: const Icon(
+                          Icons.person_pin_circle,
+                          color: Colors.blue,
+                          size: 42,
+                        ),
+                      ),
+                    ],
             ),
           ),
           if (_locationMessage != null)
@@ -160,36 +109,6 @@ class _ABTCMapScreenState extends State<ABTCMapScreen> {
             ),
         ],
       ),
-    );
-  }
-}
-
-class _FacilityLocation {
-  const _FacilityLocation({
-    required this.name,
-    required this.latitude,
-    required this.longitude,
-  });
-
-  final String name;
-  final double latitude;
-  final double longitude;
-
-  static _FacilityLocation? fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> document,
-  ) {
-    final data = document.data();
-    final location = data?['location'] as Map<String, dynamic>?;
-    final latitude = location?['latitude'];
-    final longitude = location?['longitude'];
-
-    if (latitude is! num || longitude is! num) return null;
-
-    return _FacilityLocation(
-      name: (data?['facilityName'] ?? data?['facilityType'] ?? 'ABTC Facility')
-          .toString(),
-      latitude: latitude.toDouble(),
-      longitude: longitude.toDouble(),
     );
   }
 }

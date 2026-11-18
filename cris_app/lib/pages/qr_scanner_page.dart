@@ -1,11 +1,25 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../theme.dart';
+
+class ScannedFacility {
+  const ScannedFacility({
+    required this.id,
+    required this.code,
+    required this.name,
+  });
+
+  final String id;
+  final String code;
+  final String name;
+}
 
 class QrScannerPage extends StatefulWidget {
   const QrScannerPage({super.key});
@@ -37,10 +51,100 @@ class _QrScannerPageState extends State<QrScannerPage> {
     });
   }
 
-  void _handleDetection(BarcodeCapture capture) {
+  Future<void> _handleDetection(BarcodeCapture capture) async {
     if (_hasHandledScan || capture.barcodes.isEmpty) return;
     _hasHandledScan = true;
-    Navigator.of(context).pop(true);
+    final rawQrValue = capture.barcodes.first.rawValue?.trim();
+    if (rawQrValue == null || rawQrValue.isEmpty) {
+      _showInvalidCodeMessage();
+      return;
+    }
+
+    String facilityId = rawQrValue;
+    String? scannedFacilityCode;
+    String? scannedFacilityName;
+    try {
+      final decoded = jsonDecode(rawQrValue);
+      if (decoded is Map) {
+        facilityId = decoded['facilityId']?.toString().trim() ?? '';
+        scannedFacilityCode = decoded['facilityCode']?.toString().trim();
+        scannedFacilityName = decoded['facilityName']?.toString().trim();
+      }
+    } on FormatException {
+      // Existing QR codes containing only a facility ID remain supported.
+    }
+    if (facilityId.isEmpty) {
+      _showInvalidCodeMessage();
+      return;
+    }
+
+    try {
+      final collection = FirebaseFirestore.instance.collection('facilities');
+      DocumentSnapshot<Map<String, dynamic>>? matchedDoc;
+
+      final directDoc = await collection.doc(facilityId).get();
+      if (directDoc.exists) {
+        matchedDoc = directDoc;
+      } else {
+        for (final field in ['facilityId', 'applicantUid', 'ownerUid', 'adminUid']) {
+          final querySnap =
+              await collection.where(field, isEqualTo: facilityId).limit(1).get();
+          if (querySnap.docs.isNotEmpty) {
+            matchedDoc = querySnap.docs.first;
+            break;
+          }
+        }
+      }
+
+      if (matchedDoc == null || !matchedDoc.exists) {
+        _showInvalidCodeMessage('This QR code does not match a registered facility.');
+        return;
+      }
+
+      final data = matchedDoc.data();
+      final matchedFacilityId =
+          data?['facilityId']?.toString().trim() ?? matchedDoc.id;
+      final facilityCode =
+          (data?['facilityCode'] ?? data?['acronym'])?.toString().trim();
+      final facilityName = data?['facilityName']?.toString().trim();
+      if (facilityCode == null || facilityCode.isEmpty ||
+          facilityName == null || facilityName.isEmpty) {
+        _showInvalidCodeMessage(
+          'Facility record is missing required credentials.',
+        );
+        return;
+      }
+
+      if ((scannedFacilityCode?.isNotEmpty == true &&
+              scannedFacilityCode != facilityCode) ||
+          (scannedFacilityName?.isNotEmpty == true &&
+              scannedFacilityName != facilityName)) {
+        _showInvalidCodeMessage('QR code credentials do not match this facility.');
+        return;
+      }
+      if (!mounted) return;
+      Navigator.of(context).pop(
+        ScannedFacility(
+          id: matchedFacilityId,
+          code: facilityCode,
+          name: facilityName,
+        ),
+      );
+    } catch (_) {
+      _showInvalidCodeMessage();
+    }
+  }
+
+  void _showInvalidCodeMessage([
+    String message = 'This QR code does not match a registered facility.',
+  ]) {
+    if (!mounted) return;
+    setState(() => _hasHandledScan = false);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(message),
+      ));
   }
 
   @override
@@ -56,7 +160,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(false),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
           'Scan QR Code',
@@ -68,14 +172,14 @@ class _QrScannerPageState extends State<QrScannerPage> {
           : !_hasCameraPermission
               ? _CameraMessage(
                   message: 'Camera permission is needed to scan a QR code.',
-                  onBack: () => Navigator.of(context).pop(false),
+                  onBack: () => Navigator.of(context).pop(),
                 )
               : MobileScanner(
                   controller: _scannerController,
                   onDetect: _handleDetection,
                   errorBuilder: (context, error) => _CameraMessage(
                     message: 'Camera unavailable. Please check your camera and try again.',
-                    onBack: () => Navigator.of(context).pop(false),
+                    onBack: () => Navigator.of(context).pop(),
                   ),
                 ),
     );

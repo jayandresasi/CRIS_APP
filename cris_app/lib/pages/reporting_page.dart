@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -74,9 +74,20 @@ const List<String> _suspiciousBehaviors = [
 ];
 
 class ReportingPage extends StatefulWidget {
-  const ReportingPage({super.key, this.reportingForSelf = false});
+  const ReportingPage({
+    super.key,
+    this.reportingForSelf = false,
+    this.facilityId,
+    this.facilityName,
+    this.facilityCode,
+  });
 
   final bool reportingForSelf;
+
+  /// Facility (ABTC) info passed from the dashboard after scanning the QR code.
+  final String? facilityId;
+  final String? facilityName;
+  final String? facilityCode;
 
   @override
   State<ReportingPage> createState() => _ReportingPageState();
@@ -214,6 +225,7 @@ class _ReportingPageState extends State<ReportingPage> {
           .collection('user-info')
           .doc(user.uid)
           .get();
+      if (!mounted) return;
       final data = snapshot.data();
       if (data == null) {
         setState(() => _reportingForSelf = false);
@@ -239,14 +251,14 @@ class _ReportingPageState extends State<ReportingPage> {
             : '';
         _mobileController.text =
             (data['contactNumber'] ?? data['contact_number'] ?? '') as String;
-        _emailController.text =
-            (data['email'] ?? user.email ?? '') as String;
+        _emailController.text = (data['email'] ?? user.email ?? '') as String;
         _streetController.text = (data['address'] ?? '') as String;
         _barangayController.text =
             (data['barangay'] ?? data['brgy'] ?? '') as String;
         _municipalityController.text = (data['municipality'] ?? '') as String;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _reportingForSelf = false);
       _showSnackBar('Unable to load your profile: $e');
     } finally {
@@ -400,14 +412,16 @@ class _ReportingPageState extends State<ReportingPage> {
       await Hive.box<Report>('reports').add(report);
 
       final evidenceUrls = await _uploadEvidence(user.uid, caseId);
-      await FirebaseFirestore.instance
-          .collection('bite_reports')
-          .doc(caseId)
-          .set({
+      await FirebaseFirestore.instance.collection('patients').doc(caseId).set({
         'caseId': caseId,
         'userId': user.uid,
         'reportingForSelf': _reportingForSelf,
         'submittedBy': user.uid,
+        'facility': {
+          'id': widget.facilityId,
+          'name': widget.facilityName,
+          'code': widget.facilityCode,
+        },
         'patient': {
           'lastName': _lastNameController.text.trim(),
           'firstName': _firstNameController.text.trim(),
@@ -719,6 +733,7 @@ class _ReportingPageState extends State<ReportingPage> {
                   selected: groupValue == null ? <String>{} : {groupValue},
                   emptySelectionAllowed: true,
                   onSelectionChanged: (next) {
+                    if (next.isEmpty) return;
                     final value = next.first;
                     onChanged(value);
                     field.didChange(value);
@@ -821,12 +836,12 @@ class _ReportingPageState extends State<ReportingPage> {
                       data: Theme.of(context).copyWith(
                         inputDecorationTheme:
                             Theme.of(context).inputDecorationTheme.copyWith(
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 12,
-                          ),
-                        ),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 12,
+                                  ),
+                                ),
                       ),
                       child: _buildForm(),
                     ),
@@ -1145,7 +1160,8 @@ class _ReportingPageState extends State<ReportingPage> {
       ];
 
   List<Widget> _animalBehaviorFields() => [
-        _sectionTitle('Suspicious Animal Behavior', Icons.warning_amber_outlined),
+        _sectionTitle(
+            'Suspicious Animal Behavior', Icons.warning_amber_outlined),
         ..._suspiciousBehaviors.map(
           (behavior) => CheckboxListTile(
             value: _behaviors.contains(behavior),
@@ -1215,7 +1231,8 @@ class _ReportingPageState extends State<ReportingPage> {
           DropdownMenuItem(value: 'None', child: Text('None')),
           DropdownMenuItem(value: 'Alcohol', child: Text('Alcohol')),
           DropdownMenuItem(value: 'Betadine', child: Text('Betadine')),
-          DropdownMenuItem(value: 'Herbal Remedy', child: Text('Herbal Remedy')),
+          DropdownMenuItem(
+              value: 'Herbal Remedy', child: Text('Herbal Remedy')),
           DropdownMenuItem(value: 'Other', child: Text('Other')),
         ],
         onChanged: (value) => setState(() => _substance = value ?? 'None'),
@@ -1228,8 +1245,8 @@ class _ReportingPageState extends State<ReportingPage> {
       );
 
   List<Widget> _medicalHistoryFields() => [
-        _sectionTitle('Relevant Medical History',
-            Icons.health_and_safety_outlined),
+        _sectionTitle(
+            'Relevant Medical History', Icons.health_and_safety_outlined),
         const Text(
             'Resident-reported information; this does not confirm diagnosis or treatment.'),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1260,8 +1277,8 @@ class _ReportingPageState extends State<ReportingPage> {
           ),
         ]),
         if (_patientVaccinated == 'Yes' ||
-                _patientVaccinated == 'Unsure' ||
-                _patientVaccinated == 'Unknown' ||
+            _patientVaccinated == 'Unsure' ||
+            _patientVaccinated == 'Unknown' ||
             _allergiesKnown == 'Yes')
           Row(children: [
             if (_patientVaccinated == 'Yes' ||
@@ -1269,11 +1286,11 @@ class _ReportingPageState extends State<ReportingPage> {
                 _patientVaccinated == 'Unknown')
               Expanded(
                 child: TextFormField(
-            controller: _previousVaccinationDetailsController,
-            decoration: const InputDecoration(
-                labelText: 'Previous vaccination details'),
-            textCapitalization: TextCapitalization.sentences,
-            maxLines: 1,
+                  controller: _previousVaccinationDetailsController,
+                  decoration: const InputDecoration(
+                      labelText: 'Previous vaccination details'),
+                  textCapitalization: TextCapitalization.sentences,
+                  maxLines: 1,
                 ),
               ),
             if ((_patientVaccinated == 'Yes' ||
@@ -1353,11 +1370,13 @@ class _ReportingPageState extends State<ReportingPage> {
 
   int _firstPageForSection(String title) {
     final sectionTitle = switch (title) {
-      'Relevant Medical History' || 'First Aid Performed' =>
+      'Relevant Medical History' ||
+      'First Aid Performed' =>
         'Remaining Information',
       _ => title,
     };
-    final pageIndex = _formPages.indexWhere((page) => page.title == sectionTitle);
+    final pageIndex =
+        _formPages.indexWhere((page) => page.title == sectionTitle);
     return pageIndex < 0 ? 0 : pageIndex;
   }
 
@@ -1429,10 +1448,12 @@ class _ReportingPageState extends State<ReportingPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Review and Submit · Page ${_reviewPage + 1} of ${pages.length + 1}',
+              Text(
+                  'Review and Submit · Page ${_reviewPage + 1} of ${pages.length + 1}',
                   style: const TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
-              LinearProgressIndicator(value: (_reviewPage + 1) / (pages.length + 1)),
+              LinearProgressIndicator(
+                  value: (_reviewPage + 1) / (pages.length + 1)),
             ],
           ),
         ),
@@ -1448,7 +1469,8 @@ class _ReportingPageState extends State<ReportingPage> {
                       children: [
                         ListTile(
                           title: Text(page!.title,
-                              style: const TextStyle(fontWeight: FontWeight.w700)),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700)),
                           trailing: TextButton.icon(
                             onPressed: () => setState(() {
                               _reviewing = false;
@@ -1479,11 +1501,12 @@ class _ReportingPageState extends State<ReportingPage> {
           _reviewPage--;
         }
       }),
-      onNext: isCertification ? _confirmAndSubmit : () => setState(() => _reviewPage++),
+      onNext: isCertification
+          ? _confirmAndSubmit
+          : () => setState(() => _reviewPage++),
       nextLabel: isCertification ? 'Submit' : 'Next',
-      nextIcon: isCertification
-          ? Icons.fact_check_outlined
-          : Icons.arrow_forward,
+      nextIcon:
+          isCertification ? Icons.fact_check_outlined : Icons.arrow_forward,
       nextEnabled: !isCertification || !_isSubmitting,
     );
   }

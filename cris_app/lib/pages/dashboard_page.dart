@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import '../providers/notifications_notifier.dart';
 import '../providers/profile_notifier.dart';
@@ -27,58 +26,11 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _isLoggingOut = false;
   bool _isConfirmingLogout = false;
 
-  String _scanFlagKey(String uid) => 'abtc_qr_scanned_$uid';
-  String _scanFacilityIdKey(String uid) => 'abtc_facility_id_$uid';
-  String _scanFacilityNameKey(String uid) => 'abtc_facility_name_$uid';
-  String _scanFacilityCodeKey(String uid) => 'abtc_facility_code_$uid';
-
   Future<void> _openPreAbtcFlow() async {
-    final user = FirebaseAuth.instance.currentUser;
-    final settings = Hive.box('settings');
-    final hasScanned = user != null &&
-        settings.get(_scanFlagKey(user.uid), defaultValue: false) == true;
-    ScannedFacility? facility;
-
-    if (!hasScanned || user == null) {
-      final scanned = await Navigator.of(context).push<ScannedFacility>(
-        MaterialPageRoute(builder: (_) => const QrScannerPage()),
-      );
-      if (scanned == null || !mounted) return;
-      facility = scanned;
-
-      final scannedUser = FirebaseAuth.instance.currentUser;
-      if (scannedUser != null) {
-        await settings.put(_scanFlagKey(scannedUser.uid), true);
-        await settings.put(_scanFacilityIdKey(scannedUser.uid), scanned.facilityId);
-        await settings.put(_scanFacilityNameKey(scannedUser.uid), scanned.name);
-        // FIX: the facility code was never saved on the first scan.
-        await settings.put(_scanFacilityCodeKey(scannedUser.uid), scanned.facilityAcronym);
-      }
-    } else {
-      final facilityId = settings.get(_scanFacilityIdKey(user.uid)) as String?;
-      final facilityName =
-          settings.get(_scanFacilityNameKey(user.uid)) as String?;
-      if (facilityId == null || facilityName == null) {
-        final scanned = await Navigator.of(context).push<ScannedFacility>(
-          MaterialPageRoute(builder: (_) => const QrScannerPage()),
-        );
-        if (scanned == null || !mounted) return;
-        facility = scanned;
-        await settings.put(_scanFacilityIdKey(user.uid), scanned.facilityId);
-        await settings.put(_scanFacilityNameKey(user.uid), scanned.name);
-        await settings.put(_scanFacilityCodeKey(user.uid), scanned.facilityAcronym);
-      } else {
-        final facilityCode =
-            settings.get(_scanFacilityCodeKey(user.uid)) as String?;
-        facility = ScannedFacility(
-            facilityId: facilityId,
-            name: facilityName,
-            facilityAcronym: facilityCode ?? '');
-      }
-    }
-
-    // FIX: null-check instead of using the `!` operator.
-    if (!mounted || facility == null) return;
+    final facility = await Navigator.of(context).push<ScannedFacility>(
+      MaterialPageRoute(builder: (_) => const QrScannerPage()),
+    );
+    if (facility == null || !mounted) return;
     _showReportChoiceDialog(facility);
   }
 

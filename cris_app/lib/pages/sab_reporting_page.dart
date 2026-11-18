@@ -260,6 +260,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     if (!_readyToReview) {
       _snack(
         'Complete all required fields, provide the observation location, and confirm consent before submitting.',
@@ -273,6 +274,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
     }
     setState(() => _submitting = true);
     try {
+      final submittedAt = DateTime.now();
       setState(() => _submitStatus =
           _photo == null ? 'Saving report...' : 'Uploading photo...');
       final imageUrl =
@@ -295,7 +297,7 @@ class _SABReportingPageState extends State<SABReportingPage> {
         photoPath: _photo?.path ?? '',
         latitude: point.latitude,
         longitude: point.longitude,
-        reportedAt: DateTime.now(),
+        reportedAt: submittedAt,
       );
       await Hive.box<SABReport>('sab_reports').add(report);
       setState(() => _submitStatus = 'Submitting report...');
@@ -326,8 +328,15 @@ class _SABReportingPageState extends State<SABReportingPage> {
         'updatedAt': FieldValue.serverTimestamp(),
       }).timeout(const Duration(seconds: 30));
       if (!mounted) return;
-      _snack('SAB report submitted successfully.');
-      _resetForm();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => _SABReportSuccessPage(
+            reportId: doc.id,
+            submittedAt: submittedAt,
+          ),
+        ),
+      );
     } on TimeoutException {
       _snack(
           'Submission is taking too long. Please check your connection and try again.');
@@ -343,28 +352,6 @@ class _SABReportingPageState extends State<SABReportingPage> {
         });
       }
     }
-  }
-
-  void _resetForm() {
-    final now = DateTime.now();
-    _animalCountController.text = '1';
-    _otherAnimalController.clear();
-    _otherBehaviorController.clear();
-    setState(() {
-      _behaviors.clear();
-      _animalType = null;
-      _ownership = null;
-      _dateObserved = now;
-      _timeObserved = TimeOfDay.fromDateTime(now);
-      _observationPoint = null;
-      _locationMethod = null;
-      _photo = null;
-      _webPhoto = null;
-      _devicePhoto = null;
-      _consentGiven = false;
-      _locationError = null;
-    });
-    _changeStep(0);
   }
 
   void _snack(String message) => ScaffoldMessenger.of(context)
@@ -777,5 +764,79 @@ class _SABReportingPageState extends State<SABReportingPage> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : null,
+      );
+}
+
+class _SABReportSuccessPage extends StatelessWidget {
+  const _SABReportSuccessPage({
+    required this.reportId,
+    required this.submittedAt,
+  });
+
+  final String reportId;
+  final DateTime submittedAt;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Report Submitted')),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(
+                  Icons.check_circle_outline,
+                  size: 64,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Report Submitted',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 24),
+                _SABSuccessLine(label: 'Report ID', value: reportId),
+                const _SABSuccessLine(label: 'Report Status', value: 'Pending'),
+                _SABSuccessLine(
+                  label: 'Submitted',
+                  value: submittedAt.toLocal().toString(),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/dashboard',
+                    (route) => false,
+                  ),
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+class _SABSuccessLine extends StatelessWidget {
+  const _SABSuccessLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(color: Colors.black54)),
+            const SizedBox(height: 4),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
       );
 }

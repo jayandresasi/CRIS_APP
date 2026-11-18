@@ -156,7 +156,7 @@ class _TreatmentTrackerBody extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: AppColors.primary,
+            color: AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 8),
@@ -321,7 +321,7 @@ class _LockedCalendarGrid extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),
@@ -341,13 +341,20 @@ class _LockedCalendarGrid extends StatelessWidget {
             crossAxisCount: 7,
             childAspectRatio: 1.6,
           ),
-          itemBuilder: (context, index) => Center(
-            child: Text(
-              _weekdays[index],
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Colors.black45,
+          itemBuilder: (context, index) => DecoratedBox(
+            decoration: _gridCellDecoration(
+              index,
+              7,
+              drawBottomOnLastRow: true,
+            ),
+            child: Center(
+              child: Text(
+                _weekdays[index],
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
           ),
@@ -362,8 +369,9 @@ class _LockedCalendarGrid extends StatelessWidget {
           ),
           itemBuilder: (context, index) {
             final dayNumber = index - leadingBlanks + 1;
+            final gridDecoration = _gridCellDecoration(index, totalCells);
             if (dayNumber < 1 || dayNumber > totalDays) {
-              return const SizedBox.shrink();
+              return DecoratedBox(decoration: gridDecoration);
             }
             final day = DateTime(
               visibleMonth.year,
@@ -376,10 +384,12 @@ class _LockedCalendarGrid extends StatelessWidget {
             final color =
                 doses.isEmpty ? null : statusColor(doses.first.status);
 
-            return Padding(
-              padding: const EdgeInsets.all(3),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
+            return DecoratedBox(
+              decoration: gridDecoration,
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
                 onTap: () => onDateSelected(
                   _VaccineScheduleCardState._dateOnly(day),
                 ),
@@ -472,12 +482,13 @@ class _LockedCalendarGrid extends StatelessWidget {
                     ),
                   ),
                 ),
+                ),
               ),
             );
           },
         ),
         const SizedBox(height: 16),
-        Divider(color: AppColors.primary.withValues(alpha: 0.16), height: 1),
+        Divider(color: AppColors.inputBorder.withValues(alpha: 0.45), height: 1),
         const SizedBox(height: 16),
         if (monthDoses.isNotEmpty) ...[
           const Wrap(
@@ -517,6 +528,25 @@ class _LockedCalendarGrid extends StatelessWidget {
 
   static String _doseTag(_DoseVisit dose) => 'D${dose.doseNumber}';
 
+  BoxDecoration _gridCellDecoration(
+    int index,
+    int itemCount, {
+    bool drawBottomOnLastRow = false,
+  }) {
+    final gridLine = BorderSide(
+      color: AppColors.inputBorder.withValues(alpha: 0.4),
+      width: 0.5,
+    );
+    final isLastColumn = (index + 1) % 7 == 0;
+    final isLastRow = index >= itemCount - 7;
+    return BoxDecoration(
+      border: Border(
+        right: isLastColumn ? BorderSide.none : gridLine,
+        bottom: isLastRow && !drawBottomOnLastRow ? BorderSide.none : gridLine,
+      ),
+    );
+  }
+
   static String _doseDescription(_DoseVisit dose) =>
       '${dose.day}, ${_doseStatusLabel(dose)}';
 
@@ -555,7 +585,11 @@ class _DoseDetails extends StatelessWidget {
         children: [
           const Text(
             'Selected date',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 4),
           ...doses.map(
@@ -593,7 +627,11 @@ class _MonthDoseList extends StatelessWidget {
         children: [
           const Text(
             'Doses this month',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 6),
           ...doses.map(
@@ -640,7 +678,7 @@ class _DoseListRow extends StatelessWidget {
                 if (showPatientName) dose.patientName,
                 _doseStatusLabel(dose),
               ].join(' · '),
-              style: const TextStyle(fontSize: 13, color: Colors.black87),
+              style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
             ),
           ),
         ],
@@ -714,7 +752,7 @@ class _LegendDot extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 13, color: Colors.black87),
+          style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
         ),
       ],
     );

@@ -12,7 +12,6 @@ void main() {
       home: ReportingPage(
         facilityId: 'test-facility',
         facilityAcronym: 'TEST-001',
-        facilityName: 'Test Facility',
       ),
     ));
     await tester.pumpAndSettle();

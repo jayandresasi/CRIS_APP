@@ -93,20 +93,37 @@ class _VaccineScheduleCardState extends State<VaccineScheduleCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: _TreatmentTrackerBody(
-          selectedDate: _selectedDate,
-          visibleMonth: _visibleMonth,
-          onDateSelected: (date) => setState(() => _selectedDate = date),
-          onMonthChanged: _changeMonth,
-          dosesOn: (day) => _dosesOn(_visits, day),
-          statusColor: _statusColor,
+    final monthDoses = _visits
+        .where(
+          (dose) =>
+              dose.date.year == _visibleMonth.year &&
+              dose.date.month == _visibleMonth.month,
+        )
+        .toList()
+      ..sort((first, second) => first.date.compareTo(second.date));
+    final showPatientNames = _visits.map((dose) => dose.patientName).toSet().length > 1;
+
+    return Column(
+      children: [
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: _TreatmentTrackerBody(
+              selectedDate: _selectedDate,
+              visibleMonth: _visibleMonth,
+              monthDoses: monthDoses,
+              showPatientNames: showPatientNames,
+              onDateSelected: (date) => setState(() => _selectedDate = date),
+              onMonthChanged: _changeMonth,
+              dosesOn: (day) => _dosesOn(_visits, day),
+              statusColor: _statusColor,
+            ),
+          ),
         ),
-      ),
+        const SizedBox(height: 24),
+      ],
     );
   }
 }
@@ -115,6 +132,8 @@ class _TreatmentTrackerBody extends StatelessWidget {
   const _TreatmentTrackerBody({
     required this.selectedDate,
     required this.visibleMonth,
+    required this.monthDoses,
+    required this.showPatientNames,
     required this.onDateSelected,
     required this.onMonthChanged,
     required this.dosesOn,
@@ -123,6 +142,8 @@ class _TreatmentTrackerBody extends StatelessWidget {
 
   final DateTime selectedDate;
   final DateTime visibleMonth;
+  final List<_DoseVisit> monthDoses;
+  final bool showPatientNames;
   final ValueChanged<DateTime> onDateSelected;
   final ValueChanged<int> onMonthChanged;
   final List<_DoseVisit> Function(DateTime date) dosesOn;
@@ -145,6 +166,8 @@ class _TreatmentTrackerBody extends StatelessWidget {
         _LockedCalendarGrid(
           visibleMonth: visibleMonth,
           selectedDate: selectedDate,
+          monthDoses: monthDoses,
+          showPatientNames: showPatientNames,
           dosesOn: dosesOn,
           statusColor: statusColor,
           onMonthChanged: onMonthChanged,
@@ -256,6 +279,8 @@ class _LockedCalendarGrid extends StatelessWidget {
   const _LockedCalendarGrid({
     required this.visibleMonth,
     required this.selectedDate,
+    required this.monthDoses,
+    required this.showPatientNames,
     required this.dosesOn,
     required this.statusColor,
     required this.onMonthChanged,
@@ -264,6 +289,8 @@ class _LockedCalendarGrid extends StatelessWidget {
 
   final DateTime visibleMonth;
   final DateTime selectedDate;
+  final List<_DoseVisit> monthDoses;
+  final bool showPatientNames;
   final List<_DoseVisit> Function(DateTime date) dosesOn;
   final Color Function(_DoseStatus status) statusColor;
   final ValueChanged<int> onMonthChanged;
@@ -348,8 +375,8 @@ class _LockedCalendarGrid extends StatelessWidget {
             final doses = dosesOn(day);
             final isSelected =
                 _VaccineScheduleCardState._dateOnly(day) == selectedDate;
-            final colors = doses.map((dose) => statusColor(dose.status)).toSet();
-            final color = colors.isEmpty ? null : colors.first;
+            final color =
+                doses.isEmpty ? null : statusColor(doses.first.status);
 
             return Padding(
               padding: const EdgeInsets.all(3),
@@ -370,63 +397,85 @@ class _LockedCalendarGrid extends StatelessWidget {
                           : Colors.transparent,
                     ),
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Text(
-                        '$dayNumber',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight:
-                              doses.isEmpty ? FontWeight.w500 : FontWeight.w800,
-                          color: doses.isEmpty ? Colors.black87 : color,
-                        ),
-                      ),
-                      if (doses.isNotEmpty)
-                        Positioned(
-                          bottom: 5,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: colors
-                                .map(
-                                  (markerColor) => Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 1,
-                                    ),
-                                    child: Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: markerColor,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
+                  child: Semantics(
+                    label: doses.isEmpty
+                        ? '$dayNumber'
+                        : '$dayNumber, ${doses.map(_doseDescription).join(', ')}',
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$dayNumber',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight:
+                                doses.isEmpty ? FontWeight.w500 : FontWeight.w800,
+                            color: doses.isEmpty ? Colors.black87 : color,
                           ),
                         ),
-                    ],
+                        if (doses.isNotEmpty) ...[
+                          const SizedBox(height: 1),
+                          Tooltip(
+                            message: doses.map(_doseDescription).join('\n'),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _doseTag(doses.first),
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w700,
+                                    color: color,
+                                  ),
+                                ),
+                                const SizedBox(width: 2),
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             );
           },
         ),
-        const SizedBox(height: 8),
-        const Row(
+        const SizedBox(height: 12),
+        const Wrap(
+          spacing: 16,
+          runSpacing: 8,
           children: [
-            _LegendDot(color: Colors.green, label: 'Completed'),
-            SizedBox(width: 12),
-            _LegendDot(color: AppColors.accent, label: 'Scheduled'),
-            SizedBox(width: 12),
+            _LegendDot(color: Colors.green, label: 'Done'),
+            _LegendDot(color: AppColors.accent, label: 'Upcoming'),
             _LegendDot(color: Colors.red, label: 'Overdue'),
           ],
         ),
-        _DoseDetails(doses: dosesOn(selectedDate)),
+        _DoseDetails(
+          doses: dosesOn(selectedDate),
+          showPatientNames: showPatientNames,
+        ),
+        _MonthDoseList(
+          doses: monthDoses,
+          showPatientNames: showPatientNames,
+          statusColor: statusColor,
+        ),
       ],
     );
   }
+
+  static String _doseTag(_DoseVisit dose) => 'D${dose.doseNumber}';
+
+  static String _doseDescription(_DoseVisit dose) =>
+      '${dose.day}, ${_doseStatusLabel(dose)}';
 
   String _monthName(int month) {
     const names = [
@@ -448,9 +497,10 @@ class _LockedCalendarGrid extends StatelessWidget {
 }
 
 class _DoseDetails extends StatelessWidget {
-  const _DoseDetails({required this.doses});
+  const _DoseDetails({required this.doses, required this.showPatientNames});
 
   final List<_DoseVisit> doses;
+  final bool showPatientNames;
 
   @override
   Widget build(BuildContext context) {
@@ -459,28 +509,139 @@ class _DoseDetails extends StatelessWidget {
       padding: const EdgeInsets.only(top: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: doses
-            .map(
-              (dose) => Text(
-                '${dose.patientName} - ${dose.day} (${_label(dose.status)})',
-                style: const TextStyle(fontSize: 11, color: Colors.black54),
-              ),
-            )
-            .toList(),
+        children: [
+          const Text(
+            'Selected date',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          ...doses.map(
+            (dose) => _DoseListRow(
+              dose: dose,
+              showPatientName: showPatientNames,
+              showDate: false,
+              statusColor: _statusColorFor(dose.status),
+            ),
+          ),
+        ],
       ),
     );
   }
+}
 
-  String _label(_DoseStatus status) {
-    switch (status) {
-      case _DoseStatus.completed:
-        return 'Completed';
-      case _DoseStatus.scheduled:
-        return 'Scheduled';
-      case _DoseStatus.overdue:
-        return 'Overdue';
-    }
+class _MonthDoseList extends StatelessWidget {
+  const _MonthDoseList({
+    required this.doses,
+    required this.showPatientNames,
+    required this.statusColor,
+  });
+
+  final List<_DoseVisit> doses;
+  final bool showPatientNames;
+  final Color Function(_DoseStatus status) statusColor;
+
+  @override
+  Widget build(BuildContext context) {
+    if (doses.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Doses this month',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          ...doses.map(
+            (dose) => _DoseListRow(
+              dose: dose,
+              showPatientName: showPatientNames,
+              showDate: true,
+              statusColor: statusColor(dose.status),
+            ),
+          ),
+        ],
+      ),
+    );
   }
+}
+
+class _DoseListRow extends StatelessWidget {
+  const _DoseListRow({
+    required this.dose,
+    required this.showPatientName,
+    required this.showDate,
+    required this.statusColor,
+  });
+
+  final _DoseVisit dose;
+  final bool showPatientName;
+  final bool showDate;
+  final Color statusColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateText = '${_monthShortName(dose.date.month)} ${dose.date.day}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              [
+                if (showDate) dateText,
+                dose.day,
+                if (showPatientName) dose.patientName,
+                _doseStatusLabel(dose),
+              ].join(' · '),
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Color _statusColorFor(_DoseStatus status) {
+  switch (status) {
+    case _DoseStatus.completed:
+      return Colors.green;
+    case _DoseStatus.scheduled:
+      return AppColors.accent;
+    case _DoseStatus.overdue:
+      return Colors.red;
+  }
+}
+
+String _doseStatusLabel(_DoseVisit dose) {
+  final today = _VaccineScheduleCardState._dateOnly(DateTime.now());
+  final labels = <String>[
+    switch (dose.status) {
+      _DoseStatus.completed => 'Done',
+      _DoseStatus.scheduled => 'Upcoming',
+      _DoseStatus.overdue => 'Overdue',
+    },
+  ];
+  if (_VaccineScheduleCardState._dateOnly(dose.date) == today) {
+    labels.add('Today');
+  }
+  return labels.join(' · ');
+}
+
+String _monthShortName(int month) {
+  const names = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  return names[month - 1];
 }
 
 class _LegendDot extends StatelessWidget {
@@ -495,14 +656,14 @@ class _LegendDot extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 8,
-          height: 8,
+          width: 9,
+          height: 9,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Colors.black54),
+          style: const TextStyle(fontSize: 13, color: Colors.black87),
         ),
       ],
     );
